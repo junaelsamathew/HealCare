@@ -1,0 +1,246 @@
+/* Light hospital landing overrides to mirror reference layout */
+:root {
+    --heal-blue: #0d3b8a;
+    --heal-blue-dark: #062b6b;
+    --heal-accent: #0bb1ff;
+    --heal-surface: #f6f8fb;
+}
+
+body.landing {
+    background: var(--heal-surface);
+    color: #0f172a;
+}
+
+/* Primary navigation */
+.primary-nav {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    background: #fff;
+    color: var(--heal-blue);
+    z-index: 999;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(6, 43, 107, 0.08);
+}
+
+.nav-grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.55rem 0;
+}
+
+.primary-nav .logo {
+    color: var(--heal-blue);
+}
+
+.primary-nav .logo-icon {
+    background: var(--heal-blue);
+    color: #fff;
+}
+
+.primary-nav .nav-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.primary-nav .nav-links a {
+    color: var(--heal-blue);
+    font-weight: 600;
+    letter-spacing: 0.1px;
+    padding: 0.35rem 0.4rem;
+    border-bottom: 2px solid transparent;
+}
+
+.primary-nav .nav-links a:hover,
+.primary-nav .nav-links a.active {
+    color: var(--heal-blue-dark);
+    border-color: var(--heal-blue-dark);
+}
+
+.primary-nav .nav-actions {
+    display: flex;
+    gap: 0.65rem;
+    align-items: flex-start;
+}
+
+.nav-meta {
+    display: grid;
+    gap: 0.15rem;
+    font-size: 0.82rem;
+    color: var(--heal-blue);
+    text-align: right;
+    line-height: 1.2;
+}
+
+.nav-meta .strong {
+    font-weight: 700;
+    color: var(--heal-blue-dark);
+}
+
+.nav-meta .meta-line {
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: center;
+}
+
+.nav-meta .icon {
+    font-size: 0.9rem;
+}
+
+.nav-meta a {
+    color: var(--heal-blue-dark);
+    font-weight: 600;
+}
+
+.primary-nav .btn-outline {
+    border-color: var(--heal-blue);
+    color: var(--heal-blue);
+}
+
+.primary-nav .btn-outline:hover {
+    background: var(--heal-blue);
+    color: #fff;
+}
+
+/* Hero */
+.landing-hero {
+    min-height: 80vh;
+    background: linear-gradient(0deg, rgba(13, 59, 138, 0.35), rgba(13, 59, 138, 0.35)),
+        url('https://images.unsplash.com/photo-1504439468489-c8920d796a29?auto=format&fit=crop&w=1600&q=80') center/cover no-repeat;
+    padding-top: 120px;
+}
+
+.landing-hero::before {
+    display: none;
+}
+
+.landing-hero .hero-content {
+    max-width: 640px;
+}
+
+.landing-hero h1,
+.landing-hero p {
+    color: #fff;
+}
+
+.hero-bg-glow {
+    display: none;
+}
+
+/* Cards & panels */
+.glass-panel,
+.appointment-form,
+.cta-content {
+    background: #fff;
+    color: #0f172a;
+    box-shadow: 0 10px 30px rgba(13, 59, 138, 0.08);
+    border: 1px solid rgba(13, 59, 138, 0.08);
+}
+
+.bg-darker {
+    background: #eef2ff;
+    color: #0f172a;
+}
+
+.section {
+    color: #0f172a;
+}
+
+.contact-card .highlight-text {
+    color: var(--heal-blue);
+}
+
+/* Social rail */
+.social-rail {
+    position: fixed;
+    right: 14px;
+    top: 35%;
+    display: grid;
+    gap: 10px;
+    z-index: 998;
+}
+
+.social-rail a {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    background: #fff;
+    color: var(--heal-blue);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    font-weight: 700;
+}
+
+.social-rail a:hover {
+    background: var(--heal-blue);
+    color: #fff;
+}
+
+/* Floating CTAs */
+.floating-actions {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    display: grid;
+    gap: 12px;
+    z-index: 998;
+}
+
+.fab {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 1.2rem;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+.fab.whatsapp {
+    background: #25d366;
+}
+
+.fab.call {
+    background: #0bb1ff;
+}
+
+/* Responsive tweaks */
+@media (max-width: 1024px) {
+    .topbar-grid {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .nav-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .primary-nav .nav-actions {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 720px) {
+    .topbar-left,
+    .topbar-right {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .primary-nav .nav-links {
+        justify-content: flex-start;
+    }
+
+    .social-rail {
+        display: none;
+    }
+}
+

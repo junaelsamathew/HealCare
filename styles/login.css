@@ -1,0 +1,226 @@
+/* Login Page Specific Styles */
+
+body {
+    background-color: var(--dark-bg);
+    overflow: hidden;
+    /* Prevent scrolling on login page */
+}
+
+.login-container {
+    position: relative;
+    z-index: 2;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('../assets/images/hero-bg.png') no-repeat center center/cover;
+    z-index: 0;
+    filter: brightness(0.4);
+}
+
+/* Steps */
+.login-step {
+    display: none;
+    text-align: center;
+    width: 100%;
+    max-width: 1000px;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease;
+}
+
+.login-step.active {
+    display: block;
+}
+
+/* Role Selection */
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.role-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.role-card:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-10px);
+    border-color: var(--primary-color);
+    box-shadow: var(--glow-primary);
+}
+
+.role-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.role-card h3 {
+    color: var(--white);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.role-card p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.back-link {
+    display: inline-block;
+    margin-top: 3rem;
+    color: var(--text-muted);
+    transition: color 0.3s;
+}
+
+.back-link:hover {
+    color: var(--white);
+}
+
+/* Auth Box */
+.auth-box {
+    max-width: 450px;
+    margin: 0 auto;
+    padding: 3rem;
+    border-radius: var(--radius-lg);
+    background: rgba(15, 23, 42, 0.85);
+    /* Darker for form */
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.back-btn {
+    position: absolute;
+    top: 1.5rem;
+    left: 1.5rem;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.back-btn:hover {
+    color: var(--white);
+}
+
+.auth-header {
+    margin-bottom: 2rem;
+}
+
+.role-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+}
+
+/* Role Specific Badge Colors */
+.badge-patient {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+}
+
+.badge-doctor {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.badge-staff {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.badge-admin {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+
+.auth-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 2rem;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 1rem;
+    background: transparent;
+    color: var(--text-muted);
+    position: relative;
+    font-weight: 600;
+}
+
+.tab-btn.active {
+    color: var(--white);
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--primary-color);
+}
+
+.input-group label {
+    display: block;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    text-align: left;
+}
+
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.remember-me {
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
