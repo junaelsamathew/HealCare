@@ -3,20 +3,19 @@
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
-                    <a href="#" class="logo">
-                        <span class="logo-icon">+</span> HealCare
+                    <a href="index.php" class="logo">
+                        <span class="logo-icon">+</span> HEALCARE
                     </a>
-                    <p>Transforming healthcare with innovation, compassion, and excellence. We are dedicated to your
-                        brighter, healthier future.</p>
+                    <p>Caring for you, digitally and compassionately. HealCare is health made simple. We are dedicated to your brighter, healthier future.</p>
                 </div>
 
                 <div class="footer-col">
-                    <h4>Company</h4>
+                    <h4>Quick Links</h4>
                     <ul class="footer-links">
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Press</a></li>
-                        <li><a href="#">Contact</a></li>
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#services">Services</a></li>
+                        <li><a href="#find-doctor">Find a Doctor</a></li>
+                        <li><a href="#contact">Contact</a></li>
                     </ul>
                 </div>
 
@@ -31,11 +30,11 @@
                 </div>
 
                 <div class="footer-col">
-                    <h4>Legal</h4>
+                    <h4>Contact Info</h4>
                     <ul class="footer-links">
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Cookie Policy</a></li>
+                        <li>Kanjirapally, Kottayam</li>
+                        <li>(+254) 717 783 146</li>
+                        <li>contact@healcare.com</li>
                     </ul>
                 </div>
             </div>
@@ -47,7 +46,6 @@
     </footer>
 
     <script src="js/main.js"></script>
-    <script src="js/slideshow.js"></script>
 </body>
 
 </html>
