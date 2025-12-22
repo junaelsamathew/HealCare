@@ -350,3 +350,182 @@ window.handleCredentialResponse = function (response) {
         loginLink.classList.add('btn-primary');
     }
 }
+
+/* -------------------------------------------------------------------------- */
+/*                        DOCTORS CAROUSEL & DEPARTMENT FILTER                */
+/* -------------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+    initDoctorsCarousel();
+});
+
+function initDoctorsCarousel() {
+    const track = document.querySelector('.doctors-track');
+    const prevBtn = document.querySelector('.prev-nav');
+    const nextBtn = document.querySelector('.next-nav');
+    const deptTabs = document.querySelectorAll('.dept-tab');
+
+    if (!track) return;
+
+    let currentIndex = 0;
+    let currentDepartment = 'all';
+    let visibleCards = [];
+
+    // Get cards per view based on screen size
+    function getCardsPerView() {
+        if (window.innerWidth <= 768) return 1;
+        if (window.innerWidth <= 1024) return 2;
+        return 3;
+    }
+
+    // Filter cards by department
+    function filterByDepartment(dept) {
+        currentDepartment = dept;
+        currentIndex = 0;
+
+        const allCards = Array.from(track.querySelectorAll('.doctor-card'));
+
+        if (dept === 'all') {
+            visibleCards = allCards;
+            allCards.forEach(card => card.classList.remove('hidden'));
+        } else {
+            visibleCards = allCards.filter(card => card.dataset.department === dept);
+            allCards.forEach(card => {
+                if (card.dataset.department === dept) {
+                    card.classList.remove('hidden');
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+        }
+
+        updateCarouselPosition();
+        updateNavigationButtons();
+    }
+
+    // Update carousel position
+    function updateCarouselPosition() {
+        const cardsPerView = getCardsPerView();
+        const cardWidth = track.querySelector('.doctor-card:not(.hidden)').offsetWidth;
+        const gap = 32; // 2rem gap
+        const offset = currentIndex * (cardWidth + gap);
+
+        track.style.transform = `translateX(-${offset}px)`;
+    }
+
+    // Update navigation button states
+    function updateNavigationButtons() {
+        const cardsPerView = getCardsPerView();
+        const maxIndex = Math.max(0, visibleCards.length - cardsPerView);
+
+        if (prevBtn) {
+            prevBtn.disabled = currentIndex === 0;
+            prevBtn.style.opacity = currentIndex === 0 ? '0.3' : '1';
+            prevBtn.style.cursor = currentIndex === 0 ? 'not-allowed' : 'pointer';
+        }
+
+        if (nextBtn) {
+            nextBtn.disabled = currentIndex >= maxIndex;
+            nextBtn.style.opacity = currentIndex >= maxIndex ? '0.3' : '1';
+            nextBtn.style.cursor = currentIndex >= maxIndex ? 'not-allowed' : 'pointer';
+        }
+    }
+
+    // Navigate to next
+    function navigateNext() {
+        const cardsPerView = getCardsPerView();
+        const maxIndex = Math.max(0, visibleCards.length - cardsPerView);
+
+        if (currentIndex < maxIndex) {
+            currentIndex++;
+            updateCarouselPosition();
+            updateNavigationButtons();
+        }
+    }
+
+    // Navigate to previous
+    function navigatePrev() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateCarouselPosition();
+            updateNavigationButtons();
+        }
+    }
+
+    // Event listeners for navigation buttons
+    if (nextBtn) {
+        nextBtn.addEventListener('click', navigateNext);
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', navigatePrev);
+    }
+
+    // Event listeners for department tabs
+    deptTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active class from all tabs
+            deptTabs.forEach(t => t.classList.remove('active'));
+
+            // Add active class to clicked tab
+            tab.classList.add('active');
+
+            // Filter by department
+            const dept = tab.dataset.dept;
+            filterByDepartment(dept);
+        });
+    });
+
+    // Touch/Swipe support for mobile
+    let touchStartX = 0;
+    let touchEndX = 0;
+
+    const carousel = document.querySelector('.doctors-carousel');
+    if (carousel) {
+        carousel.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        carousel.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+    }
+
+    function handleSwipe() {
+        const swipeThreshold = 50;
+        const diff = touchStartX - touchEndX;
+
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+                // Swiped left - go to next
+                navigateNext();
+            } else {
+                // Swiped right - go to previous
+                navigatePrev();
+            }
+        }
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') {
+            navigatePrev();
+        } else if (e.key === 'ArrowRight') {
+            navigateNext();
+        }
+    });
+
+    // Handle window resize
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            currentIndex = 0;
+            updateCarouselPosition();
+            updateNavigationButtons();
+        }, 250);
+    });
+
+    // Initialize
+    filterByDepartment('all');
+}

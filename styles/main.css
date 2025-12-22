@@ -1816,3 +1816,302 @@ button {
 .g_id_signin>div {
     width: 100%;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                        DOCTORS SECTION - DEPARTMENT CAROUSEL               */
+/* -------------------------------------------------------------------------- */
+.doctors-section {
+    padding: 5rem 0;
+    background: var(--dark-bg);
+    position: relative;
+}
+
+.doctors-section .section-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.doctors-section .section-subtitle {
+    display: inline-block;
+    color: #00bcd4;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+}
+
+.doctors-title {
+    font-size: 2.5rem;
+    color: #0a1f44;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.doctors-description {
+    max-width: 900px;
+    margin: 0 auto 3rem;
+    color: var(--text-muted);
+    line-height: 1.8;
+    text-align: justify;
+}
+
+/* Department Filter Tabs */
+.department-tabs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 3rem;
+    padding: 0 1rem;
+}
+
+.dept-tab {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-full);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.dept-tab:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(56, 189, 248, 0.3);
+    color: var(--white);
+    transform: translateY(-2px);
+}
+
+.dept-tab.active {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border-color: var(--primary-color);
+    color: var(--white);
+    box-shadow: 0 4px 15px rgba(56, 189, 248, 0.4);
+}
+
+/* Doctors Carousel Wrapper */
+.doctors-carousel-wrapper {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 60px;
+}
+
+.doctors-carousel {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+}
+
+.doctors-track {
+    display: flex;
+    gap: 2rem;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Doctor Card */
+.doctors-section .doctor-card {
+    min-width: calc(33.333% - 1.35rem);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    text-align: center;
+    padding: 2rem;
+}
+
+.doctors-section .doctor-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(56, 189, 248, 0.3);
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.doctor-image {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid rgba(56, 189, 248, 0.2);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.doctors-section .doctor-card:hover .doctor-image {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 30px rgba(56, 189, 248, 0.4);
+    transform: scale(1.05);
+}
+
+.doctor-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.doctors-section .doctor-card:hover .doctor-image img {
+    transform: scale(1.1);
+}
+
+.doctor-info h3 {
+    font-size: 1.25rem;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.doctor-info .specialty {
+    color: var(--primary-color);
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+/* Carousel Navigation */
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    color: var(--white);
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.carousel-nav:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.carousel-nav:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.prev-nav {
+    left: 0;
+}
+
+.next-nav {
+    right: 0;
+}
+
+.carousel-nav svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Team CTA Button */
+.team-cta {
+    text-align: center;
+    margin-top: 3rem;
+}
+
+.btn-team-consultants {
+    padding: 1rem 3rem;
+    background: linear-gradient(135deg, #00bcd4, #0097a7);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius-full);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+    text-transform: uppercase;
+}
+
+.btn-team-consultants:hover {
+    background: linear-gradient(135deg, #0097a7, #00838f);
+    box-shadow: 0 8px 25px rgba(0, 188, 212, 0.5);
+    transform: translateY(-3px);
+}
+
+.btn-team-consultants:active {
+    transform: translateY(-1px);
+}
+
+/* Hide doctors not in active department */
+.doctor-card.hidden {
+    display: none;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .doctors-section .doctor-card {
+        min-width: calc(50% - 1rem);
+    }
+}
+
+@media (max-width: 768px) {
+    .doctors-section .doctor-card {
+        min-width: 100%;
+    }
+
+    .doctors-carousel-wrapper {
+        padding: 0 50px;
+    }
+
+    .carousel-nav {
+        width: 40px;
+        height: 40px;
+    }
+
+    .carousel-nav svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .department-tabs {
+        gap: 0.5rem;
+    }
+
+    .dept-tab {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .doctors-title {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .doctors-carousel-wrapper {
+        padding: 0 40px;
+    }
+
+    .carousel-nav {
+        width: 35px;
+        height: 35px;
+    }
+
+    .dept-tab {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .doctor-image {
+        width: 150px;
+        height: 150px;
+    }
+}

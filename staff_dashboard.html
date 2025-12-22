@@ -5,140 +5,100 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Dashboard - HealCare</title>
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-    <!-- Styles -->
-    <link rel="stylesheet" href="styles/main.css">
-
-    <style>
-        .dashboard-container {
-            padding-top: 80px;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            position: fixed;
-            top: 80px;
-            left: 0;
-            bottom: 0;
-            background: rgba(15, 23, 42, 0.95);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 2rem 1rem;
-        }
-
-        .main-content {
-            margin-left: 250px;
-            padding: 2rem;
-        }
-
-        .nav-item {
-            display: block;
-            padding: 1rem;
-            color: var(--text-muted);
-            border-radius: var(--radius-sm);
-            margin-bottom: 0.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .nav-item:hover,
-        .nav-item.active {
-            background: rgba(56, 189, 248, 0.1);
-            color: var(--primary-color);
-        }
-
-        .dashboard-header {
-            margin-bottom: 2rem;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card-dash {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1.5rem;
-            border-radius: var(--radius-md);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .recent-section {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles/dashboard.css">
 </head>
 
 <body>
-
-    <!-- Navigation -->
-    <nav class="navbar glass-effect" style="position: fixed; background: rgba(15,23,42,0.95);">
-        <div class="container">
-            <a href="#" class="logo">
-                <span class="logo-icon">+</span> HealCare
-            </a>
-            <div class="nav-actions">
-                <span style="margin-right: 1rem;">Staff Member</span>
-                <a href="index.html" class="btn btn-outline btn-sm">Log Out</a>
+    <!-- Top Header -->
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon">📞</div>
+                <div class="info-details">
+                    <span class="info-label">Emergency</span>
+                    <span class="info-value">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div class="header-info-item">
+                <div class="info-icon">⏰</div>
+                <div class="info-details">
+                    <span class="info-label">Work Hour</span>
+                    <span class="info-value">09:00 - 20:00 Everyday</span>
+                </div>
+            </div>
+            <div class="header-info-item">
+                <div class="info-icon">📍</div>
+                <div class="info-details">
+                    <span class="info-label">Location</span>
+                    <span class="info-value">0123 Some Place</span>
+                </div>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <div class="dashboard-container">
+    <!-- Secondary Header -->
+    <div class="secondary-header">
+        <div class="brand-section">
+            <span class="brand-icon">+</span>
+            <span class="brand-name">HealCare</span>
+        </div>
+        <div class="user-controls">
+            <span class="user-greeting">Staff Member</span>
+            <a href="logout.php" class="btn-logout">Log Out</a>
+        </div>
+    </div>
+
+    <div class="dashboard-layout">
         <!-- Sidebar -->
         <aside class="sidebar">
-            <a href="#" class="nav-item active">Dashboard</a>
-            <a href="#" class="nav-item">Reception / Queue</a>
-            <a href="#" class="nav-item">Patient Billing</a>
-            <a href="#" class="nav-item">Inventory</a>
-            <a href="#" class="nav-item">Canteen Orders</a>
+            <a href="#" class="nav-link active">Dashboard</a>
+            <a href="#" class="nav-link">Reception / Queue</a>
+            <a href="#" class="nav-link">Patient Billing</a>
+            <a href="#" class="nav-link">Inventory</a>
+            <a href="#" class="nav-link">Canteen Orders</a>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
-            <div class="dashboard-header">
-                <h2>Staff Operations</h2>
-                <p class="text-muted">Manage hospital workflow and patient services.</p>
-            </div>
+            <section class="page-title-section">
+                <h1 class="page-title">Staff Operations</h1>
+                <p class="page-subtitle">Manage hospital workflow and patient services.</p>
+            </section>
 
             <div class="stats-grid">
-                <div class="stat-card-dash">
-                    <h3 class="highlight">120</h3>
-                    <p>New Registrations</p>
+                <div class="stat-card">
+                    <div class="stat-value">120</div>
+                    <div class="stat-label">New Registrations</div>
                 </div>
-                <div class="stat-card-dash">
-                    <h3 class="highlight">45</h3>
-                    <p>Pending Bills</p>
+                <div class="stat-card">
+                    <div class="stat-value">45</div>
+                    <div class="stat-label">Pending Bills</div>
                 </div>
-                <div class="stat-card-dash">
-                    <h3 class="highlight">15</h3>
-                    <p>Room Occupancy</p>
+                <div class="stat-card">
+                    <div class="stat-value">15</div>
+                    <div class="stat-label">Room Occupancy</div>
                 </div>
-                <div class="stat-card-dash">
-                    <h3 class="highlight">Done</h3>
-                    <p>Shift Status</p>
+                <div class="stat-card">
+                    <div class="stat-value">Done</div>
+                    <div class="stat-label">Shift Status</div>
                 </div>
             </div>
 
-            <div class="recent-section">
-                <h3>Quick Actions</h3>
-                <div style="margin-top: 1rem; display: flex; gap: 1rem;">
-                    <button class="btn btn-secondary glass-panel">Register New Patient</button>
-                    <button class="btn btn-secondary glass-panel">Generate Bill</button>
-                    <button class="btn btn-secondary glass-panel">Update Bed Status</button>
+            <div class="content-block">
+                <div class="block-header">
+                    <h2 class="block-title">Quick Actions</h2>
+                </div>
+                <div class="quick-actions">
+                    <a href="#" class="btn-quick">Register New Patient</a>
+                    <a href="#" class="btn-quick">Generate Bill</a>
+                    <a href="#" class="btn-quick">Update Bed Status</a>
                 </div>
             </div>
         </main>
     </div>
-
 </body>
 
 </html>

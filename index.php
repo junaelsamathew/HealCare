@@ -2,48 +2,53 @@
 
     <!-- Hero Section -->
     <section class="hero-section">
-        <div class="hero-text-area">
-            <span class="welcome-text">WELCOME TO HEALCARE</span>
-            <h1>A Great Place to Receive Care</h1>
-            <p>"Caring for you, digitally and compassionately — HealCare is health made simple."</p>
+        <div class="hero-bg">
+            <img src="images/bgimg.jpg" alt="HealCare Hospital Building">
+            <div class="hero-overlay"></div>
         </div>
-        <div class="hero-image-area">
-            <img src="images/hospital-building.jpg" alt="HealCare Hospital Building">
-            <!-- Action Cards - Inside the image -->
-            <div class="action-cards">
-                <div class="action-card">
-                    <span class="card-text">Book an Appointment</span>
-                    <div class="card-icon">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                            <rect x="7" y="14" width="3" height="3"/>
-                            <rect x="14" y="14" width="3" height="3"/>
-                        </svg>
+        
+        <div class="container hero-container">
+            <div class="hero-content">
+                <span class="welcome-text">WELCOME TO HEALCARE</span>
+                <h1>A Great Place to Receive Care</h1>
+                <p>"Caring for you, digitally and compassionately — HealCare is health made simple."</p>
+                
+                <!-- Action Cards -->
+                <div class="action-cards">
+                    <div class="action-card primary">
+                        <span class="card-text">Book an Appointment</span>
+                        <div class="card-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                                <rect x="7" y="14" width="3" height="3"/>
+                                <rect x="14" y="14" width="3" height="3"/>
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div class="action-card">
-                    <span class="card-text">Find a Doctor</span>
-                    <div class="card-icon">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <circle cx="9" cy="7" r="4"/>
-                            <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-                            <circle cx="17" cy="7" r="4"/>
-                            <path d="M21 21v-2a4 4 0 0 0-3-3.87"/>
-                        </svg>
+                    <div class="action-card primary">
+                        <span class="card-text">Find a Doctor</span>
+                        <div class="card-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                                <circle cx="17" cy="7" r="4"/>
+                                <path d="M21 21v-2a4 4 0 0 0-3-3.87"/>
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div class="action-card primary">
-                    <span class="card-text">Book a Health Checkup</span>
-                    <div class="card-icon">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <rect x="2" y="6" width="20" height="12" rx="2"/>
-                            <circle cx="8" cy="12" r="2"/>
-                            <circle cx="16" cy="12" r="2"/>
-                            <line x1="11" y1="12" x2="13" y2="12"/>
-                        </svg>
+                    <div class="action-card primary">
+                        <span class="card-text">Book a Health Checkup</span>
+                        <div class="card-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <rect x="2" y="6" width="20" height="12" rx="2"/>
+                                <circle cx="8" cy="12" r="2"/>
+                                <circle cx="16" cy="12" r="2"/>
+                                <line x1="11" y1="12" x2="13" y2="12"/>
+                            </svg>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -57,11 +62,21 @@
             <div class="who-we-are-content">
                 <div class="quote-icon">"</div>
                 <h2>WHO WE ARE</h2>
-                <p>HealCare Hospital is a modern digital healthcare platform committed to delivering compassionate, accessible, and reliable medical services. Built with a patient-first approach, HealCare integrates doctors, staff, laboratories, and administrative services into one secure system, ensuring efficient care and seamless hospital operations for everyone.</p>
-                <div class="dots">
-                    <span class="dot"></span>
-                    <span class="dot active"></span>
-                    <span class="dot"></span>
+                <div class="who-we-are-slider">
+                    <div class="who-slide active" data-index="0" style="display: block;">
+                        <p>HealCare Hospital is a modern digital healthcare platform committed to delivering compassionate, accessible, and reliable medical services. Built with a patient-first approach, HealCare integrates doctors, staff, laboratories, and administrative services into one secure system, ensuring efficient care and seamless hospital operations for everyone.</p>
+                    </div>
+                    <div class="who-slide" data-index="1" style="display: none;">
+                        <p>Our mission is to provide world-class medical facilities with a human touch, ensuring that every patient receives personalized attention and the best possible outcomes through our integrated healthcare delivery model that focuses on holistic healing.</p>
+                    </div>
+                    <div class="who-slide" data-index="2" style="display: none;">
+                        <p>With a team of highly qualified specialists and state-of-the-art technology, we are redefining healthcare standards to make medical excellence accessible to all segments of society while maintaining the highest levels of safety and quality.</p>
+                    </div>
+                </div>
+                <div class="dots who-dots">
+                    <span class="dot active" data-index="0"></span>
+                    <span class="dot" data-index="1"></span>
+                    <span class="dot" data-index="2"></span>
                 </div>
             </div>
         </div>
@@ -75,270 +90,312 @@
                 <h2>Our Specialties</h2>
             </div>
             <div class="specialties-grid">
+                <!-- General Medicine / Cardiovascular -->
                 <div class="specialty-card">
                     <div class="specialty-icon">
                         <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
                             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
                     </div>
-                    <span class="specialty-name">Neurology</span>
+                    <span class="specialty-name">General Medicine / Cardiovascular</span>
                 </div>
+                
+                <!-- Gynecology -->
+                <div class="specialty-card">
+                    <div class="specialty-icon">
+                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
+                            <circle cx="12" cy="8" r="5"/>
+                            <path d="M12 13v8M9 18h6"/>
+                        </svg>
+                    </div>
+                    <span class="specialty-name">Gynecology</span>
+                </div>
+                
+                <!-- Orthopedics (Bones) -->
                 <div class="specialty-card active">
                     <div class="specialty-icon">
                         <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                            <path d="M12 8v4M10 10h4"/>
+                            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
                         </svg>
                     </div>
-                    <span class="specialty-name">Bones</span>
+                    <span class="specialty-name">Orthopedics (Bones)</span>
                 </div>
+                
+                <!-- ENT -->
                 <div class="specialty-card">
                     <div class="specialty-icon">
                         <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
                         </svg>
                     </div>
-                    <span class="specialty-name">Oncology</span>
+                    <span class="specialty-name">ENT</span>
                 </div>
+                
+                <!-- Ophthalmology -->
                 <div class="specialty-card">
                     <div class="specialty-icon">
                         <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span class="specialty-name">Otorhinolaryngology</span>
-                </div>
-                <div class="specialty-card">
-                    <div class="specialty-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
                         </svg>
                     </div>
                     <span class="specialty-name">Ophthalmology</span>
                 </div>
+                
+                <!-- Dermatology -->
                 <div class="specialty-card">
                     <div class="specialty-icon">
                         <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span class="specialty-name">Cardiovascular</span>
-                </div>
-                <div class="specialty-card">
-                    <div class="specialty-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span class="specialty-name">Pulmonology</span>
-                </div>
-                <div class="specialty-card">
-                    <div class="specialty-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span class="specialty-name">Renal Medicine</span>
-                </div>
-                <div class="specialty-card">
-                    <div class="specialty-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span class="specialty-name">Gastroenterology</span>
-                </div>
-                <div class="specialty-card">
-                    <div class="specialty-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span class="specialty-name">Urology</span>
-                </div>
-                <div class="specialty-card">
-                    <div class="specialty-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            <circle cx="12" cy="12" r="2"/>
                         </svg>
                     </div>
                     <span class="specialty-name">Dermatology</span>
                 </div>
-                <div class="specialty-card">
-                    <div class="specialty-icon">
-                        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#1e90ff" stroke-width="1.5">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                    </div>
-                    <span class="specialty-name">Gynaecology</span>
-                </div>
             </div>
         </div>
     </section>
+    
 
-    <!-- Book an Appointment Section -->
-    <section id="book-appointment" class="appointment-section">
-        <div class="appointment-bg"></div>
-        <div class="container">
-            <div class="appointment-wrapper">
-                <div class="appointment-content">
-                    <h2>Book an Appointment</h2>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque placerat scelerisque tortor ornare ornare. Convallis felis vitae tortor augue. Velit nascetur proin massa in. Consequat faucibus porttitor enim et.</p>
-                </div>
-                <div class="appointment-form-wrapper">
-                    <form class="appointment-form" id="appointmentForm">
-                        <div class="form-row">
-                            <input type="text" name="name" placeholder="Name" required>
-                            <select name="gender" required>
-                                <option value="" disabled selected>Gender</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <input type="email" name="email" placeholder="Email" required>
-                            <input type="tel" name="phone" placeholder="Phone" required>
-                        </div>
-                        <div class="form-row">
-                            <select name="date" required>
-                                <option value="" disabled selected>Date</option>
-                                <option value="today">Today</option>
-                                <option value="tomorrow">Tomorrow</option>
-                                <option value="this-week">This Week</option>
-                            </select>
-                            <select name="time" required>
-                                <option value="" disabled selected>Time</option>
-                                <option value="09:00">09:00 AM</option>
-                                <option value="10:00">10:00 AM</option>
-                                <option value="11:00">11:00 AM</option>
-                                <option value="14:00">02:00 PM</option>
-                                <option value="15:00">03:00 PM</option>
-                                <option value="16:00">04:00 PM</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <select name="doctor" required>
-                                <option value="" disabled selected>Doctor</option>
-                                <option value="dr-smith">Dr. Smith</option>
-                                <option value="dr-johnson">Dr. Johnson</option>
-                                <option value="dr-williams">Dr. Williams</option>
-                            </select>
-                            <select name="department" required>
-                                <option value="" disabled selected>Department</option>
-                                <option value="cardiology">Cardiology</option>
-                                <option value="neurology">Neurology</option>
-                                <option value="orthopedics">Orthopedics</option>
-                                <option value="pediatrics">Pediatrics</option>
-                            </select>
-                        </div>
-                        <div class="form-row full">
-                            <textarea name="message" placeholder="Message" rows="4"></textarea>
-                        </div>
-                        <button type="submit" class="btn-submit">SUBMIT</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </section>
+
 
     <!-- Team of Professionals Section -->
     <section id="doctors" class="doctors-section">
         <div class="container">
-            <div class="section-header">
-                <span class="section-subtitle">HEAL CARE</span>
-                <h2 class="doctors-title">TEAM OF PROFESSIONALS<br><span>Meet your doctor</span></h2>
-            </div>
-            <div class="doctors-grid">
-                <div class="doctor-card">
-                    <div class="doctor-image">
-                        <img src="images/doctor-1.jpg" alt="Dr. Amal Dev">
+            <div class="doctors-layout">
+                <!-- Left Side: Content -->
+                <div class="doctors-left">
+                    <div class="section-header-left">
+                        <span class="section-subtitle">TEAM OF PROFESSIONALS</span>
+                        <h2 class="doctors-title">Meet your doctor</h2>
+                        <p class="doctors-description">
+                            HealCare Hospital, a team of around 30 consultant doctors with Experience, Expertise and Academic along with Technology cater to serve the needy with quality care and excellence in medication with an affordable price and uncompromising Nursing Care. 
+                            HealCare Hospital is a small hospital which offers comprehensive medical care in specialized departments including General Medicine / Cardiovascular, Gynecology, Orthopedics (Bones), ENT, Ophthalmology, and Dermatology.
+                            We have a vast pool of dexterous and experienced team of doctors, who are further supported by a team of highly qualified, experienced & dedicated support staff & cutting edge technology. 
+                            More than 50 consultants and 40 employees work together to manage over 15000 patients every year. The hospital has an infrastructure comprising of 100 beds.
+                        </p>
                     </div>
-                    <div class="doctor-info">
-                        <h3>DR.AMAL DEV</h3>
-                        <p class="specialty">SONOLOGY</p>
-                        <div class="social-links">
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                                </svg>
-                            </a>
+                    <div class="team-cta">
+                        <button class="btn-team-consultants">Team Of Consultants</button>
+                    </div>
+                </div>
+
+                <!-- Right Side: Doctors Display -->
+                <div class="doctors-right">
+                    <!-- Featured Doctors Grid/Carousel -->
+                    <div class="doctors-display-wrapper">
+                        <div class="doctors-cards-slider">
+                            <!-- Slide 1 -->
+                            <div class="doctor-slide active" style="display: grid;">
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-3.jpg" alt="Dr. Arjun Reddy">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Arjun Reddy</h3>
+                                        <p class="profile-specialty">Cardiology</p>
+                                    </div>
+                                </div>
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-7.jpg" alt="Dr. Meera Krishnan">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Meera Krishnan</h3>
+                                        <p class="profile-specialty">Neurology</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Slide 2 -->
+                            <div class="doctor-slide" style="display: none;">
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-2.jpg" alt="Dr. Suresh Kumar">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Suresh Kumar</h3>
+                                        <p class="profile-specialty">Orthopedics</p>
+                                    </div>
+                                </div>
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-9.jpg" alt="Dr. Ananya Iyer">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Ananya Iyer</h3>
+                                        <p class="profile-specialty">Pediatrics</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Slide 3 -->
+                            <div class="doctor-slide" style="display: none;">
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-5.jpg" alt="Dr. Vikram Singh">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Vikram Singh</h3>
+                                        <p class="profile-specialty">Dermatology</p>
+                                    </div>
+                                </div>
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-10.jpg" alt="Dr. Sneha Gupta">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Sneha Gupta</h3>
+                                        <p class="profile-specialty">Gynecology</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Slide 4 -->
+                            <div class="doctor-slide" style="display: none;">
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-6.jpg" alt="Dr. Rajesh Khanna">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Rajesh Khanna</h3>
+                                        <p class="profile-specialty">ENT</p>
+                                    </div>
+                                </div>
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-4.jpg" alt="Dr. Lakshmi Devi">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Lakshmi Devi</h3>
+                                        <p class="profile-specialty">Ophthalmology</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Slide 5 -->
+                            <div class="doctor-slide" style="display: none;">
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-1.jpg" alt="Dr. Abraham Mohan">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Abraham Mohan</h3>
+                                        <p class="profile-specialty">General Surgery</p>
+                                    </div>
+                                </div>
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="images/doctor-8.jpg" alt="Dr. Akshay Kumar">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3>Dr. Akshay Kumar</h3>
+                                        <p class="profile-specialty">Nephrology</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <a href="#" class="view-profile-btn">View Profile</a>
                 </div>
-                <div class="doctor-card">
-                    <div class="doctor-image">
-                        <img src="images/doctor-2.jpg" alt="Dr. Christo George">
-                    </div>
-                    <div class="doctor-info">
-                        <h3>DR.CHRISTO GEORGE</h3>
-                        <p class="specialty">DENTAL SCIENCE</p>
-                        <div class="social-links">
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </div>
-                    <a href="#" class="view-profile-btn">View Profile</a>
-                </div>
-                <div class="doctor-card">
-                    <div class="doctor-image">
-                        <img src="images/doctor-1.jpg" alt="Dr. Deepthi Madhu">
-                    </div>
-                    <div class="doctor-info">
-                        <h3>DR.DEEPTHI MADHU</h3>
-                        <p class="specialty">MICROBIOLOGY</p>
-                        <div class="social-links">
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
-                                </svg>
-                            </a>
-                            <a href="#" class="social-icon">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                                </svg>
-                            </a>
-                        </div>
-                    </div>
-                    <a href="#" class="view-profile-btn">View Profile</a>
-                </div>
-            </div>
-            <div class="dots">
-                <span class="dot"></span>
-                <span class="dot active"></span>
-                <span class="dot"></span>
             </div>
         </div>
     </section>
+
+    <!-- We Provide Best Care Section -->
+    <section class="best-care-section">
+        <div class="container text-center">
+            <div class="section-header white">
+                <h2>We Provide Best Care</h2>
+                <p>HealCare Hospital ensures to provide the highest quality of care and a transformative experience for all your healthcare needs. Our multi-speciality hospital equipped with specialised doctors, and world-class technology, bring global standards of medical care to our patients.</p>
+            </div>
+            
+            <div class="care-grid">
+                <!-- Diagnostic Center -->
+                <div class="care-card card-diag">
+                    <div class="care-overlay"></div>
+                    <div class="care-content">
+                        <h3>Diagnostic Center</h3>
+                        <p>Our state-of-the-art diagnostic center offers a comprehensive range of laboratory and imaging services for accurate and rapid diagnosis.</p>
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+                    </div>
+                </div>
+
+                <!-- Health Packages -->
+                <div class="care-card card-pkg">
+                    <div class="care-overlay"></div>
+                    <div class="care-content">
+                        <h3>Health Packages</h3>
+                        <p>Don't ignore the signals from your body before it's too late. Take the step toward preventive health with our comprehensive packages.</p>
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+                    </div>
+                </div>
+
+                <!-- Home Care -->
+                <div class="care-card card-home">
+                    <div class="care-overlay"></div>
+                    <div class="care-content">
+                        <h3>Home Care</h3>
+                        <p>HealCare Hospital aims at bringing personalized and quality healthcare services to the comfort of your home.</p>
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+                    </div>
+                </div>
+
+                <!-- Community Clinics -->
+                <div class="care-card card-comm">
+                    <div class="care-overlay"></div>
+                    <div class="care-content">
+                        <h3>Community Clinics</h3>
+                        <p>We believe in making healthcare accessible. Visit our community clinics for affordable, high-quality primary care near you.</p>
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+                    </div>
+                </div>
+
+                <!-- Emergency -->
+                <div class="care-card card-emg">
+                    <div class="care-overlay"></div>
+                    <div class="care-content">
+                        <h3>Emergency</h3>
+                        <p>Our Emergency Department is geared to meet all medical and surgical emergencies, including pediatric and trauma care 24/7.</p>
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+                    </div>
+                </div>
+
+                <!-- 24x7 Pharmacy -->
+                <div class="care-card card-phm">
+                    <div class="care-overlay"></div>
+                    <div class="care-content">
+                        <h3>24x7 Pharmacy</h3>
+                        <p>Accessible round the clock, our well-stocked pharmacy ensures that the medicines you need are always available.</p>
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
 
     <!-- News Section -->
     <section id="news" class="news-section">
@@ -349,7 +406,9 @@
             </div>
             <div class="news-grid">
                 <div class="news-card">
-                    <div class="news-image gradient-1"></div>
+                    <div class="news-image">
+                        <img src="images/news-1.jpg" alt="Health Camp">
+                    </div>
                     <div class="news-content">
                         <span class="news-date">Monday 16, December 2024 | <span class="author">By Admin</span></span>
                         <h4>HealCare Launches Free Health Camp for Local Community</h4>
@@ -360,7 +419,9 @@
                     </div>
                 </div>
                 <div class="news-card">
-                    <div class="news-image gradient-2"></div>
+                    <div class="news-image">
+                        <img src="images/news-2.jpg" alt="Cardiology Wing">
+                    </div>
                     <div class="news-content">
                         <span class="news-date">Friday 13, December 2024 | <span class="author">By Admin</span></span>
                         <h4>New Cardiology Wing Inaugurated at HealCare Hospital</h4>
@@ -371,7 +432,9 @@
                     </div>
                 </div>
                 <div class="news-card">
-                    <div class="news-image gradient-3"></div>
+                    <div class="news-image">
+                        <img src="images/news-3.jpg" alt="Excellence Award">
+                    </div>
                     <div class="news-content">
                         <span class="news-date">Wednesday 11, December 2024 | <span class="author">By Admin</span></span>
                         <h4>HealCare Receives Excellence Award in Patient Care</h4>
@@ -382,7 +445,9 @@
                     </div>
                 </div>
                 <div class="news-card">
-                    <div class="news-image gradient-4"></div>
+                    <div class="news-image">
+                        <img src="images/news-1.jpg" alt="Blood Donation">
+                    </div>
                     <div class="news-content">
                         <span class="news-date">Monday 09, December 2024 | <span class="author">By Admin</span></span>
                         <h4>Blood Donation Drive: Over 200 Donors Participate</h4>
@@ -464,4 +529,114 @@
         </div>
     </section>
 
+    <!-- Floating Social Bar -->
+    <div class="social-side-bar">
+        <a href="#" class="social-side-item fb"><i class="fab fa-facebook-f"></i></a>
+        <a href="#" class="social-side-item tw"><i class="fab fa-twitter"></i></a>
+        <a href="#" class="social-side-item yt"><i class="fab fa-youtube"></i></a>
+        <a href="#" class="social-side-item ig"><i class="fab fa-instagram"></i></a>
+    </div>
+
+    <!-- Floating Action Buttons -->
+    <div class="floating-actions">
+        <a href="https://wa.me/254717783146" class="float-btn whatsapp-btn" target="_blank">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+        <a href="tel:+254717783146" class="float-btn call-btn">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+        </a>
+    </div>
+
+    <script>
+        // Who We Are Slider Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const slides = document.querySelectorAll('.who-slide');
+            const dots = document.querySelectorAll('.who-dots .dot');
+            let currentSlide = 0;
+            let slideInterval;
+
+            function showSlide(index) {
+                slides.forEach((slide, i) => {
+                    slide.classList.remove('active');
+                    slide.style.display = 'none';
+                    dots[i].classList.remove('active');
+                });
+                
+                slides[index].classList.add('active');
+                slides[index].style.display = 'block';
+                dots[index].classList.add('active');
+                currentSlide = index;
+            }
+
+            function nextSlide() {
+                let next = (currentSlide + 1) % slides.length;
+                showSlide(next);
+            }
+
+            function startInterval() {
+                clearInterval(slideInterval);
+                slideInterval = setInterval(nextSlide, 3000);
+            }
+
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    showSlide(index);
+                    startInterval();
+                });
+            });
+
+            // Swipe functionality
+            let touchStartX = 0;
+            let touchEndX = 0;
+            const slider = document.querySelector('.who-we-are-slider');
+
+            slider.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+            }, false);
+
+            slider.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                handleSwipe();
+            }, false);
+
+            function handleSwipe() {
+                if (touchEndX < touchStartX - 50) {
+                    // Swipe left - next slide
+                    nextSlide();
+                    startInterval();
+                }
+                if (touchEndX > touchStartX + 50) {
+                    // Swipe right - prev slide
+                    let prev = (currentSlide - 1 + slides.length) % slides.length;
+                    showSlide(prev);
+                    startInterval();
+                }
+            }
+
+            startInterval();
+        });
+
+        // Doctors Slider Functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const doctorSlides = document.querySelectorAll('.doctor-slide');
+            let currentDoctorSlide = 0;
+
+            if (doctorSlides.length === 0) return;
+
+            function showNextDoctors() {
+                // Hide current
+                doctorSlides[currentDoctorSlide].classList.remove('active');
+                doctorSlides[currentDoctorSlide].style.display = 'none';
+
+                // Move to next
+                currentDoctorSlide = (currentDoctorSlide + 1) % doctorSlides.length;
+
+                // Show next
+                doctorSlides[currentDoctorSlide].classList.add('active');
+                doctorSlides[currentDoctorSlide].style.display = 'grid';
+            }
+
+            setInterval(showNextDoctors, 3000);
+        });
+    </script>
 <?php include 'includes/footer.php'; ?>

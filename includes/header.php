@@ -7,6 +7,7 @@
     <title>HealCare - A Great Place to Receive Care</title>
     <link rel="stylesheet" href="styles/landing.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <!-- Top Bar -->
@@ -65,7 +66,6 @@
                     <li><a href="index.php" class="active">Home</a></li>
                     <li><a href="#about">About Us</a></li>
                     <li><a href="#services">Services</a></li>
-                    <li><a href="#book-appointment">Book Appointment</a></li>
                     <li><a href="#find-doctor">Find a Doctor</a></li>
                     <li><a href="#contact">Contact</a></li>
                 </ul>
