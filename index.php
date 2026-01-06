@@ -15,7 +15,21 @@
                 
                 <!-- Action Cards -->
                 <div class="action-cards">
-                    <div class="action-card primary">
+                    <!-- 1. Find a Doctor -->
+                    <a href="find_doctor.php" class="action-card primary" style="text-decoration: none; color: inherit;">
+                        <span class="card-text">Find a Doctor</span>
+                        <div class="card-icon">
+                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                                <circle cx="17" cy="7" r="4"/>
+                                <path d="M21 21v-2a4 4 0 0 0-3-3.87"/>
+                            </svg>
+                        </div>
+                    </a>
+
+                    <!-- 2. Book an Appointment -->
+                    <a href="find_doctor.php" class="action-card primary" style="text-decoration: none; color: inherit;">
                         <span class="card-text">Book an Appointment</span>
                         <div class="card-icon">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -27,19 +41,10 @@
                                 <rect x="14" y="14" width="3" height="3"/>
                             </svg>
                         </div>
-                    </div>
-                    <div class="action-card primary">
-                        <span class="card-text">Find a Doctor</span>
-                        <div class="card-icon">
-                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <circle cx="9" cy="7" r="4"/>
-                                <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-                                <circle cx="17" cy="7" r="4"/>
-                                <path d="M21 21v-2a4 4 0 0 0-3-3.87"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="action-card primary">
+                    </a>
+
+                    <!-- 3. Health Checkup -->
+                    <a href="health_packages.php" class="action-card primary" style="text-decoration: none; color: inherit;">
                         <span class="card-text">Book a Health Checkup</span>
                         <div class="card-icon">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -49,7 +54,7 @@
                                 <line x1="11" y1="12" x2="13" y2="12"/>
                             </svg>
                         </div>
-                    </div>
+                    </a>
                 </div>
             </div>
         </div>

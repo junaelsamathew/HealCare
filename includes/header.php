@@ -63,11 +63,12 @@
         <div class="container">
             <div class="nav-content">
                 <ul class="nav-links">
-                    <li><a href="index.php" class="active">Home</a></li>
-                    <li><a href="#about">About Us</a></li>
-                    <li><a href="#services">Services</a></li>
-                    <li><a href="#find-doctor">Find a Doctor</a></li>
-                    <li><a href="#contact">Contact</a></li>
+                    <li><a href="index.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'index.php') ? 'active' : ''; ?>">Home</a></li>
+                    <li><a href="about.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'about.php') ? 'active' : ''; ?>">About Us</a></li>
+                    <li><a href="services.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'services.php') ? 'active' : ''; ?>">Services</a></li>
+                    <li><a href="find_doctor.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'find_doctor.php') ? 'active' : ''; ?>">Find a Doctor</a></li>
+                    <li><a href="contact.php" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'contact.php') ? 'active' : ''; ?>">Contact</a></li>
+                    <li><a href="apply.php" style="color: #3b82f6; font-weight: 700;" class="<?php echo (basename($_SERVER['PHP_SELF']) == 'apply.php') ? 'active' : ''; ?>">Join Our Team</a></li>
                 </ul>
                 <a href="login.php" class="btn-login">LOGIN/SIGNUP</a>
             </div>
