@@ -2,151 +2,536 @@
 session_start();
 include 'includes/db_connect.php';
 
+// Check for canteen staff role
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'staff') {
     header("Location: login.php");
     exit();
 }
 
+// Get user info
 $user_id = $_SESSION['user_id'];
+$username = $_SESSION['username'];
+
+// Handle POST actions
+$success_msg = "";
+$error_msg = "";
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // 1. Status Update
+    if (isset($_POST['update_status'])) {
+        $order_id = $_POST['order_id'];
+        $new_status = $_POST['new_status'];
+        $stmt = $conn->prepare("UPDATE canteen_orders SET order_status = ? WHERE order_id = ?");
+        $stmt->bind_param("si", $new_status, $order_id);
+        if ($stmt->execute()) {
+            $success_msg = "Order #$order_id status updated to $new_status!";
+        }
+    }
+
+    // 2. Menu Item Management
+    if (isset($_POST['save_menu_item'])) {
+        $name = $_POST['food_name'];
+        $cat = $_POST['meal_category'];
+        $diet = $_POST['diet_type'];
+        $price = $_POST['price'];
+        $desc = $_POST['description'];
+        $avail = $_POST['availability'];
+        $mid = $_POST['menu_id'] ?? null;
+
+        if ($mid) {
+            $stmt = $conn->prepare("UPDATE canteen_menu SET item_name=?, item_category=?, diet_type=?, price=?, description=?, availability=? WHERE menu_id=?");
+            $stmt->bind_param("sssdssi", $name, $cat, $diet, $price, $desc, $avail, $mid);
+        } else {
+            $stmt = $conn->prepare("INSERT INTO canteen_menu (item_name, item_category, diet_type, price, description, availability) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssdss", $name, $cat, $diet, $price, $desc, $avail);
+        }
+        if ($stmt->execute()) {
+            $success_msg = $mid ? "Menu item updated!" : "New menu item added!";
+        }
+    }
+
+    if (isset($_POST['delete_menu_item'])) {
+        $mid = $_POST['menu_id'];
+        $stmt = $conn->prepare("DELETE FROM canteen_menu WHERE menu_id = ?");
+        $stmt->bind_param("i", $mid);
+        if ($stmt->execute()) {
+            $success_msg = "Menu item deleted!";
+        }
+    }
+
+    // 3. Profile Update
+    if (isset($_POST['update_profile'])) {
+        $new_name = $_POST['full_name'];
+        $new_phone = $_POST['phone'];
+        $stmt = $conn->prepare("UPDATE registrations r JOIN users u ON r.registration_id = u.registration_id SET r.name = ?, r.phone = ? WHERE u.user_id = ?");
+        $stmt->bind_param("ssi", $new_name, $new_phone, $user_id);
+        if ($stmt->execute()) {
+            $success_msg = "Profile updated successfully!";
+        }
+    }
+
+    // 4. Password Update
+    if (isset($_POST['update_password'])) {
+        $new_pass = password_hash($_POST['new_password'], PASSWORD_DEFAULT);
+        $stmt = $conn->prepare("UPDATE registrations r JOIN users u ON r.registration_id = u.registration_id SET r.password = ? WHERE u.user_id = ?");
+        $stmt->bind_param("si", $new_pass, $user_id);
+        if ($stmt->execute()) {
+            $success_msg = "Password changed successfully!";
+        }
+    }
+}
+
+$section = $_GET['section'] ?? 'active_orders';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canteen Dashboard - HealCare</title>
+    <title>Canteen Panel - HealCare Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="styles/dashboard.css">
     <style>
         :root {
             --bg-deep: #020617;
+            --bg-sidebar: #020617;
             --bg-card: #0f172a;
-            --accent-orange: #4fc3f7;
-            --border-soft: rgba(255, 255, 255, 0.05);
+            --accent: #4fc3f7;
+            --text-main: #fff;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.05);
+            --sidebar-width: 280px;
         }
 
-        .reception-top-bar { background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
-        .secondary-nav { background: #0f172a; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; }
-        .dashboard-body { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 140px); background: #020617; }
-        .side-nav { background: #020617; padding: 20px 0; border-right: 1px solid var(--border-soft); }
-        .nav-item { display: flex; align-items: center; padding: 15px 30px; color: #94a3b8; text-decoration: none; font-size: 14px; gap: 15px; transition: 0.3s; }
-        .nav-item.active { background: rgba(79, 195, 247, 0.1); color: #4fc3f7; border-left: 4px solid #4fc3f7; }
-        .main-ops { padding: 40px; overflow-y: auto; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg-deep); color: var(--text-main); margin: 0; display: flex; min-height: 100vh; overflow-x: hidden; }
+        
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); background: var(--bg-sidebar); border-right: 1px solid var(--border); position: fixed; height: 100vh; display: flex; flex-direction: column; z-index: 1001; }
+        .sidebar-header { padding: 30px; display: flex; align-items: center; gap: 15px; }
+        .brand-icon { background: var(--accent); color: #fff; width: 35px; height: 35px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
+        .brand-text { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
 
-        .order-card {
-            background: #0f172a; border: 1px solid var(--border-soft); border-radius: 12px; padding: 25px;
-            margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1.5fr; gap: 30px; border-left: 4px solid #4fc3f7;
+        .nav-links { flex: 1; padding: 20px 0; }
+        .nav-link { 
+            display: flex; align-items: center; padding: 16px 30px; 
+            color: var(--text-dim); text-decoration: none; font-size: 15px; 
+            font-weight: 500; transition: 0.3s; gap: 15px; border-left: 4px solid transparent; 
         }
-        .status-badge-ct { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-        .st-prep { background: rgba(79, 195, 247, 0.1); color: #4fc3f7; }
-        .st-ready { background: rgba(79, 195, 247, 0.1); color: #4fc3f7; }
+        .nav-link i { width: 22px; font-size: 18px; text-align: center; }
+        .nav-link:hover { color: #fff; background: rgba(255,255,255,0.02); }
+        .nav-link.active { 
+            background: rgba(79, 195, 247, 0.08); 
+            color: var(--accent); 
+            border-left: 4px solid var(--accent); 
+        }
 
-        .menu-item-card {
-            background: rgba(255,255,255,0.02); border: 1px solid var(--border-soft); padding: 15px; border-radius: 10px;
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
-        }
+        /* Main Content */
+        .main-content { margin-left: var(--sidebar-width); flex: 1; display: flex; flex-direction: column; }
+        .top-navbar { height: 80px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1000; }
+        .page-title { font-size: 20px; font-weight: 700; }
+        .user-info { display: flex; align-items: center; gap: 15px; }
+        .user-avatar { width: 35px; height: 35px; background: #1e293b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--accent); }
+
+        .content-body { padding: 40px; }
+
+        /* Tables & Cards */
+        .card { background: var(--bg-card); border-radius: 20px; border: 1px solid var(--border); padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { text-align: left; padding: 15px; color: var(--text-dim); border-bottom: 2px solid var(--border); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .data-table td { padding: 15px; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .status-placed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .status-preparing { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .status-delivered { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; border: none; cursor: pointer; transition: 0.3s; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: var(--accent); color: #000; }
+        .btn-success { background: #10b981; color: #fff; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: #fff; }
+        .btn:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+        /* Form Controls */
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; margin-bottom: 8px; font-size: 13px; color: var(--text-dim); }
+        .form-input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 12px; border-radius: 10px; color: #fff; outline: none; }
+        .form-input:focus { border-color: var(--accent); }
+
+        /* Notifications */
+        .banner { padding: 15px 25px; border-radius: 12px; margin-bottom: 30px; display: flex; align-items: center; gap: 15px; font-weight: 600; }
+        .banner-success { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+        /* Modal placeholder */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 2000; }
+        .modal { background: #0f172a; background-image: radial-gradient(at top left, #1e293b, #0f172a); width: 500px; padding: 40px; border-radius: 20px; border: 1px solid var(--border); position: relative; }
     </style>
 </head>
 <body>
 
-    <!-- Universal Header -->
-    <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
-        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
-        <div style="display: flex; gap: 40px; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
-                    <i class="fas fa-phone-alt"></i>
-                </div>
-                <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
-                </div>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="brand-icon">C</div>
+            <div class="brand-text">Canteen Panel</div>
+        </div>
+        <nav class="nav-links">
+            <a href="?section=active_orders" class="nav-link <?php echo $section == 'active_orders' ? 'active' : ''; ?>">
+                <i class="fas fa-list-ul"></i> Active Orders
+            </a>
+            <a href="?section=menu_management" class="nav-link <?php echo $section == 'menu_management' ? 'active' : ''; ?>">
+                <i class="fas fa-utensils"></i> Menu Management
+            </a>
+            <a href="?section=order_history" class="nav-link <?php echo $section == 'order_history' ? 'active' : ''; ?>">
+                <i class="fas fa-history"></i> Order History
+            </a>
+            <a href="?section=profile" class="nav-link <?php echo $section == 'profile' ? 'active' : ''; ?>">
+                <i class="fas fa-cog"></i> Profile Settings
+            </a>
+        </nav>
+        <div style="padding: 20px;">
+            <a href="logout.php" class="nav-link" style="color: #ef4444;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-navbar">
+            <div class="page-title">
+                <?php 
+                    if($section == 'active_orders') echo "Active Orders Module";
+                    elseif($section == 'menu_management') echo "Menu Management Module";
+                    elseif($section == 'order_history') echo "Order History Module";
+                    elseif($section == 'profile') echo "Profile Settings Module";
+                ?>
             </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
-                </div>
+            <div class="user-info">
+                <span style="font-size: 14px; color: var(--text-dim);">HealCare Canteen Staff</span>
+                <div class="user-avatar"><i class="fas fa-user"></i></div>
             </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
-                    <i class="fas fa-map-marker-alt"></i>
+        </header>
+
+        <section class="content-body">
+            <?php if ($success_msg): ?>
+                <div class="banner banner-success"><i class="fas fa-check-circle"></i> <?php echo $success_msg; ?></div>
+            <?php endif; ?>
+
+            <?php if ($section == 'active_orders'): ?>
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2 style="margin: 0;">Live Orders Tracker</h2>
+                        <button onclick="window.location.reload()" class="btn btn-outline"><i class="fas fa-sync"></i> Refresh Updates</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Patient Info</th>
+                                <th>Meal & Items</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $active_orders = $conn->query("
+                                SELECT co.*, cm.item_name, cm.item_category, cm.diet_type as item_diet,
+                                       COALESCE(pp.name, r.name) as pname, COALESCE(pp.patient_code, 'N/A') as pcode
+                                FROM canteen_orders co
+                                JOIN canteen_menu cm ON co.menu_id = cm.menu_id
+                                JOIN users u ON co.patient_id = u.user_id
+                                LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                                LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
+                                WHERE co.order_status IN ('Placed', 'Preparing')
+                                ORDER BY co.created_at DESC
+                            ");
+                            if ($active_orders && $active_orders->num_rows > 0):
+                                while ($o = $active_orders->fetch_assoc()):
+                            ?>
+                                <tr>
+                                    <td><strong style="color: var(--accent);">#<?php echo $o['order_id']; ?></strong></td>
+                                    <td>
+                                        <div style="font-weight: 700;"><?php echo htmlspecialchars($o['pname']); ?></div>
+                                        <div style="font-size: 11px; color: var(--text-dim);">ID: <?php echo $o['pcode']; ?> | Location: <?php echo $o['delivery_location'] ?: 'OPD'; ?></div>
+                                    </td>
+                                    <td>
+                                        <div><?php echo $o['item_name']; ?> <small style="color: var(--accent);">(<?php echo $o['item_category']; ?>)</small></div>
+                                        <div style="font-size: 11px; color: #4fc3f7;">Diet: <?php echo $o['item_diet'] ?: 'Normal'; ?></div>
+                                    </td>
+                                    <td><?php echo date('h:i A', strtotime($o['order_time'])); ?></td>
+                                    <td><span class="status-badge status-<?php echo strtolower($o['order_status']); ?>"><?php echo $o['order_status']; ?></span></td>
+                                    <td>
+                                        <form method="POST" style="display: flex; gap: 5px;">
+                                            <input type="hidden" name="order_id" value="<?php echo $o['order_id']; ?>">
+                                            <?php if ($o['order_status'] == 'Placed'): ?>
+                                                <button type="submit" name="new_status" value="Preparing" class="btn btn-primary btn-sm">Accept & Prep</button>
+                                            <?php elseif ($o['order_status'] == 'Preparing'): ?>
+                                                <button type="submit" name="new_status" value="Delivered" class="btn btn-success btn-sm">Deliver</button>
+                                            <?php endif; ?>
+                                            <input type="hidden" name="update_status" value="1">
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endwhile; else: ?>
+                                <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-dim);">No active orders at the moment.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
                 </div>
-                <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">LOCATION</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">Kanjirapally, Kottayam</span>
+
+            <?php elseif ($section == 'menu_management'): ?>
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                        <h2 style="margin: 0;">Food Menu Management</h2>
+                        <button onclick="openModal()" class="btn btn-primary"><i class="fas fa-plus"></i> Add New Food Item</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Food Name</th>
+                                <th>Category</th>
+                                <th>Diet Type</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $menu = $conn->query("SELECT * FROM canteen_menu ORDER BY item_category, item_name");
+                            while ($m = $menu->fetch_assoc()):
+                            ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($m['item_name']); ?></strong></td>
+                                    <td><?php echo $m['item_category']; ?></td>
+                                    <td><?php echo $m['diet_type'] ?: 'Any'; ?></td>
+                                    <td>₹<?php echo number_format($m['price'], 0); ?></td>
+                                    <td>
+                                        <span class="status-badge" style="background: <?php echo $m['availability'] == 'Available' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'; ?>; color: <?php echo $m['availability'] == 'Available' ? '#10b981' : '#ef4444'; ?>;">
+                                            <?php echo $m['availability']; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 10px;">
+                                            <button onclick='editItem(<?php echo json_encode($m); ?>)' class="btn btn-outline" style="padding: 5px 10px;"><i class="fas fa-edit"></i></button>
+                                            <form method="POST" onsubmit="return confirm('Delete this item?');">
+                                                <input type="hidden" name="menu_id" value="<?php echo $m['menu_id']; ?>">
+                                                <button name="delete_menu_item" class="btn btn-outline" style="padding: 5px 10px; color: #ef4444; border-color: rgba(239,68,68,0.2);"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
+
+            <?php elseif ($section == 'order_history'): ?>
+                <div class="card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                        <h2 style="margin: 0;">Past Orders & History</h2>
+                        <form method="GET" style="display: flex; gap: 15px;">
+                            <input type="hidden" name="section" value="order_history">
+                            <input type="date" name="filter_date" value="<?php echo $_GET['filter_date'] ?? ''; ?>" class="form-input" style="width: 150px; padding: 8px;" onchange="this.form.submit()">
+                            <select name="filter_cat" class="form-input" style="width: 170px; padding: 8px;" onchange="this.form.submit()">
+                                <option value="">All Categories</option>
+                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Morning / Breakfast') ? 'selected' : ''; ?>>Morning / Breakfast</option>
+                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Lunch') ? 'selected' : ''; ?>>Lunch</option>
+                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Evening Snacks') ? 'selected' : ''; ?>>Evening Snacks</option>
+                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Dinner') ? 'selected' : ''; ?>>Dinner</option>
+                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Night Food') ? 'selected' : ''; ?>>Night Food</option>
+                            </select>
+                        </form>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Delivered Time</th>
+                                <th>Patient</th>
+                                <th>Ordered Item</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $filter_date = $_GET['filter_date'] ?? '';
+                            $filter_cat = $_GET['filter_cat'] ?? '';
+
+                            $history_query = "
+                                SELECT co.*, cm.item_name, COALESCE(pp.name, r.name) as pname
+                                FROM canteen_orders co
+                                JOIN canteen_menu cm ON co.menu_id = cm.menu_id
+                                JOIN users u ON co.patient_id = u.user_id
+                                LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                                LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
+                                WHERE co.order_status = 'Delivered'
+                            ";
+
+                            if ($filter_date) {
+                                $history_query .= " AND co.order_date = '$filter_date'";
+                            }
+                            if ($filter_cat) {
+                                $history_query .= " AND cm.item_category = '$filter_cat'";
+                            }
+
+                            $history_query .= " ORDER BY co.updated_at DESC";
+                            $history = $conn->query($history_query);
+                            
+                            if ($history && $history->num_rows > 0):
+                                while ($h = $history->fetch_assoc()):
+                            ?>
+                                <tr>
+                                    <td>#<?php echo $h['order_id']; ?></td>
+                                    <td><?php echo date('M d, h:i A', strtotime($h['updated_at'])); ?></td>
+                                    <td><strong><?php echo htmlspecialchars($h['pname']); ?></strong></td>
+                                    <td><?php echo $h['item_name']; ?></td>
+                                    <td>₹<?php echo number_format($h['total_amount'], 0); ?></td>
+                                    <td><span class="status-badge status-delivered">DELIVERED</span></td>
+                                </tr>
+                            <?php endwhile; else: ?>
+                                <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-dim);">No past orders found matching the filters.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+
+            <?php elseif ($section == 'profile'): ?>
+                <div style="max-width: 600px;">
+                    <div class="card">
+                        <h3>Update My Information</h3>
+                        <form method="POST">
+                            <input type="hidden" name="update_profile" value="1">
+                            <div class="form-group">
+                                <label class="form-label">Full Name</label>
+                                <input type="text" name="full_name" class="form-input" value="<?php echo htmlspecialchars($username); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Phone Number</label>
+                                <input type="text" name="phone" class="form-input" placeholder="Update your phone">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Security & Password</h3>
+                        <form method="POST">
+                            <input type="hidden" name="update_password" value="1">
+                            <div class="form-group">
+                                <label class="form-label">New Password</label>
+                                <input type="password" name="new_password" class="form-input" placeholder="Min 6 characters" required>
+                            </div>
+                            <button type="submit" class="btn btn-outline" style="border-color: var(--accent); color: var(--accent);">Change Password</button>
+                        </form>
+                    </div>
+                </div>
+            <?php endif; ?>
+        </section>
+    </main>
+
+    <!-- Menu Modal -->
+    <div id="menuModal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modalTitle">Add Food Item</h3>
+            <form method="POST">
+                <input type="hidden" name="save_menu_item" value="1">
+                <input type="hidden" name="menu_id" id="m_id">
+                <div class="form-group">
+                    <label class="form-label">Food Name</label>
+                    <input type="text" name="food_name" id="m_name" class="form-input" required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label class="form-label">Meal Category</label>
+                        <select name="meal_category" id="m_cat" class="form-input">
+                            <option>Morning / Breakfast</option>
+                            <option>Lunch</option>
+                            <option>Evening Snacks</option>
+                            <option>Dinner</option>
+                            <option>Night Food</option>
+                            <option>Other Food Items</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Diet Recommend</label>
+                        <select name="diet_type" id="m_diet" class="form-input">
+                            <option value="Normal">Normal</option>
+                            <option value="Diabetic">Diabetic</option>
+                            <option value="Low-Salt">Low-Salt</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label class="form-label">Price (₹)</label>
+                        <input type="number" step="0.01" name="price" id="m_price" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Availability</label>
+                        <select name="availability" id="m_avail" class="form-input">
+                            <option>Available</option>
+                            <option>Out of Stock</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" id="m_desc" class="form-input" rows="3"></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save Menu Item</button>
+                    <button type="button" onclick="closeModal()" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 
-    <div class="secondary-nav">
-        <div style="display: flex; align-items: center; gap: 15px;"><div style="background: #4fc3f7; color:#fff; width:35px; height:35px; display:flex; align-items:center; justify-content:center; border-radius:8px; font-weight:bold;">C</div><h2 style="color:#fff; font-size:20px;">Canteen Panel</h2></div>
-        <div style="display: flex; align-items: center;"><span class="staff-label" style="color: #94a3b8; font-size: 14px; margin-right: 15px;"><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']); ?></span><a href="logout.php" style="color: #94a3b8; text-decoration: none; border: 1px solid #4fc3f7; padding: 5px 20px; border-radius: 20px;">Log Out</a></div>
-    </div>
+    <script>
+        function openModal() {
+            document.getElementById('modalTitle').innerText = "Add New Food Item";
+            document.getElementById('m_id').value = "";
+            document.getElementById('m_name').value = "";
+            document.getElementById('m_price').value = "";
+            document.getElementById('m_desc').value = "";
+            document.getElementById('menuModal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('menuModal').style.display = 'none';
+        }
+        function editItem(item) {
+            document.getElementById('modalTitle').innerText = "Edit Food Item";
+            document.getElementById('m_id').value = item.menu_id;
+            document.getElementById('m_name').value = item.item_name;
+            document.getElementById('m_cat').value = item.item_category;
+            document.getElementById('m_diet').value = item.diet_type;
+            document.getElementById('m_price').value = item.price;
+            document.getElementById('m_avail').value = item.availability;
+            document.getElementById('m_desc').value = item.description;
+            document.getElementById('menuModal').style.display = 'flex';
+        }
 
-    <div class="dashboard-body">
-        <aside class="side-nav">
-            <a href="#" class="nav-item active"><i class="fas fa-list-ul"></i> Active Orders</a>
-            <a href="#" class="nav-item"><i class="fas fa-utensils"></i> Menu Management</a>
-            <a href="#" class="nav-item"><i class="fas fa-history"></i> Order History</a>
-            <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
-        </aside>
-
-        <main class="main-ops">
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-                <!-- Live Orders -->
-                <div>
-                    <h3 style="color:#fff; margin-bottom: 20px;">Active Orders & Time-Slots</h3>
-                    <div class="order-card">
-                        <div>
-                            <span class="status-badge-ct st-prep">Preparing</span>
-                            <h4 style="color:#fff; margin: 15px 0 5px 0; font-size: 18px;">Patient Combo A</h4>
-                            <p style="font-size: 13px; color: #94a3b8; margin-bottom: 15px;">Ward B / Bed 15 • Liquid Diet</p>
-                            <div style="font-size: 12px; color: #cbd5e1;"><i class="fas fa-clock"></i> Requested Slot: <strong>08:30 AM - 09:00 AM</strong></div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; gap: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <span style="font-size: 13px; color: #cbd5e1;">Progress Monitor</span>
-                                <span style="color: #4fc3f7; font-size: 11px; font-weight: 800;">75% Cooked</span>
-                            </div>
-                            <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
-                                <div style="width: 75%; height: 100%; background: #4fc3f7;"></div>
-                            </div>
-                            <div style="display: flex; gap: 10px; margin-top: 5px;">
-                                <button style="flex: 1; padding: 10px; background: #4fc3f7; border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer;">Mark Ready</button>
-                                <button style="flex: 1; padding: 10px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer;">Out for delivery</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Menu Management Snippet -->
-                <div style="background: #0f172a; border: 1px solid var(--border-soft); border-radius: 16px; padding: 25px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h4 style="color: #fff; font-size: 15px;"><i class="fas fa-book-open"></i> Daily Menu</h4>
-                        <button style="font-size: 10px; color: #4fc3f7; background: none; border: 1px solid #4fc3f7; padding: 4px 10px; border-radius: 20px; cursor: pointer;">Edit Menu</button>
-                    </div>
-                    <div class="menu-item-card">
-                        <span style="color: #cbd5e1; font-size: 13px;">Oatmeal Porridge</span>
-                        <span style="color: #4fc3f7; font-size: 11px; font-weight: bold;">AVAILABLE</span>
-                    </div>
-                    <div class="menu-item-card">
-                        <span style="color: #cbd5e1; font-size: 13px;">Veg Clear Soup</span>
-                        <span style="color: #4fc3f7; font-size: 11px; font-weight: bold;">AVAILABLE</span>
-                    </div>
-                    <div class="menu-item-card" style="opacity: 0.5;">
-                        <span style="color: #cbd5e1; font-size: 13px;">Paneer Butter Masala</span>
-                        <span style="color: #ef4444; font-size: 11px; font-weight: bold;">SOLD OUT</span>
-                    </div>
-                    <button style="width: 100%; margin-top: 20px; background: #4fc3f7; color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">Update Availability</button>
-                </div>
-            </div>
-        </main>
-    </div>
+        // Auto reload Active Orders every minute & Notification
+        <?php if($section == 'active_orders'): ?>
+        let currentOrderCount = <?php echo $active_orders ? $active_orders->num_rows : 0; ?>;
+        
+        setInterval(() => {
+            fetch('api_check_orders.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.count > currentOrderCount) {
+                        // Play notification sound
+                        let audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+                        audio.play().catch(e => console.log("Audio play blocked"));
+                        
+                        // Optional: Browser alert or toast
+                        alert("🔔 New Order Received!");
+                        location.reload();
+                    } else {
+                        location.reload();
+                    }
+                });
+        }, 60000); 
+        <?php endif; ?>
+    </script>
 </body>
 </html>

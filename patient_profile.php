@@ -27,11 +27,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $blood_group = mysqli_real_escape_string($conn, $_POST['blood_group']);
     $phone = mysqli_real_escape_string($conn, $_POST['phone']);
     $address = mysqli_real_escape_string($conn, $_POST['address']);
-    $name = $reg_data['name']; // Forced from registration
+    $name = mysqli_real_escape_string($conn, $_POST['fullname']); // Allowed editing name
 
     if ($profile_exists) {
         // Update
-        $sql = "UPDATE patient_profiles SET gender='$gender', date_of_birth='$dob', blood_group='$blood_group', phone='$phone', address='$address' WHERE user_id=$user_id";
+        $sql = "UPDATE patient_profiles SET name='$name', gender='$gender', date_of_birth='$dob', blood_group='$blood_group', phone='$phone', address='$address' WHERE user_id=$user_id";
         if ($conn->query($sql)) {
             $message = "Profile updated successfully!";
             // Refresh profile data
@@ -205,8 +205,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         </div>
 
                         <div class="form-group">
-                            <label>Full Name (Verified)</label>
-                            <input type="text" class="form-input" value="<?php echo htmlspecialchars($reg_data['name']); ?>" readonly>
+                            <label>Full Name</label>
+                            <input type="text" name="fullname" class="form-input" value="<?php echo htmlspecialchars($profile['name'] ?? $reg_data['name']); ?>" required>
                         </div>
 
                         <div class="form-group">

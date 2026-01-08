@@ -105,41 +105,76 @@ $lab_type = $lab['lab_type'] ?? 'Pathology';
         </aside>
 
         <main class="main-ops">
-            <div style="margin-bottom: 30px;">
-                <h1 style="color:#fff; font-size: 28px;">Lab Operations</h1>
-                <p style="color:#64748b; font-size:14px;">Manage medical test requests and report generation.</p>
+            <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 style="color:#fff; font-size: 28px;">Lab Operations: <span style="color:#4fc3f7;"><?php echo htmlspecialchars($lab_type); ?></span></h1>
+                    <p style="color:#64748b; font-size:14px;">Managing requests for <?php echo htmlspecialchars($lab_type); ?></p>
+                </div>
+                <div style="text-align: right;">
+                    <span class="status-badge status-online">System Online</span>
+                </div>
             </div>
 
+            <?php
+            // Fetch Counts
+            $q_pending = $conn->query("SELECT COUNT(*) as count FROM lab_orders WHERE lab_category = '$lab_type' AND order_status = 'Pending'");
+            $pending_count = $q_pending->fetch_assoc()['count'];
+
+            $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_orders WHERE lab_category = '$lab_type' AND order_status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
+            $completed_today = $q_completed->fetch_assoc()['count'];
+            ?>
+
             <div class="stats-grid">
-                <div class="stat-card-new"><h2>12</h2><p>Pending Requests</p></div>
+                <div class="stat-card-new"><h2><?php echo str_pad($pending_count, 2, '0', STR_PAD_LEFT); ?></h2><p>Pending Requests</p></div>
                 <div class="stat-card-new"><h2>05</h2><p>Samples Ready</p></div>
-                <div class="stat-card-new"><h2>28</h2><p>Completed (Today)</p></div>
-                <div class="stat-card-new"><h2>02</h2><p>Urgent (STAT)</p></div>
+                <div class="stat-card-new"><h2><?php echo str_pad($completed_today, 2, '0', STR_PAD_LEFT); ?></h2><p>Completed (Today)</p></div>
+                <div class="stat-card-new"><h2>00</h2><p>Urgent (STAT)</p></div>
             </div>
 
             <h3 style="color:#fff; margin-bottom: 20px;">Active Laboratory Tasks</h3>
 
+            <?php
+            // Fetch Pending Orders
+            $sql_orders = "
+                SELECT lo.*, 
+                       rp.name as patient_name, 
+                       rd.name as doctor_name
+                FROM lab_orders lo
+                JOIN users up ON lo.patient_id = up.user_id
+                JOIN registrations rp ON up.registration_id = rp.registration_id
+                JOIN users ud ON lo.doctor_id = ud.user_id
+                JOIN registrations rd ON ud.registration_id = rd.registration_id
+                WHERE lo.lab_category = '$lab_type' AND lo.order_status = 'Pending'
+                ORDER BY lo.created_at ASC
+            ";
+            $res_orders = $conn->query($sql_orders);
+
+            if ($res_orders && $res_orders->num_rows > 0):
+                while($order = $res_orders->fetch_assoc()):
+            ?>
             <div class="test-request-card">
                 <div>
-                    <span style="font-size: 11px; color: #4fc3f7; font-weight: 800; text-transform: uppercase;">Hematology • ID: #LAB-1025</span>
-                    <h4 style="color:#fff; margin: 10px 0; font-size: 18px;">Complete Blood Count (CBC)</h4>
-                    <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">Patient: Dileep Mathew • Requested by: Dr. Sathish</p>
+                    <span style="font-size: 11px; color: #4fc3f7; font-weight: 800; text-transform: uppercase;">
+                        <?php echo htmlspecialchars($lab_type); ?> • ID: #LAB-<?php echo $order['order_id']; ?>
+                    </span>
+                    <h4 style="color:#fff; margin: 10px 0; font-size: 18px;"><?php echo htmlspecialchars($order['test_name']); ?></h4>
+                    <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">
+                        Patient: <?php echo htmlspecialchars($order['patient_name']); ?> • Requested by: Dr. <?php echo htmlspecialchars($order['doctor_name']); ?>
+                    </p>
                     
-                    <div class="sample-status-bar">
-                        <div class="status-dot active" title="Sample Collected" style="--label: 'Collected'"></div>
-                        <div class="status-dot active" title="In Processing" style="--label: 'Processing'"></div>
-                        <div class="status-dot" title="Result Pending"></div>
-                        <div class="status-dot" title="Report Ready"></div>
+                    <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <small style="color: #4fc3f7; text-transform: uppercase; font-size: 10px; font-weight: bold;">Doctor Instructions:</small>
+                        <p style="color: #cbd5e1; font-size: 12px; margin-top: 5px;"><?php echo nl2br(htmlspecialchars($order['instructions'] ?: 'No special instructions.')); ?></p>
                     </div>
                 </div>
                 <div style="background: rgba(255,255,255,0.02); padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft);">
-                    <form action="upload_report.php" method="POST" enctype="multipart/form-data">
+                    <form action="finalize_lab_report.php" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
                         <div style="display: flex; flex-direction: column; gap: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="font-size: 13px; color: #cbd5e1;">Final Test Results</span>
-                                <span style="color: #ef4444; font-size: 10px; font-weight: 800;"><i class="fas fa-bolt"></i> URGENT</span>
                             </div>
-                            <textarea placeholder="Final clinical marking/observations..." style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 12px; border-radius: 10px; color: #fff; font-size: 13px; resize: none;"></textarea>
+                            <textarea name="result_summary" placeholder="Final clinical marking/observations..." style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 12px; border-radius: 10px; color: #fff; font-size: 13px; resize: none;" required></textarea>
                             
                             <div style="display: flex; gap: 15px;">
                                 <label class="btn-upload" style="flex: 1; justify-content: center;">
@@ -152,6 +187,15 @@ $lab_type = $lab['lab_type'] ?? 'Pathology';
                     </form>
                 </div>
             </div>
+            <?php 
+                endwhile;
+            else:
+            ?>
+            <div style="text-align: center; padding: 100px; color: #64748b; background: #0f172a; border-radius: 20px; border: 1px dashed var(--border-soft);">
+                <i class="fas fa-check-circle" style="font-size: 40px; margin-bottom: 15px; color: #10b981;"></i>
+                <p>All clear! No pending requests for your lab today.</p>
+            </div>
+            <?php endif; ?>
         </main>
     </div>
 </body>

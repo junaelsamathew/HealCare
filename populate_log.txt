@@ -1,0 +1,12 @@
+
+PHP Fatal error:  Uncaught mysqli_sql_exception: Cannot truncate a table referenced in a foreign key constraint (`healcare`.`canteen_orders`, CONSTRAINT `canteen_orders_ibfk_2` FOREIGN KEY (`menu_id`) REFERENCES `healcare`.`canteen_menu` (`menu_id`)) in D:\xampp\htdocs\HealCare\populate_canteen_menu.php:15
+Stack trace:
+#0 D:\xampp\htdocs\HealCare\populate_canteen_menu.php(15): mysqli->query('TRUNCATE TABLE ...')
+#1 {main}
+  thrown in D:\xampp\htdocs\HealCare\populate_canteen_menu.php on line 15
+
+Fatal error: Uncaught mysqli_sql_exception: Cannot truncate a table referenced in a foreign key constraint (`healcare`.`canteen_orders`, CONSTRAINT `canteen_orders_ibfk_2` FOREIGN KEY (`menu_id`) REFERENCES `healcare`.`canteen_menu` (`menu_id`)) in D:\xampp\htdocs\HealCare\populate_canteen_menu.php:15
+Stack trace:
+#0 D:\xampp\htdocs\HealCare\populate_canteen_menu.php(15): mysqli->query('TRUNCATE TABLE ...')
+#1 {main}
+  thrown in D:\xampp\htdocs\HealCare\populate_canteen_menu.php on line 15

@@ -15,11 +15,20 @@ $res = $conn->query("SELECT * FROM patient_profiles WHERE user_id = $user_id");
 $profile_exists = ($res->num_rows > 0);
 $profile = $profile_exists ? $res->fetch_assoc() : null;
 
-// Fetch medical records
+// Fetch medical history and visit records
 $medical_records = [];
 if ($profile_exists) {
-    $pid = $profile['patient_id'];
-    $records_res = $conn->query("SELECT * FROM patient_medical_records WHERE patient_id = $pid ORDER BY visit_date DESC");
+    // Current visit records from medical_records table
+    $records_res = $conn->query("
+        SELECT mr.*, r.name as doctor_name, 
+        (SELECT medicine_details FROM prescriptions WHERE patient_id = $user_id AND (DATE(prescription_date) = DATE(mr.created_at) OR appointment_id = mr.appointment_id) LIMIT 1) as prescription,
+        (SELECT GROUP_CONCAT(test_name SEPARATOR ', ') FROM lab_orders WHERE appointment_id = mr.appointment_id) as lab_tests
+        FROM medical_records mr
+        LEFT JOIN users u ON mr.doctor_id = u.user_id
+        LEFT JOIN registrations r ON u.registration_id = r.registration_id
+        WHERE mr.patient_id = $user_id 
+        ORDER BY mr.created_at DESC
+    ");
     while ($row = $records_res->fetch_assoc()) {
         $medical_records[] = $row;
     }
@@ -120,6 +129,11 @@ if ($profile_exists) {
         }
         .status-online { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .status-offline { background: rgba(156, 163, 175, 0.1); color: #9ca3af; }
+        .status-Pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .status-Requested { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .status-Scheduled { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .status-Approved, .status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
     </style>
 </head>
 <body>
@@ -164,7 +178,11 @@ if ($profile_exists) {
             <div class="brand-name">HealCare</div>
         </div>
         <div class="user-controls">
-            <span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($_SESSION['full_name'] ?? $username); ?></strong></span>
+            <?php 
+            // Use name from profile if available, else session, else username
+            $display_name = $profile['name'] ?? $_SESSION['full_name'] ?? $username;
+            ?>
+            <span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($display_name); ?></strong></span>
             <a href="logout.php" class="btn-logout">Log Out</a>
         </div>
     </header>
@@ -228,38 +246,141 @@ if ($profile_exists) {
                         <h3>Next Appointment</h3>
                     </div>
                     <div class="appointment-list">
+                        <?php
+                        // Fetch next upcoming appointment
+                        $today_dt = date('Y-m-d H:i:s');
+                        $appt_sql = "SELECT a.*, d.specialization, u.username as doc_name, r.name as real_doc_name 
+                                     FROM appointments a 
+                                     LEFT JOIN users u ON a.doctor_id = u.user_id 
+                                     LEFT JOIN doctors d ON u.user_id = d.user_id 
+                                     LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                                     WHERE a.patient_id = $user_id AND a.status IN ('Scheduled', 'Approved', 'Pending', 'Requested', 'Confirmed') AND a.appointment_date >= '$today_dt'
+                                     ORDER BY a.appointment_date ASC LIMIT 1";
+                        
+                        $appt_res = $conn->query($appt_sql);
+                        
+                        if ($appt_res && $appt_res->num_rows > 0):
+                            $appt = $appt_res->fetch_assoc();
+                            $doc_display_name = $appt['real_doc_name'] ?? ('Dr. ' . $appt['doc_name']);
+                            $appt_time = date('M d, Y \a\t h:i A', strtotime($appt['appointment_date']));
+                            $specialty = $appt['specialization'] ?? $appt['department'] ?? 'General';
+                        ?>
                         <div class="appointment-item">
                             <div class="doc-info">
-                                <h4>Dr. Sarah Jenny <span class="status-badge status-online">Available Now</span></h4>
-                                <p>Cardiologist • Oct 25, 2025 at 10:00 AM</p>
-                                <p style="font-size: 12px; margin-top: 5px;"><i class="fas fa-info-circle"></i> Notes: General cardiac checkup and BP review.</p>
+                                <h4><?php echo htmlspecialchars($doc_display_name); ?> <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo htmlspecialchars($appt['status']); ?></span></h4>
+                                <p><?php echo htmlspecialchars($specialty); ?> • <?php echo $appt_time; ?></p>
+                                <p style="font-size: 12px; margin-top: 5px;"><i class="fas fa-info-circle"></i> Token: <?php echo htmlspecialchars($appt['queue_number'] ?? 'N/A'); ?></p>
                             </div>
                             <div style="text-align: right;">
-                                <a href="medical_records.php" style="display: block; font-size: 13px; color: #4fc3f7; text-decoration: none; margin-bottom: 10px;">View History</a>
-                                <a href="#" class="action-cancel">Cancel</a>
+                                <a href="my_appointments.php" style="display: block; font-size: 13px; color: #4fc3f7; text-decoration: none; margin-bottom: 10px;">View All</a>
+                                <a href="cancel_booking.php?id=<?php echo $appt['appointment_id']; ?>" class="action-cancel">Cancel</a>
                             </div>
                         </div>
+                        <?php else: ?>
+                            <div style="padding: 20px; text-align: center; color: #aaa;">
+                                <p>No upcoming appointments.</p>
+                                <a href="appointment_form.php" style="color: #4fc3f7; text-decoration: none; font-size: 13px; font-weight: 600;">Book Now</a>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
-                    <!-- Lab Reports Download -->
-                    <div style="margin-top: 40px;">
-                        <div class="section-head"><h3>Recent Lab Reports</h3></div>
-                        <div style="display: flex; flex-direction: column; gap: 15px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px;">
-                                <span><i class="fas fa-microscope" style="margin-right: 10px;"></i> Blood Test Report</span>
-                                <a href="#" style="color: #4fc3f7; font-size: 14px;"><i class="fas fa-download"></i> PDF</a>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px;">
-                                <span><i class="fas fa-x-ray" style="margin-right: 10px;"></i> X-Ray (Chest)</span>
-                                <a href="#" style="color: #4fc3f7; font-size: 14px;"><i class="fas fa-download"></i> PDF</a>
-                            </div>
+                <!-- Lab Reports Download -->
+                <div style="margin-top: 40px;">
+                    <div class="section-head"><h3>Recent Lab Reports</h3></div>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px;">
+                            <span><i class="fas fa-microscope" style="margin-right: 10px;"></i> Blood Test Report</span>
+                            <a href="#" style="color: #4fc3f7; font-size: 14px;"><i class="fas fa-download"></i> PDF</a>
                         </div>
                     </div>
                 </div>
 
+                <!-- Visit History & Advice Section -->
+                <div style="margin-top: 40px;">
+                    <div class="section-head"><h3>Visit History & Doctor's Advice</h3></div>
+                    <?php if(!empty($medical_records)): ?>
+                        <?php foreach($medical_records as $record): ?>
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                    <div>
+                                        <h4 style="color: #4fc3f7; margin-bottom: 5px;"><?php echo htmlspecialchars($record['diagnosis']); ?></h4>
+                                        <p style="font-size: 12px; color: #94a3b8;">Consulted with <?php echo htmlspecialchars($record['doctor_name']); ?> • <?php echo date('M d, Y', strtotime($record['created_at'])); ?></p>
+                                    </div>
+                                    <span class="status-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; align-self: flex-start;">Visit Completed</span>
+                                </div>
+                                
+                                <?php if(!empty($record['special_notes'])): ?>
+                                    <div style="background: rgba(59, 130, 246, 0.05); border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                                        <strong style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #3b82f6; margin-bottom: 5px;">Special Advice for you:</strong>
+                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($record['special_notes'])); ?></p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if(!empty($record['prescription'])): ?>
+                                    <div style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid #10b981; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                                        <strong style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; margin-bottom: 5px;"><i class="fas fa-pills"></i> Prescribed Medication:</strong>
+                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($record['prescription'])); ?></p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if(!empty($record['lab_tests'])): ?>
+                                    <div style="background: rgba(79, 195, 247, 0.05); border-left: 4px solid #4fc3f7; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                                        <strong style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #4fc3f7; margin-bottom: 5px;"><i class="fas fa-flask"></i> Requested Lab Tests:</strong>
+                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;"><?php echo htmlspecialchars($record['lab_tests']); ?></p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div style="padding: 20px; text-align: center; color: #aaa;">
+                            <p>No medical visit history available yet.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
                 <!-- Canteen & Notifications -->
                 <div style="display: flex; flex-direction: column; gap: 30px;">
-                    <a href="#" style="padding: 10px 20px; background: rgba(79, 195, 247, 0.1); border: 1px solid #4fc3f7; border-radius: 8px; color: #4fc3f7; text-decoration: none; font-size: 13px; font-weight: 600;">Submit Feedback</a>
+                    <!-- Canteen Status Card -->
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="font-size: 16px; font-weight: 700;">Local Canteen</h3>
+                            <a href="canteen.php" style="font-size: 12px; color: #4fc3f7; text-decoration: none;">Order Food</a>
+                        </div>
+                        
+                        <?php
+                        $latest_canteen = $conn->query("
+                            SELECT co.*, cm.item_name 
+                            FROM canteen_orders co
+                            JOIN canteen_menu cm ON co.menu_id = cm.menu_id
+                            WHERE co.patient_id = $user_id
+                            ORDER BY co.created_at DESC LIMIT 1
+                        ");
+                        if ($latest_canteen && $latest_canteen->num_rows > 0):
+                            $c_order = $latest_canteen->fetch_assoc();
+                            $c_progress = 20;
+                            if($c_order['order_status'] == 'Preparing') $c_progress = 60;
+                            if($c_order['order_status'] == 'Delivered') $c_progress = 100;
+                        ?>
+                            <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(79, 195, 247, 0.1);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span style="font-size: 13px; color: #fff; font-weight: 600;"><?php echo htmlspecialchars($c_order['item_name']); ?></span>
+                                    <span class="status-badge status-<?php echo $c_order['order_status']; ?>" style="font-size: 10px;"><?php echo strtoupper($c_order['order_status']); ?></span>
+                                </div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
+                                    <div style="width: <?php echo $c_progress; ?>%; height: 100%; background: #4fc3f7; box-shadow: 0 0 10px rgba(79, 195, 247, 0.4);"></div>
+                                </div>
+                                <p style="font-size: 11px; color: #94a3b8; margin: 0;">Last updated: <?php echo date('h:i A', strtotime($c_order['created_at'])); ?></p>
+                            </div>
+                        <?php else: ?>
+                            <div style="text-align: center; padding: 20px; color: #64748b; font-size: 13px;">
+                                <i class="fas fa-utensils" style="font-size: 24px; margin-bottom: 10px; display: block; opacity: 0.3;"></i>
+                                No active food orders.
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <a href="#" style="padding: 10px 20px; background: rgba(79, 195, 247, 0.1); border: 1px solid #4fc3f7; border-radius: 8px; color: #4fc3f7; text-decoration: none; font-size: 13px; font-weight: 600; text-align: center;">Submit Feedback</a>
                 </div>
             </div>
 

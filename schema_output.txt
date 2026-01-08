@@ -1,0 +1,28 @@
+TABLE: patient_profiles
+patient_id           int(11)              NO         PRI                            
+user_id              int(11)              NO         UNI                            
+patient_code         varchar(20)          NO         UNI                            
+name                 varchar(100)         NO                                        
+gender               varchar(10)          YES                                       
+date_of_birth        date                 YES                                       
+medical_history      text                 YES                                       
+blood_group          varchar(10)          YES                                       
+phone                varchar(15)          YES                                       
+address              text                 YES                                       
+registered_date      date                 YES                   curdate()           
+status               varchar(20)          YES                   Active              
+
+TABLE: users
+user_id              int(11)              NO         PRI                            
+registration_id      int(11)              YES                                       
+username             varchar(50)          YES                                       
+email                varchar(100)         YES        UNI                            
+password             varchar(255)         NO                                        
+role                 varchar(20)          NO                                        
+permissions          text                 YES                                       
+force_password_change tinyint(1)           YES                   0                   
+status               varchar(20)          YES                   Active              
+verification_token   varchar(255)         YES                                       
+created_at           datetime             YES                   current_timestamp() 
+last_login           datetime             YES                                       
+

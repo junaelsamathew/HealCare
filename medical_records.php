@@ -65,21 +65,36 @@ $username = $_SESSION['username'];
             <div class="content-section">
                 <div class="section-head"><h3>Recent Diagnosis Reports</h3></div>
                 
-                <div class="record-card">
-                    <div>
-                        <h4 style="margin-bottom: 5px;">General Checkup Report</h4>
-                        <p style="color: var(--text-gray); font-size: 13px;">Follow-up visit • Oct 10, 2025</p>
-                    </div>
-                    <a href="#" class="btn-download"><i class="fas fa-download"></i> PDF</a>
-                </div>
+                <?php
+                $records_sql = "
+                    SELECT mr.*, r.name as doctor_name 
+                    FROM medical_records mr
+                    LEFT JOIN users u ON mr.doctor_id = u.user_id
+                    LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                    WHERE mr.patient_id = $user_id
+                    ORDER BY mr.created_at DESC
+                ";
+                $records_res = $conn->query($records_sql);
 
+                if ($records_res && $records_res->num_rows > 0):
+                    while ($row = $records_res->fetch_assoc()):
+                ?>
                 <div class="record-card">
                     <div>
-                        <h4 style="margin-bottom: 5px;">Blood Test Analysis</h4>
-                        <p style="color: var(--text-gray); font-size: 13px;">Lab Result • Sep 22, 2025</p>
+                        <h4 style="margin-bottom: 5px;"><?php echo htmlspecialchars($row['diagnosis']); ?></h4>
+                        <p style="color: var(--text-gray); font-size: 13px;">
+                            Consulted with <?php echo htmlspecialchars($row['doctor_name']); ?> • 
+                            <?php echo date('M d, Y', strtotime($row['created_at'])); ?>
+                        </p>
                     </div>
-                    <a href="#" class="btn-download"><i class="fas fa-download"></i> PDF</a>
+                    <a href="generate_report_pdf.php?id=<?php echo $row['record_id']; ?>" class="btn-download"><i class="fas fa-download"></i> PDF</a>
                 </div>
+                <?php 
+                    endwhile;
+                else: 
+                ?>
+                    <div class="empty-state"><p>No medical records found yet.</p></div>
+                <?php endif; ?>
             </div>
 
             <div class="content-section" style="margin-top: 30px;">

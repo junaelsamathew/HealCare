@@ -224,6 +224,7 @@ CREATE TABLE IF NOT EXISTS canteen_orders (
     order_status VARCHAR(20) DEFAULT 'Pending' COMMENT 'Pending / Preparing / Delivered / Cancelled',
     total_amount DECIMAL(10,2) DEFAULT 0.00,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (patient_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (menu_id) REFERENCES canteen_menu(menu_id) ON DELETE CASCADE,
     INDEX idx_patient (patient_id),

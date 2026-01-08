@@ -3,16 +3,17 @@ session_start();
 include 'includes/db_connect.php';
 
 // Mock Doctors Data (Consistent with Index.php)
+// Mock Doctors Data (Consistent with Index.php)
 $doctors = [
-    ['id' => 1, 'name' => 'Dr. Abraham Mohan', 'dept' => 'General Surgery', 'exp' => '15 Years', 'img' => 'images/doctor-1.jpg', 'timings' => 'Mon-Sat 09:00 AM - 02:00 PM'],
-    ['id' => 2, 'name' => 'Dr. Suresh Kumar', 'dept' => 'Orthopedics', 'exp' => '12 Years', 'img' => 'images/doctor-2.jpg', 'timings' => 'Mon-Fri 10:00 AM - 04:00 PM'],
-    ['id' => 3, 'name' => 'Dr. Arjun Reddy', 'dept' => 'Cardiology', 'exp' => '10 Years', 'img' => 'images/doctor-3.jpg', 'timings' => 'Mon-Sat 11:00 AM - 05:00 PM'],
+    ['id' => 1, 'name' => 'Dr. Abraham Mohan', 'dept' => 'General Medicine / Cardiovascular', 'exp' => '15 Years', 'img' => 'images/doctor-1.jpg', 'timings' => 'Mon-Sat 09:00 AM - 02:00 PM'],
+    ['id' => 2, 'name' => 'Dr. Suresh Kumar', 'dept' => 'Orthopedics (Bones)', 'exp' => '12 Years', 'img' => 'images/doctor-2.jpg', 'timings' => 'Mon-Fri 10:00 AM - 04:00 PM'],
+    ['id' => 3, 'name' => 'Dr. Arjun Reddy', 'dept' => 'General Medicine / Cardiovascular', 'exp' => '10 Years', 'img' => 'images/doctor-3.jpg', 'timings' => 'Mon-Sat 11:00 AM - 05:00 PM'],
     ['id' => 4, 'name' => 'Dr. Lakshmi Devi', 'dept' => 'Ophthalmology', 'exp' => '8 Years', 'img' => 'images/doctor-4.jpg', 'timings' => 'Tue-Sun 09:00 AM - 01:00 PM'],
     ['id' => 5, 'name' => 'Dr. Vikram Singh', 'dept' => 'Dermatology', 'exp' => '9 Years', 'img' => 'images/doctor-5.jpg', 'timings' => 'Mon-Fri 02:00 PM - 08:00 PM'],
     ['id' => 6, 'name' => 'Dr. Rajesh Khanna', 'dept' => 'ENT', 'exp' => '14 Years', 'img' => 'images/doctor-6.jpg', 'timings' => 'Mon-Sat 08:00 AM - 12:00 PM'],
-    ['id' => 7, 'name' => 'Dr. Meera Krishnan', 'dept' => 'Neurology', 'exp' => '11 Years', 'img' => 'images/doctor-7.jpg', 'timings' => 'Wed-Mon 10:00 AM - 06:00 PM'],
-    ['id' => 8, 'name' => 'Dr. Akshay Kumar', 'dept' => 'Nephrology', 'exp' => '7 Years', 'img' => 'images/doctor-8.jpg', 'timings' => 'Mon-Fri 09:00 AM - 03:00 PM'],
-    ['id' => 9, 'name' => 'Dr. Ananya Iyer', 'dept' => 'Pediatrics', 'exp' => '6 Years', 'img' => 'images/doctor-9.jpg', 'timings' => 'Mon-Sat 09:00 AM - 04:00 PM'],
+    ['id' => 7, 'name' => 'Dr. Meera Krishnan', 'dept' => 'General Medicine / Cardiovascular', 'exp' => '11 Years', 'img' => 'images/doctor-7.jpg', 'timings' => 'Wed-Mon 10:00 AM - 06:00 PM'],
+    ['id' => 8, 'name' => 'Dr. Akshay Kumar', 'dept' => 'General Medicine / Cardiovascular', 'exp' => '7 Years', 'img' => 'images/doctor-8.jpg', 'timings' => 'Mon-Fri 09:00 AM - 03:00 PM'],
+    ['id' => 9, 'name' => 'Dr. Ananya Iyer', 'dept' => 'General Medicine / Cardiovascular', 'exp' => '6 Years', 'img' => 'images/doctor-9.jpg', 'timings' => 'Mon-Sat 09:00 AM - 04:00 PM'],
     ['id' => 10, 'name' => 'Dr. Sneha Gupta', 'dept' => 'Gynecology', 'exp' => '13 Years', 'img' => 'images/doctor-10.jpg', 'timings' => 'Mon-Sat 10:00 AM - 02:00 PM']
 ];
 
@@ -205,13 +206,12 @@ if ($department_filter && $department_filter != 'All') {
             
             <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
                 <a href="?dept=All" class="filter-btn <?php echo (!$department_filter || $department_filter == 'All') ? 'active' : ''; ?>">All Specialists</a>
-                <a href="?dept=Cardiology" class="filter-btn <?php echo ($department_filter == 'Cardiology') ? 'active' : ''; ?>">Cardiology</a>
-                <a href="?dept=Neurology" class="filter-btn <?php echo ($department_filter == 'Neurology') ? 'active' : ''; ?>">Neurology</a>
-                <a href="?dept=Orthopedics" class="filter-btn <?php echo ($department_filter == 'Orthopedics') ? 'active' : ''; ?>">Orthopedics</a>
+                <a href="?dept=General Medicine / Cardiovascular" class="filter-btn <?php echo ($department_filter == 'General Medicine / Cardiovascular') ? 'active' : ''; ?>">General Medicine / Cardiovascular</a>
                 <a href="?dept=Gynecology" class="filter-btn <?php echo ($department_filter == 'Gynecology') ? 'active' : ''; ?>">Gynecology</a>
-                <a href="?dept=Pediatrics" class="filter-btn <?php echo ($department_filter == 'Pediatrics') ? 'active' : ''; ?>">Pediatrics</a>
-                <a href="?dept=Dermatology" class="filter-btn <?php echo ($department_filter == 'Dermatology') ? 'active' : ''; ?>">Dermatology</a>
+                <a href="?dept=Orthopedics (Bones)" class="filter-btn <?php echo ($department_filter == 'Orthopedics (Bones)') ? 'active' : ''; ?>">Orthopedics (Bones)</a>
                 <a href="?dept=ENT" class="filter-btn <?php echo ($department_filter == 'ENT') ? 'active' : ''; ?>">ENT</a>
+                <a href="?dept=Ophthalmology" class="filter-btn <?php echo ($department_filter == 'Ophthalmology') ? 'active' : ''; ?>">Ophthalmology</a>
+                <a href="?dept=Dermatology" class="filter-btn <?php echo ($department_filter == 'Dermatology') ? 'active' : ''; ?>">Dermatology</a>
             </div>
         </div>
     </div>

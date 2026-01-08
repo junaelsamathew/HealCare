@@ -72,22 +72,43 @@ $username = $_SESSION['username'];
                         </tr>
                     </thead>
                     <tbody>
+                        <?php
+                        $bills_sql = "
+                            SELECT b.*, a.department, r.name as doctor_name
+                            FROM billing b
+                            LEFT JOIN appointments a ON b.appointment_id = a.appointment_id
+                            LEFT JOIN users ud ON b.doctor_id = ud.user_id
+                            LEFT JOIN registrations r ON ud.registration_id = r.registration_id
+                            WHERE b.patient_id = $user_id
+                            ORDER BY b.bill_date DESC
+                        ";
+                        $bills_res = $conn->query($bills_sql);
+
+                        if ($bills_res && $bills_res->num_rows > 0):
+                            while ($bill = $bills_res->fetch_assoc()):
+                                $invoice_no = "INV-" . str_pad($bill['bill_id'], 4, '0', STR_PAD_LEFT);
+                                $service_desc = $bill['bill_type'] . " - " . ($bill['department'] ?? 'General');
+                                $status_class = strtolower($bill['payment_status']);
+                        ?>
                         <tr>
-                            <td>#INV-9901</td>
-                            <td>Oct 15, 2025</td>
-                            <td>Consultation - Cardiology</td>
-                            <td>$150.00</td>
-                            <td><span class="status-paid">Paid</span></td>
+                            <td>#<?php echo $invoice_no; ?></td>
+                            <td><?php echo date('M d, Y', strtotime($bill['bill_date'])); ?></td>
+                            <td>
+                                <strong><?php echo htmlspecialchars($service_desc); ?></strong><br>
+                                <small style="color: #94a3b8;">Dr. <?php echo htmlspecialchars($bill['doctor_name'] ?? 'Hospital Staff'); ?></small>
+                            </td>
+                            <td>$<?php echo number_format($bill['total_amount'], 2); ?></td>
+                            <td><span class="status-<?php echo $status_class; ?>"><?php echo $bill['payment_status']; ?></span></td>
                             <td><a href="#" style="color: #4fc3f7; text-decoration: none;"><i class="fas fa-file-invoice"></i> PDF</a></td>
                         </tr>
+                        <?php 
+                            endwhile;
+                        else:
+                        ?>
                         <tr>
-                            <td>#INV-9844</td>
-                            <td>Sep 22, 2025</td>
-                            <td>Laboratory - Blood Test</td>
-                            <td>$45.00</td>
-                            <td><span class="status-paid">Paid</span></td>
-                            <td><a href="#" style="color: #4fc3f7; text-decoration: none;"><i class="fas fa-file-invoice"></i> PDF</a></td>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: #aaa;">No invoices found.</td>
                         </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

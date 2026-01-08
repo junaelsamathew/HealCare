@@ -3,18 +3,35 @@ session_start();
 include 'includes/db_connect.php';
 
 // Mock Doctors Data (Consistent with other pages)
-$doctors = [
-    ['id' => 1, 'name' => 'Dr. Abraham Mohan', 'dept' => 'General Surgery', 'exp' => '15 Years', 'img' => 'images/doctor-1.jpg', 'qual' => 'MBBS, MS'],
-    ['id' => 2, 'name' => 'Dr. Suresh Kumar', 'dept' => 'Orthopedics', 'exp' => '12 Years', 'img' => 'images/doctor-2.jpg', 'qual' => 'MBBS, D.Ortho'],
-    ['id' => 3, 'name' => 'Dr. Arjun Reddy', 'dept' => 'Cardiology', 'exp' => '10 Years', 'img' => 'images/doctor-3.jpg', 'qual' => 'MBBS, MD (Cardio)'],
-    ['id' => 4, 'name' => 'Dr. Lakshmi Devi', 'dept' => 'Ophthalmology', 'exp' => '8 Years', 'img' => 'images/doctor-4.jpg', 'qual' => 'MBBS, DOMS'],
-    ['id' => 5, 'name' => 'Dr. Vikram Singh', 'dept' => 'Dermatology', 'exp' => '9 Years', 'img' => 'images/doctor-5.jpg', 'qual' => 'MBBS, MD (Derma)'],
-    ['id' => 6, 'name' => 'Dr. Rajesh Khanna', 'dept' => 'ENT', 'exp' => '14 Years', 'img' => 'images/doctor-6.jpg', 'qual' => 'MBBS, MS (ENT)'],
-    ['id' => 7, 'name' => 'Dr. Meera Krishnan', 'dept' => 'Neurology', 'exp' => '11 Years', 'img' => 'images/doctor-7.jpg', 'qual' => 'MBBS, DM (Neuro)'],
-    ['id' => 8, 'name' => 'Dr. Akshay Kumar', 'dept' => 'Nephrology', 'exp' => '7 Years', 'img' => 'images/doctor-8.jpg', 'qual' => 'MBBS, MD'],
-    ['id' => 9, 'name' => 'Dr. Ananya Iyer', 'dept' => 'Pediatrics', 'exp' => '6 Years', 'img' => 'images/doctor-9.jpg', 'qual' => 'MBBS, MD (Ped)'],
-    ['id' => 10, 'name' => 'Dr. Sneha Gupta', 'dept' => 'Gynecology', 'exp' => '13 Years', 'img' => 'images/doctor-10.jpg', 'qual' => 'MBBS, DGO']
-];
+// Fetch Doctors from DB
+$doctors = [];
+$dept_filter = isset($_GET['dept']) ? trim(urldecode($_GET['dept'])) : '';
+
+// Base Query
+$sql = "SELECT d.user_id as id, r.name, d.department as dept, d.experience as exp, d.qualification as qual, r.profile_photo as img, d.consultation_fee 
+        FROM doctors d 
+        JOIN users u ON d.user_id = u.user_id 
+        JOIN registrations r ON u.registration_id = r.registration_id";
+
+// Apply Filter
+if (!empty($dept_filter) && $dept_filter !== 'Select Department') {
+    $safe_dept = mysqli_real_escape_string($conn, $dept_filter);
+    $sql .= " WHERE d.department = '$safe_dept'";
+}
+
+$result = $conn->query($sql);
+
+if ($result && $result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        if(empty($row['img'])) {
+            $row['img'] = 'images/doctor-' . (rand(1, 10)) . '.jpg'; 
+        }
+        $doctors[] = $row;
+    }
+} else {
+    // Debug info in case of no results
+    // echo "<!-- Query: $sql -->";
+}
 
 // Handle Query Params
 $pre_doc_id = isset($_GET['doctor_id']) ? (int)$_GET['doctor_id'] : 0;
@@ -33,6 +50,22 @@ if ($pre_doc_id) {
 // Fixed Token Number for Demo (Or Random)
 $token_number = rand(10, 50);
 
+// Fetch Logged-in User Data
+$user_data = [];
+$is_logged_in = false;
+if(isset($_SESSION['user_id'])) {
+    $uid = $_SESSION['user_id'];
+    $is_logged_in = true;
+    // Fetch patient code and details
+    $q = $conn->query("SELECT p.patient_code, r.phone, r.email, r.name 
+                       FROM users u 
+                       JOIN registrations r ON u.registration_id = r.registration_id 
+                       LEFT JOIN patient_profiles p ON u.user_id = p.user_id 
+                       WHERE u.user_id = $uid");
+    if($q->num_rows > 0) {
+        $user_data = $q->fetch_assoc();
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -206,7 +239,7 @@ $token_number = rand(10, 50);
     </div>
 
     <div class="booking-wrapper">
-        <form action="booking_success.php" method="POST" onsubmit="return validateCaptcha()">
+        <form action="process_booking.php" method="POST" onsubmit="return validateCaptcha()">
             <input type="hidden" name="token" value="<?php echo $token_number; ?>">
             <input type="hidden" name="doctor_name" value="<?php echo $selected_doc ? htmlspecialchars($selected_doc['name']) : ''; ?>">
             
@@ -215,21 +248,28 @@ $token_number = rand(10, 50);
                 <div class="filter-group">
                     <label>Department</label>
                     <select class="filter-control" name="dept" onchange="window.location.href='?dept='+this.value">
-                        <option value="">Select Department</option>
-                        <option value="Cardiology" <?php echo ($pre_dept == 'Cardiology') ? 'selected' : ''; ?>>Cardiology</option>
-                        <option value="Neurology" <?php echo ($pre_dept == 'Neurology') ? 'selected' : ''; ?>>Neurology</option>
-                        <option value="Orthopedics" <?php echo ($pre_dept == 'Orthopedics') ? 'selected' : ''; ?>>Orthopedics</option>
+                            <option value="">Select Department</option>
+                            <option value="General Medicine / Cardiovascular" <?php if($pre_dept == 'General Medicine / Cardiovascular') echo 'selected'; ?>>General Medicine / Cardiovascular</option>
+                            <option value="Gynecology" <?php if($pre_dept == 'Gynecology') echo 'selected'; ?>>Gynecology</option>
+                            <option value="Orthopedics (Bones)" <?php if($pre_dept == 'Orthopedics (Bones)') echo 'selected'; ?>>Orthopedics (Bones)</option>
+                            <option value="ENT" <?php if($pre_dept == 'ENT') echo 'selected'; ?>>ENT</option>
+                            <option value="Ophthalmology" <?php if($pre_dept == 'Ophthalmology') echo 'selected'; ?>>Ophthalmology</option>
+                            <option value="Dermatology" <?php if($pre_dept == 'Dermatology') echo 'selected'; ?>>Dermatology</option>
                     </select>
                 </div>
                 <div class="filter-group">
                     <label>Doctor</label>
-                    <select class="filter-control" name="doctor_id" onchange="window.location.href='?doctor_id='+this.value+'&dept=<?php echo $pre_dept; ?>'">
+                    <select class="filter-control" name="doctor_id" onchange="window.location.href='?doctor_id='+this.value+'&dept=<?php echo urlencode($dept_filter); ?>'">
                         <option value="">Select Doctor</option>
-                        <?php foreach($doctors as $d): ?>
-                            <option value="<?php echo $d['id']; ?>" <?php echo ($pre_doc_id == $d['id']) ? 'selected' : ''; ?>>
-                                <?php echo $d['name']; ?>
-                            </option>
-                        <?php endforeach; ?>
+                        <?php if (!empty($doctors)): ?>
+                            <?php foreach($doctors as $d): ?>
+                                <option value="<?php echo $d['id']; ?>" <?php echo ($pre_doc_id == $d['id']) ? 'selected' : ''; ?>>
+                                    <?php echo $d['name']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <option value="" disabled>No doctors found in this department</option>
+                        <?php endif; ?>
                     </select>
                 </div>
                 <div class="filter-group">
@@ -246,14 +286,35 @@ $token_number = rand(10, 50);
                     <div class="doc-details">
                         <h3><?php echo $selected_doc['name']; ?></h3>
                         <div class="doc-qual"><?php echo $selected_doc['qual']; ?></div>
-                        <div style="color:var(--primary-cyan); font-weight:600; text-transform:uppercase;"><?php echo $selected_doc['dept']; ?></div>
+                        <div style="color:var(--primary-cyan); font-weight:600; text-transform:uppercase; margin-bottom: 5px;"><?php echo $selected_doc['dept']; ?></div>
+                        <div style="background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 15px; display: inline-block; font-size: 0.9rem; font-weight: 700;">
+                            <i class="fas fa-money-bill-wave" style="margin-right: 5px;"></i> Consultation Fee: ₹<?php echo number_format($selected_doc['consultation_fee'], 0); ?>
+                        </div>
                     </div>
                 </div>
                 <div style="flex:1;">
-                    <div style="font-weight:600; margin-bottom:10px; font-size:0.9rem;">Consulting Days</div>
+                    <div style="font-weight:600; margin-bottom:10px; font-size:1rem; color:#2c3e50;">Consulting Days</div>
                     <table class="consult-table">
-                        <thead><tr><th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th></tr></thead>
-                        <tbody><tr><td>10-12</td><td>10-12</td><td>10-12</td><td>10-12</td><td>10-12</td><td>16-17</td></tr></tbody>
+                        <thead>
+                            <tr>
+                                <th>MONDAY</th>
+                                <th>TUESDAY</th>
+                                <th>WEDNESDAY</th>
+                                <th>THURSDAY</th>
+                                <th>FRIDAY</th>
+                                <th>SATURDAY</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>10:00 TO 12:30</td>
+                                <td>10:00 TO 12:30</td>
+                                <td>10:00 TO 12:30</td>
+                                <td>10:00 TO 12:30</td>
+                                <td>10:00 TO 12:30</td>
+                                <td>16:00 TO 17:00</td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -282,9 +343,14 @@ $token_number = rand(10, 50);
 
             <!-- Patient Details Area (Hidden until slot selected) -->
             <div id="patientDetailsArea" style="display:none;">
-                <h3 style="margin: 40px 0 20px; color: #2c3e50;">Patient Details</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 40px 0 20px;">
+                    <h3 style="margin: 0; color: #2c3e50;">Patient Details</h3>
+                    <button type="button" onclick="autofillDemo()" style="background:#f0f7ff; border:1px solid #00aeef; color:#00aeef; padding:8px 15px; border-radius:20px; font-size:0.85rem; font-weight:600; cursor:pointer; transition: all 0.3s;">
+                        <i class="fas fa-magic" style="margin-right: 5px;"></i> Autofill for Demo
+                    </button>
+                </div>
 
-                <div class="reg-toggle">
+                <div class="reg-toggle" <?php if($is_logged_in) echo 'style="display:none;"'; ?>>
                     <label>Already registered patient<span class="required">*</span></label>
                     <input type="radio" name="reg_status" value="yes" id="reg_yes" onchange="toggleRegForm()" checked>
                     <label for="reg_yes">Yes</label>
@@ -295,12 +361,28 @@ $token_number = rand(10, 50);
                 <div class="reg-form-container">
                     <!-- Registered -->
                     <div id="form-registered">
-                        <div class="info-text">Enter OP number and registered phone number to proceed</div>
-                        <div class="form-grid">
-                            <div><label>OP Number <span class="required">*</span></label><input type="text" name="op_number" class="form-control-input"></div>
-                            <div><label>Mobile Number <span class="required">*</span></label><input type="tel" name="reg_mobile" class="form-control-input"></div>
+                        <div class="info-text">
+                            <?php if($is_logged_in): ?>
+                                <b>Welcome back, <?php echo htmlspecialchars($user_data['name'] ?? 'Patient'); ?>!</b><br>
+                                Your details have been auto-filled.
+                            <?php else: ?>
+                                Enter your Registered Mobile Number. OP Number is optional.
+                            <?php endif; ?>
                         </div>
-                        <div><label>Email</label><input type="email" name="reg_email" class="form-control-input"></div>
+                        <div class="form-grid">
+                            <div>
+                                <label>OP Number (Optional)</label>
+                                <input type="text" name="op_number" class="form-control-input" value="<?php echo $user_data['patient_code'] ?? ''; ?>" <?php if($is_logged_in) echo 'readonly style="background:#f0f0f0;"'; ?>>
+                            </div>
+                            <div>
+                                <label>Mobile Number <span class="required">*</span></label>
+                                <input type="tel" name="reg_mobile" class="form-control-input" value="<?php echo $user_data['phone'] ?? ''; ?>" <?php if($is_logged_in) echo 'readonly style="background:#f0f0f0;"'; ?>>
+                            </div>
+                        </div>
+                        <div>
+                            <label>Email</label>
+                            <input type="email" name="reg_email" class="form-control-input" value="<?php echo $user_data['email'] ?? ''; ?>" <?php if($is_logged_in) echo 'readonly style="background:#f0f0f0;"'; ?>>
+                        </div>
                     </div>
 
                     <!-- New -->
@@ -308,6 +390,10 @@ $token_number = rand(10, 50);
                         <div class="form-grid">
                             <div><label>First Name <span class="required">*</span></label><input type="text" name="first_name" class="form-control-input"></div>
                             <div><label>Last Name <span class="required">*</span></label><input type="text" name="last_name" class="form-control-input"></div>
+                        </div>
+                        <div class="form-grid">
+                            <div><label>Email Address <span class="required">*</span></label><input type="email" name="email" class="form-control-input"></div>
+                            <div><label>Phone Number <span class="required">*</span></label><input type="tel" name="phone" class="form-control-input"></div>
                         </div>
                         <div class="form-grid">
                             <div><label>Address <span class="required">*</span></label><input type="text" name="address" class="form-control-input"></div>
@@ -369,6 +455,46 @@ $token_number = rand(10, 50);
                 document.getElementById('form-new').classList.remove('hidden');
             }
         }
+        function autofillDemo() {
+            // Switch to 'No' (New Patient)
+            document.getElementById('reg_no').click();
+            
+            // Fill Fields
+            const data = {
+                'first_name': 'John',
+                'last_name': 'Doe',
+                'email': 'john.doe@example.com',
+                'phone': '9876543210',
+                'address': '123 Health Ave',
+                'locality': 'HealCare Heights',
+                'age': '30',
+                'captchaInput': '5692'
+            };
+            
+            for (let name in data) {
+                let el = document.getElementsByName(name)[0] || document.getElementById(name);
+                if (el) el.value = data[name];
+            }
+            
+            // Gender & Terms
+            document.querySelector('input[name="gender"][value="Male"]').checked = true;
+            document.getElementById('terms').checked = true;
+            
+            // Visual feedback
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Filled!';
+            btn.style.background = '#e6fffa';
+            btn.style.borderColor = '#38b2ac';
+            btn.style.color = '#38b2ac';
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.style.background = '#f0f7ff';
+                btn.style.borderColor = '#00aeef';
+                btn.style.color = '#00aeef';
+            }, 2000);
+        }
+
         function validateCaptcha() {
             var val = document.getElementById('captchaInput').value;
             if(val !== '5692') {

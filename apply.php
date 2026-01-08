@@ -496,11 +496,13 @@
                     case 'lab_staff':
                         html += `
                             <div class="form-group">
-                                <label>Lab Type</label>
+                                <label>Lab Specialty / Department</label>
                                 <select name="specialization" id="specialization" class="form-control" required>
-                                    <option value="Blood">Blood Bank</option>
-                                    <option value="X-Ray">X-Ray / Radiology</option>
-                                    <option value="Pathology">Pathology</option>
+                                    <option value="">-- Select Lab Type --</option>
+                                    <option value="Blood / Pathology Lab">Blood / Pathology Lab</option>
+                                    <option value="X-Ray / Imaging Lab">X-Ray / Imaging Lab</option>
+                                    <option value="Diagnostic Lab">Diagnostic Lab</option>
+                                    <option value="Ultrasound Lab">Ultrasound Lab</option>
                                 </select>
                                 <div class="error-msg" id="specializationError">Please select lab type.</div>
                             </div>

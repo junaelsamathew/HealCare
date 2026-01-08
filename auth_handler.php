@@ -1,4 +1,5 @@
 <?php
+ob_start(); // Start output buffering to prevent header issues
 session_start();
 include 'includes/db_connect.php';
 
@@ -119,7 +120,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         exit();
 
     } elseif ($action == 'signup') {
-        // Patient Signup (Auto-Approve)
+        // Patient Signup - New Flow (OTP First)
         $name = mysqli_real_escape_string($conn, $_POST['fullname']);
         $email = mysqli_real_escape_string($conn, $_POST['email']);
         $phone = mysqli_real_escape_string($conn, $_POST['phone']);
@@ -127,37 +128,81 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $password = password_hash($password_raw, PASSWORD_DEFAULT);
         $role = 'patient';
 
-        $check_user = $conn->query("SELECT * FROM users WHERE email='$email'");
+        // Check if email already registered and active
+        $check_user = $conn->query("SELECT * FROM users WHERE email='$email' AND status='Active'");
         if ($check_user->num_rows > 0) {
-            echo "<script>alert('This email is already registered.'); window.location.href='login.php'</script>";
+            echo "<script>alert('This email is already registered and active. Please login.'); window.location.href='login.php'</script>";
             exit();
         }
 
-        $conn->begin_transaction();
+        // Generate 4-Digit Verification OTP
+        $otp_code = rand(1000, 9999);
+
+        // Store Signup Data in Session
+        $_SESSION['pending_signup'] = [
+            'name' => $name,
+            'email' => $email,
+            'phone' => $phone,
+            'password' => $password,
+            'role' => $role,
+            'otp' => $otp_code,
+            'expiry' => time() + 600 // 10 minutes
+        ];
+
+        // Send Verification Email with Code
+        $mail = new PHPMailer(true);
+        
         try {
-            $sql_reg = "INSERT INTO registrations (name, email, phone, password, user_type, status) 
-                        VALUES ('$name', '$email', '$phone', '$password', '$role', 'Approved')";
-            $conn->query($sql_reg);
-            $registration_id = $conn->insert_id;
-            
-            // Generate Unique Patient ID
-            $patient_code = "HC-P-" . date("Y") . "-" . rand(1000, 9999);
-            $username = $patient_code; 
+            //Server settings
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.gmail.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
+            $mail->Password   = 'yiuwcrykatkfzdwv';
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            $mail->Port       = 465;
+            $mail->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                )
+            );
 
-            $sql_user = "INSERT INTO users (registration_id, username, email, password, role, status) 
-                         VALUES ('$registration_id', '$username', '$email', '$password', '$role', 'Active')";
-            $conn->query($sql_user);
-            $user_id = $conn->insert_id;
+            //Recipients
+            $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+            $mail->addAddress($email, $name);
 
-            // Create initial patient profile
-            $conn->query("INSERT INTO patient_profiles (user_id, patient_code, name, phone) VALUES ($user_id, '$patient_code', '$name', '$phone')");
+            //Content
+            $mail->isHTML(true);
+            $mail->Subject = 'Verify Your Email - HealCare';
+            $mail->Body = '
+            <div style="font-family: Arial, sans-serif; max-width: 500px; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+                <h2 style="color: #2b50c0; text-align: center;">Welcome to HealCare!</h2>
+                <p>Hi ' . $name . ',</p>
+                <p>Thank you for choosing HealCare. Please use the verification code below to complete your registration:</p>
+                
+                <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 20px; text-align: center; margin: 25px 0; border-radius: 8px;">
+                    <span style="font-size: 32px; font-weight: 800; color: #3b82f6; letter-spacing: 12px;">' . $otp_code . '</span>
+                </div>
+                
+                <p style="font-size: 0.9em; color: #64748b; text-align: center;">This code will expire in 10 minutes.</p>
+                
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 25px 0;">
+                <p style="font-size: 0.8em; color: #94a3b8;">If you did not initiate this registration, please ignore this email.</p>
+            </div>';
 
-            $conn->commit();
-            echo "<script>alert('Patient account created successfully! Your Patient ID is: $patient_code'); window.location.href='login.php'</script>";
+            $mail->send();
+
+            echo "<script>
+                alert('A 4-digit verification code has been sent to your email. Please verify to complete your account creation.');
+                window.location.href = 'verify_code.php?email=" . urlencode($email) . "';
+            </script>";
+            exit();
         } catch (Exception $e) {
-            $conn->rollback();
-            echo "<script>alert('Error: " . $e->getMessage() . "'); window.location.href='signup.php'</script>";
+            echo "<script>alert('Error sending email: " . $mail->ErrorInfo . "'); window.location.href='signup.php'</script>";
         }
+
 
     } elseif ($action == 'apply') {
         // Create upload directories
@@ -247,6 +292,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($res->num_rows > 0) {
             $user = $res->fetch_assoc();
             if (password_verify($password, $user['password'])) {
+                if ($user['status'] == 'Unverified') {
+                    echo "<script>alert('Please verify your account with the code sent to your email.'); window.location.href='verify_code.php?email=" . urlencode($user['email']) . "'</script>";
+                    exit();
+                }
+
                 $_SESSION['logged_in'] = true;
                 $_SESSION['user_role'] = $user['role'];
                 $_SESSION['username'] = $user['username'];
@@ -331,7 +381,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $_SESSION['full_name'] = $name; // Fallback to Google Name
             }
 
-            echo "<script>window.location.href='" . $user['role'] . "_dashboard.php';</script>";
+            $_SESSION['logged_in'] = true;
+            header("Location: " . $user['role'] . "_dashboard.php");
+            exit();
         } else {
             // Auto-register as patient
             $conn->begin_transaction();
@@ -362,21 +414,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $conn->query("INSERT INTO users (registration_id, username, email, password, role, status) VALUES ($rid, '$uname', '$email', '$dummy_pass', 'patient', 'Active')");
                 
                 $new_user_id = $conn->insert_id;
+                
+                // Create patient profile
+                $patient_code = "HC-P-" . date("Y") . "-" . rand(1000, 9999);
+                $conn->query("INSERT INTO patient_profiles (user_id, patient_code, name, phone) VALUES ($new_user_id, '$patient_code', '$name', '')");
+                
                 $conn->commit();
                 
+                $_SESSION['logged_in'] = true;
                 $_SESSION['user_role'] = 'patient';
                 $_SESSION['username'] = $uname;
                 $_SESSION['user_id'] = $new_user_id;
                 $_SESSION['full_name'] = $name;
 
-                echo "<script>window.location.href='patient_dashboard.php';</script>";
+                header("Location: patient_dashboard.php");
+                exit();
             } catch (Exception $e) {
                 $conn->rollback();
-                $err_msg = json_encode("Error: " . $e->getMessage());
-                echo "<script>alert($err_msg); window.location.href='login.php'</script>";
+                echo "<script>alert('Error: " . addslashes($e->getMessage()) . "'); window.location.href='login.php';</script>";
+                exit();
             }
         }
-        exit();
     } elseif ($action == 'update_forced_password') {
         if (!isset($_SESSION['user_id']) || !isset($_SESSION['force_change'])) {
             header("Location: login.php");
@@ -408,6 +466,189 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             header("Location: staff_dashboard.php");
         } else {
             header("Location: " . $role . "_dashboard.php");
+        }
+        exit();
+    } elseif ($action == 'resend_signup_otp') {
+        $email = mysqli_real_escape_string($conn, $_POST['email']);
+        
+        // Check if there is a pending signup in session
+        if (isset($_SESSION['pending_signup']) && $_SESSION['pending_signup']['email'] == $email) {
+            $new_otp = rand(1000, 9999);
+            $_SESSION['pending_signup']['otp'] = $new_otp;
+            $_SESSION['pending_signup']['expiry'] = time() + 600;
+            $name = $_SESSION['pending_signup']['name'];
+
+            // Send Email
+            $mail = new PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host       = 'smtp.gmail.com';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
+                $mail->Password   = 'yiuwcrykatkfzdwv';
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                $mail->Port       = 465;
+                $mail->SMTPOptions = array('ssl' => array('verify_peer'=>false,'verify_peer_name'=>false,'allow_self_signed'=>true));
+
+                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                $mail->addAddress($email, $name);
+                $mail->isHTML(true);
+                $mail->Subject = 'New Verification Code - HealCare';
+                $mail->Body = '
+                <div style="font-family: Arial, sans-serif; max-width: 500px; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+                    <h2 style="color: #2b50c0; text-align: center;">New Verification Code</h2>
+                    <p>Hi ' . $name . ',</p>
+                    <p>You requested a new verification code. Please use the code below to complete your registration:</p>
+                    <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 20px; text-align: center; margin: 25px 0; border-radius: 8px;">
+                        <span style="font-size: 32px; font-weight: 800; color: #3b82f6; letter-spacing: 12px;">' . $new_otp . '</span>
+                    </div>
+                </div>';
+                $mail->send();
+                echo "OTP_SENT";
+            } catch (Exception $e) {
+                echo "ERROR: " . $mail->ErrorInfo;
+            }
+            exit();
+        }
+
+        // Fallback: Check Users Table (for old flow users)
+        $res = $conn->query("SELECT * FROM users WHERE email='$email' AND status='Unverified'");
+        if ($res->num_rows > 0) {
+            $user = $res->fetch_assoc();
+            $name = $user['username']; // Fallback
+            
+            // Fetch Real Name from Registrations
+            $reg_id = $user['registration_id'];
+            $reg_q = $conn->query("SELECT name FROM registrations WHERE registration_id = $reg_id");
+            if ($reg_q->num_rows > 0) {
+                $name = $reg_q->fetch_assoc()['name'];
+            }
+
+            $new_otp = rand(1000, 9999);
+            $conn->query("UPDATE users SET verification_token='$new_otp' WHERE user_id=" . $user['user_id']);
+
+            // Send Email
+            $mail = new PHPMailer(true);
+            try {
+                $mail->isSMTP();
+                $mail->Host       = 'smtp.gmail.com';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
+                $mail->Password   = 'yiuwcrykatkfzdwv';
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                $mail->Port       = 465;
+                $mail->SMTPOptions = array('ssl' => array('verify_peer'=>false,'verify_peer_name'=>false,'allow_self_signed'=>true));
+
+                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                $mail->addAddress($email, $name);
+                $mail->isHTML(true);
+                $mail->Subject = 'Verify Your Account - HealCare';
+                $mail->Body = '
+                <div style="font-family: Arial, sans-serif; max-width: 500px; padding: 30px; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+                    <h2 style="color: #2b50c0; text-align: center;">New Verification Code</h2>
+                    <p>Hi ' . $name . ',</p>
+                    <p>You requested a new verification code. Please use the code below to activate your account:</p>
+                    <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 20px; text-align: center; margin: 25px 0; border-radius: 8px;">
+                        <span style="font-size: 32px; font-weight: 800; color: #3b82f6; letter-spacing: 12px;">' . $new_otp . '</span>
+                    </div>
+                </div>';
+                $mail->send();
+                echo "OTP_SENT";
+            } catch (Exception $e) {
+                echo "ERROR: " . $mail->ErrorInfo;
+            }
+        } else {
+            echo "EMAIL_NOT_FOUND";
+        }
+        exit();
+
+    } elseif ($action == 'verify_signup_otp') {
+        $email = mysqli_real_escape_string($conn, $_POST['email']);
+        $otp = mysqli_real_escape_string($conn, $_POST['otp']);
+
+        // 1. Check for Pending Signup in Session
+        if (isset($_SESSION['pending_signup']) && $_SESSION['pending_signup']['email'] == $email) {
+            $data = $_SESSION['pending_signup'];
+            
+            if ($data['otp'] == $otp) {
+                if (time() > $data['expiry']) {
+                    echo "<script>alert('OTP Expired! Please try signing up again.'); window.location.href='signup.php'</script>";
+                    exit();
+                }
+
+                // SUCCESS: Create account now
+                $conn->begin_transaction();
+                try {
+                    $name = $data['name'];
+                    $pass = $data['password'];
+                    $phone = $data['phone'];
+                    $role = $data['role'];
+
+                    // 1. Create Registration Entry
+                    $sql_reg = "INSERT INTO registrations (name, email, phone, password, user_type, status) 
+                                VALUES ('$name', '$email', '$phone', '$pass', '$role', 'Approved')";
+                    $conn->query($sql_reg);
+                    $registration_id = $conn->insert_id;
+                    
+                    // 2. Generate Unique Patient ID
+                    $patient_code = "HC-P-" . date("Y") . "-" . rand(1000, 9999);
+                    $username = $patient_code; 
+
+                    // 3. Create User Entry with 'Active' status
+                    $sql_user = "INSERT INTO users (registration_id, username, email, password, role, status) 
+                                 VALUES ('$registration_id', '$username', '$email', '$pass', '$role', 'Active')";
+                    $conn->query($sql_user);
+                    $user_id = $conn->insert_id;
+
+                    // 4. Create initial patient profile
+                    $conn->query("INSERT INTO patient_profiles (user_id, patient_code, name, phone) VALUES ($user_id, '$patient_code', '$name', '$phone')");
+
+                    $conn->commit();
+
+                    // 5. Clear Pending Session
+                    unset($_SESSION['pending_signup']);
+
+                    // 6. AUTO LOGIN
+                    $_SESSION['logged_in'] = true;
+                    $_SESSION['user_id'] = $user_id;
+                    $_SESSION['username'] = $username;
+                    $_SESSION['user_role'] = $role;
+                    $_SESSION['full_name'] = $name;
+
+                    echo "<script>alert('Account verified and created successfully! Redirecting to your dashboard...'); window.location.href='patient_dashboard.php'</script>";
+                    exit();
+                } catch (Exception $e) {
+                    $conn->rollback();
+                    echo "<script>alert('Database Error: " . addslashes($e->getMessage()) . "'); window.location.href='signup.php'</script>";
+                    exit();
+                }
+            }
+        }
+
+        // 2. Fallback: Check Users Table (Old Flow)
+        $res = $conn->query("SELECT * FROM users WHERE email='$email' AND verification_token='$otp' AND status='Unverified'");
+        if ($res->num_rows > 0) {
+            $user = $res->fetch_assoc();
+            $user_id = $user['user_id'];
+            
+            $conn->query("UPDATE users SET status='Active', verification_token=NULL WHERE user_id=$user_id");
+            
+            // Auto Login for old flow too
+            $_SESSION['logged_in'] = true;
+            $_SESSION['user_id'] = $user_id;
+            $_SESSION['username'] = $user['username'];
+            $_SESSION['user_role'] = $user['role'];
+            
+            // Get Name
+            $reg_id = $user['registration_id'];
+            $reg_q = $conn->query("SELECT name FROM registrations WHERE registration_id = $reg_id");
+            if ($reg_q->num_rows > 0) {
+                $_SESSION['full_name'] = $reg_q->fetch_assoc()['name'];
+            }
+
+            echo "<script>alert('Account verified successfully! Redirecting to your dashboard...'); window.location.href='patient_dashboard.php'</script>";
+        } else {
+            echo "<script>alert('Invalid verification code. Please check your email and try again.'); window.location.href='verify_code.php?email=" . urlencode($email) . "'</script>";
         }
         exit();
     }

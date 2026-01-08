@@ -808,7 +808,9 @@ body {
 
 .section-header.white h2 {
     color: #ffffff;
+    font-weight: 800;
     margin-bottom: 20px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .section-header.white p {

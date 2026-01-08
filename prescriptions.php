@@ -61,54 +61,61 @@ $username = $_SESSION['username'];
         </aside>
 
         <main class="main-content">
-            <div class="dashboard-header"><h1>Prescriptions</h1><p>Active and past medication lists</p></div>
+            <div class="dashboard-header"><h1>My Prescriptions</h1><p>Active and past medication lists issued by your doctors</p></div>
 
             <div class="content-section" style="background: transparent; border: none; padding: 0;">
                 
-                <div class="prescription-card">
-                    <div class="presc-header">
-                        <div>
-                            <h4 style="font-size: 18px;">Dr. Sarah Jenny</h4>
-                            <p style="color: var(--text-gray); font-size: 13px;">Cardiology • Oct 15, 2025</p>
-                        </div>
-                        <a href="#" class="action-cancel" style="color: #4fc3f7;"><i class="fas fa-print"></i> Print</a>
-                    </div>
-                    <ul class="med-list">
-                        <li class="med-item">
-                            <div>
-                                <span class="med-name">Atorvastatin 20mg</span>
-                                <p class="dosage">1-0-1 | After Food</p>
-                            </div>
-                            <span style="color: var(--text-gray);">15 Days</span>
-                        </li>
-                        <li class="med-item">
-                            <div>
-                                <span class="med-name">Aspirin 75mg</span>
-                                <p class="dosage">0-0-1 | Night</p>
-                            </div>
-                            <span style="color: var(--text-gray);">30 Days</span>
-                        </li>
-                    </ul>
-                </div>
+                <?php
+                $presc_sql = "
+                    SELECT p.*, r.name as doctor_name, r.specialization
+                    FROM prescriptions p
+                    LEFT JOIN users u ON p.doctor_id = u.user_id
+                    LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                    WHERE p.patient_id = $user_id
+                    ORDER BY p.prescription_date DESC
+                ";
+                $presc_res = $conn->query($presc_sql);
 
+                if ($presc_res && $presc_res->num_rows > 0):
+                    while ($p_row = $presc_res->fetch_assoc()):
+                ?>
                 <div class="prescription-card">
                     <div class="presc-header">
                         <div>
-                            <h4 style="font-size: 18px;">Dr. Mark Stevens</h4>
-                            <p style="color: var(--text-gray); font-size: 13px;">Neurology • Sep 05, 2025</p>
+                            <h4 style="font-size: 18px; color: #fff;"><?php echo htmlspecialchars($p_row['doctor_name']); ?></h4>
+                            <p style="color: var(--text-gray); font-size: 13px;">
+                                <?php echo htmlspecialchars($p_row['specialization'] ?? 'Clinician'); ?> • 
+                                <?php echo date('M d, Y', strtotime($p_row['prescription_date'])); ?>
+                            </p>
                         </div>
-                        <a href="#" class="action-cancel" style="color: #4fc3f7;"><i class="fas fa-print"></i> Print</a>
+                        <a href="javascript:window.print()" class="action-cancel" style="color: #4fc3f7; text-decoration: none;">
+                            <i class="fas fa-print"></i> Print
+                        </a>
                     </div>
-                    <ul class="med-list">
-                        <li class="med-item">
-                            <div>
-                                <span class="med-name">Gabapentin 300mg</span>
-                                <p class="dosage">1-1-1 | Daily</p>
+                    
+                    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                        <strong style="display: block; font-size: 11px; text-transform: uppercase; color: #3b82f6; margin-bottom: 10px;">Medication & Instructions:</strong>
+                        <p style="color: #cbd5e1; line-height: 1.6; font-size: 14px;">
+                            <?php echo nl2br(htmlspecialchars($p_row['medicine_details'])); ?>
+                        </p>
+                        
+                        <?php if(!empty($p_row['instructions'])): ?>
+                            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.1);">
+                                <small style="color: #94a3b8;">Additional Instructions:</small>
+                                <p style="font-size: 13px; color: #94a3b8; font-style: italic;"><?php echo htmlspecialchars($p_row['instructions']); ?></p>
                             </div>
-                            <span style="color: var(--text-gray);">10 Days</span>
-                        </li>
-                    </ul>
+                        <?php endif; ?>
+                    </div>
                 </div>
+                <?php 
+                    endwhile;
+                else: 
+                ?>
+                <div style="text-align: center; padding: 50px; background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color);">
+                    <i class="fas fa-pills" style="font-size: 50px; color: #334155; margin-bottom: 20px;"></i>
+                    <p style="color: #64748b;">No active prescriptions found in your record.</p>
+                </div>
+                <?php endif; ?>
 
             </div>
         </main>

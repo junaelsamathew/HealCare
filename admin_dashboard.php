@@ -102,6 +102,52 @@ if (isset($_POST['action']) && isset($_POST['reg_id'])) {
         $admin_msg = "We regret to inform you that your application has been rejected after review.";
         $conn->query("UPDATE registrations SET status = 'Rejected', admin_message = '$admin_msg' WHERE registration_id = $reg_id");
         $success_msg = "Application Rejected. Notification sent successfully.";
+    } elseif ($action == 'add_user') {
+        $name = mysqli_real_escape_string($conn, $_POST['full_name']);
+        $username = mysqli_real_escape_string($conn, $_POST['username']);
+        $email = mysqli_real_escape_string($conn, $_POST['email']);
+        $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
+        $role = $_POST['role'];
+        $perms = isset($_POST['permissions']) ? implode(', ', $_POST['permissions']) : 'General Access';
+
+        $conn->begin_transaction();
+        try {
+            // Check if username/email exists
+            $check = $conn->query("SELECT user_id FROM users WHERE username = '$username' OR email = '$email'");
+            if ($check->num_rows > 0) {
+                throw new Exception("Username or Email already exists!");
+            }
+
+            // Insert into Registrations first to have a name/profile link
+            $stmt_reg = $conn->prepare("INSERT INTO registrations (name, email, user_type, status, password) VALUES (?, ?, ?, 'Approved', ?)");
+            $stmt_reg->bind_param("ssss", $name, $email, $role, $password);
+            $stmt_reg->execute();
+            $registration_id = $conn->insert_id;
+
+            // Insert into Users
+            $stmt = $conn->prepare("INSERT INTO users (registration_id, username, email, password, role, permissions, status, force_password_change) VALUES (?, ?, ?, ?, ?, ?, 'Active', 1)");
+            $stmt->bind_param("isssss", $registration_id, $username, $email, $password, $role, $perms);
+            $stmt->execute();
+            $new_user_id = $conn->insert_id;
+
+            if ($role == 'doctor') {
+                $spec = mysqli_real_escape_string($conn, $_POST['specialization']);
+                $qual = mysqli_real_escape_string($conn, $_POST['qualification']);
+                $exp = (int)$_POST['experience'];
+                $dept = mysqli_real_escape_string($conn, $_POST['department']);
+                $doj = mysqli_real_escape_string($conn, $_POST['date_of_join']);
+                $desig = mysqli_real_escape_string($conn, $_POST['designation']);
+
+                $conn->query("INSERT INTO doctors (user_id, specialization, qualification, experience, department, date_of_join, designation) 
+                             VALUES ($new_user_id, '$spec', '$qual', $exp, '$dept', '$doj', '$desig')");
+            }
+
+            $conn->commit();
+            $success_msg = "User account created successfully! ID: <strong>$username</strong>";
+        } catch (Exception $e) {
+            $conn->rollback();
+            $error_msg = "Error: " . $e->getMessage();
+        }
     }
 }
 
@@ -833,12 +879,16 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Login ID (e.g., HC-DR-2024-001)</label>
-                            <input type="text" name="username" required>
+                            <label>Full Name</label>
+                            <input type="text" name="full_name" placeholder="Enter user's full name" required>
                         </div>
                         <div class="form-group">
                             <label>Official Email</label>
-                            <input type="email" name="email" required>
+                            <input type="email" name="email" placeholder="e.g. name@healcare.com" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Username / Login ID</label>
+                            <input type="text" name="username" placeholder="e.g. HC-DR-2024-001" required>
                         </div>
                         <div class="form-group">
                             <label>Temporary Password</label>
@@ -854,20 +904,20 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         </div>
                     </div>
 
-                    <div id="doctorFields" style="display: block; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                        <h4 style="margin-bottom: 15px; font-size: 16px;">Doctor-Specific Fields</h4>
+                    <div id="doctorFields" style="display: block; background: rgba(255,255,255,0.03); padding: 25px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.05); margin: 20px 0;">
+                        <h4 style="margin-bottom: 20px; font-size: 16px; color: var(--primary-blue); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">Doctor-Specific Fields</h4>
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Specialization</label>
-                                <input type="text" name="specialization">
+                                <input type="text" name="specialization" placeholder="e.g. Cardiologist">
                             </div>
                             <div class="form-group">
                                 <label>Qualification</label>
-                                <input type="text" name="qualification">
+                                <input type="text" name="qualification" placeholder="e.g. MBBS, MD">
                             </div>
                             <div class="form-group">
                                 <label>Experience (Years)</label>
-                                <input type="number" name="experience">
+                                <input type="number" name="experience" placeholder="e.g. 5">
                             </div>
                             <div class="form-group">
                                 <label>Department</label>
@@ -921,11 +971,63 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             </div>
 
             <div class="content-section">
-                <div class="placeholder-section">
-                    <i class="fas fa-calendar-check"></i>
-                    <h3>Appointments Module</h3>
-                    <p>View all appointments, modify timings, and manage scheduling</p>
-                </div>
+                <?php
+                // Fetch All Appointments
+                $all_appts = $conn->query("
+                    SELECT a.*, 
+                           rd.name as doctor_name, 
+                           rp.name as patient_name_reg,
+                           pp.name as patient_name_prof
+                    FROM appointments a
+                    LEFT JOIN users ud ON a.doctor_id = ud.user_id
+                    LEFT JOIN registrations rd ON ud.registration_id = rd.registration_id
+                    LEFT JOIN users up ON a.patient_id = up.user_id
+                    LEFT JOIN registrations rp ON up.registration_id = rp.registration_id
+                    LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id
+                    ORDER BY a.appointment_date DESC
+                ");
+                ?>
+
+                <?php if ($all_appts && $all_appts->num_rows > 0): ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient</th>
+                                <th>Doctor</th>
+                                <th>Date & Time</th>
+                                <th>Department</th>
+                                <th>Status</th>
+                                <th>Queue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($appt = $all_appts->fetch_assoc()): 
+                                $p_name = $appt['patient_name_prof'] ?? $appt['patient_name_reg'] ?? 'Walk-in/Unknown';
+                                $d_name = $appt['doctor_name'] ?? 'Unassigned';
+                            ?>
+                                <tr>
+                                    <td><small style="color:var(--primary-blue);">#<?php echo $appt['appointment_id']; ?></small></td>
+                                    <td><strong><?php echo htmlspecialchars($p_name); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($d_name); ?></td>
+                                    <td>
+                                        <?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?><br>
+                                        <small><?php echo date('h:i A', strtotime($appt['appointment_time'] ?? $appt['appointment_date'])); ?></small>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($appt['department']); ?></td>
+                                    <td><span class="badge badge-<?php echo strtolower($appt['status'] == 'Scheduled' ? 'active' : ($appt['status'] == 'Requested' ? 'pending' : 'completed')); ?>"><?php echo $appt['status']; ?></span></td>
+                                    <td><?php echo $appt['queue_number'] ?? '-'; ?></td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="placeholder-section">
+                        <i class="fas fa-calendar-times"></i>
+                        <h3>No Appointments Found</h3>
+                        <p>There are no appointments in the system yet.</p>
+                    </div>
+                <?php endif; ?>
             </div>
 
         <?php elseif ($section == 'doctor-scheduling'): ?>

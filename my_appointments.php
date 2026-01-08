@@ -34,6 +34,19 @@ $username = $_SESSION['username'];
         <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
     </header>
 
+    <style>
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status-Pending, .status-Requested { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .status-Scheduled, .status-Approved, .status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    </style>
+
     <div class="dashboard-layout">
         <aside class="sidebar">
             <nav>
@@ -54,19 +67,61 @@ $username = $_SESSION['username'];
             <div class="content-section">
                 <div class="section-head"><h3>Scheduled Appointments</h3></div>
                 <div class="appointment-list">
-                    <div class="appointment-item">
-                        <div class="doc-info">
-                            <h4>Dr. Sarah Jenny</h4>
-                            <p>Cardiologist • Oct 25, 2025 at 10:00 AM</p>
+                    <?php
+                    $upcoming_sql = "SELECT a.*, r.name as doc_name, d.specialization 
+                                    FROM appointments a 
+                                    LEFT JOIN users u ON a.doctor_id = u.user_id 
+                                    LEFT JOIN doctors d ON u.user_id = d.user_id 
+                                    LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                                    WHERE a.patient_id = $user_id AND a.status IN ('Requested', 'Approved', 'Scheduled', 'Pending', 'Confirmed')
+                                    ORDER BY a.appointment_date ASC";
+                    $upcoming_res = $conn->query($upcoming_sql);
+
+                    if ($upcoming_res && $upcoming_res->num_rows > 0):
+                        while($appt = $upcoming_res->fetch_assoc()):
+                            $appt_time = date('M d, Y \a\t h:i A', strtotime($appt['appointment_date']));
+                    ?>
+                        <div class="appointment-item">
+                            <div class="doc-info">
+                                <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
+                                <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                            </div>
+                            <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo $appt['status']; ?></span>
                         </div>
-                        <span style="color: #10b981; font-size: 14px; font-weight: 600;">Confirmed</span>
-                    </div>
+                    <?php endwhile; else: ?>
+                        <div class="empty-state"><p>No upcoming appointments found. <a href="appointment_form.php">Book Now</a></p></div>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <div class="content-section" style="margin-top: 30px;">
                 <div class="section-head"><h3>Past History</h3></div>
-                <div class="empty-state"><p>No past appointments found.</p></div>
+                <div class="appointment-list">
+                    <?php
+                    $past_sql = "SELECT a.*, r.name as doc_name, d.specialization 
+                                FROM appointments a 
+                                LEFT JOIN users u ON a.doctor_id = u.user_id 
+                                LEFT JOIN doctors d ON u.user_id = d.user_id 
+                                LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                                WHERE a.patient_id = $user_id AND a.status IN ('Completed', 'Cancelled')
+                                ORDER BY a.appointment_date DESC";
+                    $past_res = $conn->query($past_sql);
+
+                    if ($past_res && $past_res->num_rows > 0):
+                        while($appt = $past_res->fetch_assoc()):
+                            $appt_time = date('M d, Y \a\t h:i A', strtotime($appt['appointment_date']));
+                    ?>
+                        <div class="appointment-item">
+                            <div class="doc-info">
+                                <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
+                                <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                            </div>
+                            <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo $appt['status']; ?></span>
+                        </div>
+                    <?php endwhile; else: ?>
+                        <div class="empty-state"><p>No past appointments found.</p></div>
+                    <?php endif; ?>
+                </div>
             </div>
         </main>
     </div>

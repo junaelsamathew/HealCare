@@ -28,6 +28,37 @@ if ($res->num_rows > 0) {
 }
 
 $doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
+
+// Handle Status Updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $appt_id = intval($_POST['appt_id']);
+    $new_status = $_POST['status'];
+    // Verify ownership
+    $check_own = $conn->query("SELECT appointment_id FROM appointments WHERE appointment_id = $appt_id AND doctor_id = $user_id");
+    if ($check_own->num_rows > 0) {
+        $stmt_upd = $conn->prepare("UPDATE appointments SET status = ? WHERE appointment_id = ?");
+        $stmt_upd->bind_param("si", $new_status, $appt_id);
+        if ($stmt_upd->execute()) {
+            echo "<script>alert('Appointment updated to $new_status'); window.location.href='doctor_appointments.php';</script>";
+        }
+    }
+}
+
+// Fetch Appointments
+$today_start = date('Y-m-d 00:00:00');
+$today_end = date('Y-m-d 23:59:59');
+
+// Logic for tabs could be added here, for now showing Today + Upcoming sorted
+$sql_appts = "SELECT a.*, 
+                    rp.name as reg_name, 
+                    pp.name as profile_name
+             FROM appointments a 
+             LEFT JOIN users up ON a.patient_id = up.user_id
+             LEFT JOIN registrations rp ON up.registration_id = rp.registration_id
+             LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id
+             WHERE a.doctor_id = $user_id AND a.status != 'Cancelled' 
+             ORDER BY a.appointment_date ASC";
+$res_appts = $conn->query($sql_appts);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -89,9 +120,11 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
             font-weight: 700;
             text-transform: uppercase;
         }
-        .status-scheduled { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-        .status-completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-        .status-cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .status-Scheduled, .status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .status-Approved { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .status-Requested { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
         
         .btn-action {
             background: none;
@@ -159,56 +192,69 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
             </div>
 
             <div class="tabs">
-                <a href="#" class="tab active">Today's Appointments</a>
-                <a href="#" class="tab">Upcoming</a>
+                <a href="#" class="tab active">Appointments</a>
+                <!-- <a href="#" class="tab">Upcoming</a>
                 <a href="#" class="tab">Completed</a>
-                <a href="#" class="tab">Cancelled</a>
+                <a href="#" class="tab">Cancelled</a> -->
             </div>
 
-            <!-- Today's List -->
-            <div class="appointment-card">
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div class="time-badge">09:30 AM</div>
-                    <div>
-                        <h3 style="color: white; margin-bottom: 5px;">Dileep Mathew</h3>
-                        <p style="font-size: 13px; color: #94a3b8;"><i class="fas fa-hashtag"></i> HC-P-2026-9901 • Routine Checkup</p>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <span class="status-badge status-scheduled">Scheduled</span>
-                    <button class="btn-action"><i class="fas fa-check"></i> Mark Completed</button>
-                    <button class="btn-action" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);"><i class="fas fa-times"></i> Cancel</button>
-                </div>
-            </div>
+            <!-- Dynamic List -->
+            <?php if ($res_appts->num_rows > 0): ?>
+                <?php while($appt = $res_appts->fetch_assoc()): ?>
+                    <div class="appointment-card">
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <div class="time-badge">
+                                <?php echo date('h:i A', strtotime($appt['appointment_time'] ?? $appt['appointment_date'])); ?>
+                                <br><small style="font-size:10px;"><?php echo date('M d', strtotime($appt['appointment_date'])); ?></small>
+                            </div>
+                            <div>
+                                <?php $p_display_name = $appt['profile_name'] ?? $appt['reg_name'] ?? 'Unknown Patient'; ?>
+                                <h3 style="color: white; margin-bottom: 5px;"><?php echo htmlspecialchars($p_display_name); ?></h3>
+                                <p style="font-size: 13px; color: #94a3b8;">
+                                    <i class="fas fa-hashtag"></i> Token: <?php echo htmlspecialchars($appt['token_no'] ?? 'N/A'); ?> • 
+                                    ID: <?php echo $appt['patient_id'] ?? 'Walk-in'; ?>
+                                </p>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <span class="status-badge status-<?php echo str_replace(' ', '', $appt['status']); ?>"><?php echo $appt['status']; ?></span>
+                            
+                            <?php if ($appt['status'] == 'Requested' || $appt['status'] == 'Pending'): ?>
+                                <form method="POST" style="display:inline;">
+                                    <input type="hidden" name="action" value="update">
+                                    <input type="hidden" name="appt_id" value="<?php echo $appt['appointment_id']; ?>">
+                                    <button type="submit" name="status" value="Approved" class="btn-action" style="background:#10b981; color:white; border:none;"><i class="fas fa-check"></i> Approve</button>
+                                </form>
+                            <?php endif; ?>
 
-            <div class="appointment-card">
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div class="time-badge">11:15 AM</div>
-                    <div>
-                        <h3 style="color: white; margin-bottom: 5px;">Anjali Sharma</h3>
-                        <p style="font-size: 13px; color: #94a3b8;"><i class="fas fa-hashtag"></i> HC-P-2026-8842 • Viral Fever</p>
-                    </div>
-                </div>
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <span class="status-badge status-scheduled">Scheduled</span>
-                    <button class="btn-action"><i class="fas fa-check"></i> Mark Completed</button>
-                    <button class="btn-action" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);"><i class="fas fa-times"></i> Cancel</button>
-                </div>
-            </div>
+                            <?php if ($appt['status'] == 'Approved' || $appt['status'] == 'Checked-In' || $appt['status'] == 'Scheduled' || $appt['status'] == 'Confirmed'): ?>
+                                <a href="doctor_dashboard.php?patient_id=<?php echo $appt['patient_id']; ?>&appt_id=<?php echo $appt['appointment_id']; ?>" class="btn-action" style="color:#3b82f6; border-color:#3b82f6; text-decoration:none;"><i class="fas fa-stethoscope"></i> Consult</a>
+                                <?php if($appt['status'] != 'Scheduled' && $appt['status'] != 'Approved' && $appt['status'] != 'Confirmed'): ?>
+                                    <form method="POST" style="display:inline;">
+                                        <input type="hidden" name="action" value="update">
+                                        <input type="hidden" name="appt_id" value="<?php echo $appt['appointment_id']; ?>">
+                                        <button type="submit" name="status" value="Completed" class="btn-action" style="color:#10b981; border-color:#10b981;"><i class="fas fa-check-double"></i> Complete</button>
+                                    </form>
+                                <?php endif; ?>
+                            <?php endif; ?>
 
-            <div class="appointment-card">
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <div class="time-badge">02:00 PM</div>
-                    <div>
-                        <h3 style="color: white; margin-bottom: 5px;">Suresh Raina</h3>
-                        <p style="font-size: 13px; color: #94a3b8;"><i class="fas fa-hashtag"></i> HC-P-2026-3121 • Follow-up</p>
+                            <?php if ($appt['status'] != 'Completed' && $appt['status'] != 'Cancelled'): ?>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Reject/Cancel appointment?');">
+                                    <input type="hidden" name="action" value="update">
+                                    <input type="hidden" name="appt_id" value="<?php echo $appt['appointment_id']; ?>">
+                                    <button type="submit" name="status" value="Cancelled" class="btn-action" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.2);"><i class="fas fa-times"></i></button>
+                                </form>
+                            <?php endif; ?>
+                        </div>
                     </div>
+                <?php endwhile; ?>
+            <?php else: ?>
+                <div style="text-align:center; padding:50px; color:#aaa;">
+                    <i class="fas fa-calendar-times" style="font-size:40px; margin-bottom:20px; opacity:0.5;"></i>
+                    <p>No appointments found.</p>
                 </div>
-                <div style="display: flex; align-items: center; gap: 20px;">
-                    <span class="status-badge status-completed">Completed</span>
-                    <button class="btn-action" disabled style="opacity: 0.5; cursor: default;">View Rx</button>
-                </div>
-            </div>
+            <?php endif; ?>
+
         </main>
     </div>
 </body>

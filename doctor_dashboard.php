@@ -29,6 +29,59 @@ if ($res->num_rows > 0) {
 }
 
 $doctor_name = "Dr. " . htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
+
+// Handle Status Updates (Accept Appointment)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
+    $appt_id = intval($_POST['appt_id']);
+    $new_status = $_POST['new_status'];
+    // Verify ownership
+    $check_own = $conn->query("SELECT appointment_id FROM appointments WHERE appointment_id = $appt_id AND doctor_id = $user_id");
+    if ($check_own->num_rows > 0) {
+        $stmt_upd = $conn->prepare("UPDATE appointments SET status = ? WHERE appointment_id = ?");
+        $stmt_upd->bind_param("si", $new_status, $appt_id);
+        $stmt_upd->execute();
+        header("Location: doctor_dashboard.php");
+        exit();
+    }
+}
+
+// Handle Patient Selection for Treatment
+$active_patient = null;
+$history_records = [];
+if (isset($_GET['patient_id'])) {
+    $pid = $_GET['patient_id'];
+    
+    // Fetch Patient Details
+    $stmt = $conn->prepare("SELECT u.username, r.name, r.phone, pp.patient_code, pp.gender, pp.date_of_birth, pp.medical_history FROM users u JOIN registrations r ON u.registration_id = r.registration_id LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id WHERE u.user_id = ?");
+    $stmt->bind_param("i", $pid);
+    $stmt->execute();
+    $active_patient = $stmt->get_result()->fetch_assoc();
+    
+    // Calculate Age
+    if (isset($active_patient['date_of_birth']) && $active_patient['date_of_birth']) {
+        $dob = new DateTime($active_patient['date_of_birth']);
+        $now = new DateTime();
+        $active_patient['age'] = $now->diff($dob)->y . ' Years';
+    } else {
+        $active_patient['age'] = 'N/A';
+    }
+
+    // Fetch Latest Vitals (recorded by nurse)
+    $stmt_v = $conn->prepare("SELECT * FROM patient_vitals WHERE patient_id = ? ORDER BY recorded_at DESC LIMIT 1");
+    $stmt_v->bind_param("i", $pid);
+    $stmt_v->execute();
+    $vitals_res = $stmt_v->get_result();
+    $latest_vitals = $vitals_res->fetch_assoc();
+
+    // Fetch Medical History
+    $stmt = $conn->prepare("SELECT * FROM medical_records WHERE patient_id = ? ORDER BY created_at DESC");
+    $stmt->bind_param("i", $pid);
+    $stmt->execute();
+    $hist_res = $stmt->get_result();
+    while($row = $hist_res->fetch_assoc()) {
+        $history_records[] = $row;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -133,6 +186,12 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['us
 
         .leave-status { font-size: 12px; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
         .status-granted { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+        /* Status Badges */
+        .badge-status-Requested, .badge-status-Pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-status-Approved, .badge-status-Scheduled, .badge-status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -230,23 +289,75 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['us
                 <!-- Main Activity Area -->
                 <div>
                     <!-- Today's Queue Section - ENT Filtered -->
+                    <!-- Today's Queue Section - Dynamic -->
                     <div class="content-section">
                         <div class="section-head">
                             <h3><?php echo $department; ?> Appointment Queue</h3>
                             <a href="doctor_appointments.php" style="color: #4fc3f7; font-size: 13px;">Manage All</a>
                         </div>
                         <div class="appointment-list">
-                            <div class="appointment-item" style="border-left: 4px solid #3b82f6;">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                    <div class="doc-info">
-                                        <h4 style="font-size: 15px;">Dileep Mathew <span style="font-weight: normal; color: #94a3b8; font-size: 13px;">(ID: HC-P-2026-9901)</span></h4>
-                                        <p style="font-size: 13px; margin-top: 5px;"><i class="fas fa-clock"></i> 09:30 AM • <i class="fas fa-notes-medical"></i> Chief Complaint: Chest Pain/Palpitations</p>
-                                    </div>
-                                    <div class="action-btns">
-                                        <button class="btn-consult" onclick="openConsultation('Dileep Mathew', '32', 'Male')">Treat Patient</button>
-                                    </div>
-                                </div>
-                            </div>
+                            <?php
+                            $today = date('Y-m-d');
+                            // Join with users/registrations to get name. Left join profile for age/gender if available.
+                            // Assuming patient_profiles exists and has data. If not, use defaults.
+                            $stmt = $conn->prepare("
+                                SELECT a.*, r.name as patient_name, r.phone, pp.patient_code, pp.gender, pp.date_of_birth 
+                                FROM appointments a 
+                                JOIN users u ON a.patient_id = u.user_id 
+                                JOIN registrations r ON u.registration_id = r.registration_id 
+                                LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id 
+                                WHERE a.doctor_id = ? AND a.appointment_date = ? 
+                                ORDER BY a.appointment_time ASC
+                            ");
+                            $stmt->bind_param("is", $user_id, $today);
+                            $stmt->execute();
+                            $queue_res = $stmt->get_result();
+
+                            if ($queue_res->num_rows > 0) {
+                                while ($appt = $queue_res->fetch_assoc()) {
+                                    $p_name = htmlspecialchars($appt['patient_name']);
+                                    $p_code = $appt['patient_code'] ?: 'N/A';
+                                    $p_time = date("h:i A", strtotime($appt['appointment_time']));
+                                    
+                                    // Calculate Age
+                                    $p_age = '--';
+                                    if (!empty($appt['date_of_birth'])) {
+                                        $dob_date = new DateTime($appt['date_of_birth']);
+                                        $now_date = new DateTime();
+                                        $p_age = $now_date->diff($dob_date)->y . ' Yrs';
+                                    }
+
+                                    $p_gender = $appt['gender'] ?: 'Unknown';
+                                    $p_id = $appt['patient_id'];
+                                    $a_id = $appt['appointment_id'];
+                                    $status = $appt['status'];
+                                    
+                                    echo '
+                                    <div class="appointment-item" style="border-left: 4px solid '.($status == 'Requested' ? '#fbbf24' : '#3b82f6').';">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                            <div class="doc-info">
+                                                <h4 style="font-size: 15px;">'.$p_name.' <span style="font-weight: normal; color: #94a3b8; font-size: 13px;">(ID: '.$p_code.')</span></h4>
+                                                <p style="font-size: 13px; margin-top: 5px;"><i class="fas fa-clock"></i> '.$p_time.' • Age: '.$p_age.' • Sex: '.$p_gender.' • <span class="badge-status-'.$status.'" style="font-weight:600;">'.$status.'</span></p>
+                                            </div>
+                                            <div class="action-btns" style="display:flex; gap:10px;">';
+                                                if($status == 'Requested' || $status == 'Pending') {
+                                                    echo '<form method="POST" style="margin:0;">
+                                                            <input type="hidden" name="update_status" value="1">
+                                                            <input type="hidden" name="appt_id" value="'.$a_id.'">
+                                                            <input type="hidden" name="new_status" value="Approved">
+                                                            <button type="submit" class="btn-consult" style="background:#10b981;"><i class="fas fa-check"></i> Approve</button>
+                                                          </form>';
+                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In') {
+                                                    echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult"><i class="fas fa-user-md"></i> Consult</a>';
+                                                }
+                                    echo '  </div>
+                                        </div>
+                                    </div>';
+                                }
+                            } else {
+                                echo '<p style="color: #94a3b8; text-align: center; padding: 20px;">No appointments for today.</p>';
+                            }
+                            ?>
                         </div>
                     </div>
 
@@ -323,7 +434,7 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['us
                             <div class="leave-type-card">Afternoon</div>
                             <div class="leave-type-card">Full Day</div>
                         </div>
-                        <button style="width: 100%; margin-top: 15px; padding: 10px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer;">Submit Leave Request</button>
+                        <a href="doctor_leave.php" style="width: 100%; margin-top: 15px; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: white; font-weight: 600; cursor: pointer; text-decoration: none; display: block; text-align: center;">Go to Leave Management</a>
                     </div>
 
                     <!-- Recent Lab Reports (To Review) -->
@@ -346,8 +457,14 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['us
         <div class="modal-content">
             <div class="modal-header">
                 <div>
-                    <h3 id="modalPatientName">Consultation: John Doe</h3>
-                    <p style="color: var(--text-gray); font-size: 13px;">Age: 32 | Gender: Male | Patient ID: HC-P-2026-9901</p>
+                    <h3 id="modalPatientName">Consultation: <?php echo $active_patient['name'] ?? 'Select Patient'; ?></h3>
+                    <?php if($active_patient): ?>
+                    <p style="color: var(--text-gray); font-size: 13px;">
+                        Age: <?php echo $active_patient['age'] ?? 'N/A'; ?> | 
+                        Gender: <?php echo $active_patient['gender'] ?? 'N/A'; ?> | 
+                        Patient ID: <?php echo $active_patient['patient_code']; ?>
+                    </p>
+                    <?php endif; ?>
                 </div>
                 <button onclick="closeConsultation()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
             </div>
@@ -357,79 +474,129 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['us
                     <h4 style="margin-bottom: 20px; color: #4fc3f7; display: flex; align-items: center; gap: 10px;">
                         <i class="fas fa-user-circle"></i> Patient Summary
                     </h4>
-                    <div style="font-size: 13.5px; line-height: 1.8; color: #cbd5e1; background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                        <p><strong>Medical History:</strong> Chronic Hypertension, Diabetes Mellitus Type 2 (Controlled)</p>
-                        <p><strong>Past Visits:</strong> 5 (Last: 1 month ago)</p>
-                        <p><strong>Allergies:</strong> Penicillin, Shellfish</p>
-                    </div>
                     
-                    <div style="margin-top: 30px;">
-                        <h4 style="margin-bottom: 15px; font-size: 14px; color: #94a3b8;">Current Vitals</h4>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                            <div style="background: rgba(37, 99, 235, 0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(37, 99, 235, 0.2);">
-                                <span style="font-size: 11px; color: #93c5fd; text-transform: uppercase;">Heart Rate</span><br>
-                                <strong style="font-size: 18px; color: #fff;">72 <small style="font-weight: normal; font-size: 12px; opacity: 0.6;">bpm</small></strong>
-                            </div>
-                            <div style="background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2);">
-                                <span style="font-size: 11px; color: #6ee7b7; text-transform: uppercase;">BP</span><br>
-                                <strong style="font-size: 18px; color: #fff;">120/80</strong>
-                            </div>
-                            <div style="background: rgba(251, 191, 36, 0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.2);">
-                                <span style="font-size: 11px; color: #fcd34d; text-transform: uppercase;">Cholesterol</span><br>
-                                <strong style="font-size: 18px; color: #fff;">190 <small style="font-weight: normal; font-size: 12px; opacity: 0.6;">mg/dL</small></strong>
-                            </div>
+                    <!-- Medical History Section -->
+                    <div style="font-size: 13.5px; line-height: 1.6; color: #cbd5e1; background: rgba(59, 130, 246, 0.05); padding: 18px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.1); margin-bottom: 20px;">
+                        <span style="font-size: 11px; color: #3b82f6; font-weight: 700; text-transform: uppercase;">Medical History</span>
+                        <p style="margin-top: 5px;">
+                            <?php echo !empty($active_patient['medical_history']) ? htmlspecialchars($active_patient['medical_history']) : "No previous medical history found for this patient."; ?>
+                        </p>
+                    </div>
+
+                    <!-- Current Vitals Section -->
+                    <h4 style="margin-bottom: 15px; font-size: 14px; color: #94a3b8;">Current Vitals</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                        <div style="background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                            <span style="font-size: 10px; color: #94a3b8; text-transform: uppercase;">Heart Rate</span><br>
+                            <strong style="font-size: 20px; color: #fff;">
+                                <?php echo isset($latest_vitals['heart_rate']) ? htmlspecialchars($latest_vitals['heart_rate']) : '--'; ?> 
+                                <small style="font-weight: normal; font-size: 12px; opacity: 0.6;">bpm</small>
+                            </strong>
+                        </div>
+                        <div style="background: rgba(30, 41, 59, 0.5); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                            <span style="font-size: 10px; color: #10b981; text-transform: uppercase;">BP</span><br>
+                            <strong style="font-size: 20px; color: #fff;">
+                                <?php 
+                                    if(isset($latest_vitals['blood_pressure_systolic']) && isset($latest_vitals['blood_pressure_diastolic'])) {
+                                        echo htmlspecialchars($latest_vitals['blood_pressure_systolic'] . '/' . $latest_vitals['blood_pressure_diastolic']);
+                                    } else {
+                                        echo '--/--';
+                                    }
+                                ?>
+                            </strong>
                         </div>
                     </div>
 
-                    <div style="margin-top: 30px;">
-                        <h4 style="margin-bottom: 15px; font-size: 14px; color: #94a3b8;">Health Analysis Trends</h4>
-                        <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-                            <canvas id="patientVitalsChart" height="200"></canvas>
-                        </div>
+                    <!-- Past Consultation records -->
+                    <h4 style="margin-bottom: 15px; font-size: 14px; color: #94a3b8;">Past Consultations</h4>
+                    <div style="font-size: 13px; color: #cbd5e1; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); max-height: 200px; overflow-y: auto;">
+                        <?php if(!empty($history_records)): ?>
+                            <?php foreach($history_records as $rec): ?>
+                                <div style="margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px;">
+                                    <strong style="color:#fff; font-size: 11px;"><?php echo date("d M Y", strtotime($rec['created_at'])); ?></strong><br>
+                                    <span style="color:#94a3b8;">Diag:</span> <?php echo mb_strimwidth(htmlspecialchars($rec['diagnosis']), 0, 40, "..."); ?><br>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <p style="font-size: 12px; color: #64748b;">No previous consultation records.</p>
+                        <?php endif; ?>
                     </div>
                 </div>
 
                 <!-- Right: Active Consultation -->
                 <div class="consult-form">
-                    <div style="display: flex; gap: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;">
-                        <button class="tab-btn active">Diagnosis & Notes</button>
-                        <button class="tab-btn">Prescription (Rx)</button>
-                        <button class="tab-btn">Lab/Tests</button>
-                        <button class="tab-btn">Follow-up</button>
-                    </div>
-
-                    <div>
-                        <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Doctor's Notes / Summary</label>
-                        <textarea style="width: 100%; height: 100px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; color: white; padding: 15px;" placeholder="Enter clinical observations and summary..."></textarea>
-                    </div>
-
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <label style="font-size: 13px; font-weight: 600;">Prescribe Medications</label>
-                            <button style="background: var(--primary-blue); color: white; border: none; font-size: 10px; padding: 4px 10px; border-radius: 4px;">+ Add Medicine</button>
+                    <form method="POST" action="save_consultation.php">
+                        <input type="hidden" name="patient_id" value="<?php echo $_GET['patient_id'] ?? ''; ?>">
+                        <input type="hidden" name="doctor_id" value="<?php echo $user_id; ?>">
+                        <input type="hidden" name="appointment_id" value="<?php echo $_GET['appt_id'] ?? ''; ?>">
+                        
+                        <div style="display: flex; gap: 20px; border-bottom: 1px solid var(--border-color); margin-bottom: 10px;">
+                            <button type="button" class="tab-btn active">Diagnosis & Notes</button>
                         </div>
-                        <input type="text" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; color: white;" placeholder="Search medicine (e.g. Paracetamol)...">
-                    </div>
 
-                    <div style="display: flex; gap: 15px;">
-                        <div style="flex: 1;">
-                            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">Order Lab Test</label>
-                            <input type="text" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; color: white;" placeholder="CBC, Lipids, X-Ray...">
+                        <div>
+                            <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Diagnosis</label>
+                            <input type="text" name="diagnosis" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; color: white; margin-bottom: 15px;" placeholder="Primary Diagnosis (e.g. Viral Fever)">
+                            
+                            <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Doctor's Internal Notes / Treatment Plan</label>
+                            <textarea name="treatment" style="width: 100%; height: 80px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; color: white; padding: 15px; margin-bottom: 15px;" placeholder="Enter clinical observations..."></textarea>
+                            
+                            <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Special Notes to Patient</label>
+                            <textarea name="special_notes" style="width: 100%; height: 60px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; color: white; padding: 15px; margin-bottom: 15px;" placeholder="Advice to patient (e.g. Bed rest for 3 days, drink more water)"></textarea>
                         </div>
-                        <div style="flex: 1;">
-                            <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;">Refer Next Doctor</label>
-                            <input type="text" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; color: white;" placeholder="Search specialists...">
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;"><i class="fas fa-pills" style="color:#10b981;"></i> Prescription</label>
+                                <textarea name="prescription" style="width: 100%; height: 80px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; color: white; padding: 15px;" placeholder="Medicine Name - Dosage (e.g. 500mg) - Frequency (e.g. 1-0-1)"></textarea>
+                            </div>
+                            <div>
+                                <label style="font-size: 13px; font-weight: 600; display: block; margin-bottom: 8px;"><i class="fas fa-flask" style="color:#4fc3f7;"></i> Lab Order</label>
+                                <div style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px;">
+                                    <label style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #94a3b8; cursor: pointer; margin-bottom: 8px;">
+                                        <input type="checkbox" name="lab_required" value="1" id="labCheck" onchange="toggleLabFields(this.checked)"> Lab Test Required
+                                    </label>
+                                    <input type="text" name="lab_test_name" id="labField" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; color: white; font-size: 12px; display: none; margin-bottom: 8px;" placeholder="e.g. Blood CBC, X-Ray">
+                                    
+                                     <select name="lab_category" id="labCat" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; color: white; font-size: 12px; display: none;">
+                                         <option value="">Select Lab Category</option>
+                                         <option value="Blood / Pathology Lab">Blood / Pathology Lab (Gen Med, Cardio, Gyn, Derm)</option>
+                                         <option value="X-Ray / Imaging Lab">X-Ray / Imaging Lab (Ortho, ENT)</option>
+                                         <option value="Diagnostic Lab">Diagnostic Lab (ECG, Hearing, Eye tests)</option>
+                                         <option value="Ultrasound Lab">Ultrasound Lab (Gyn, Gen Med)</option>
+                                     </select>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div style="margin-top: auto; display: flex; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-                        <button style="flex: 1; padding: 12px; background: #10b981; border: none; border-radius: 8px; color: white; font-weight: 700;">Finalize Consultation & Print Rx</button>
-                        <button style="padding: 12px 25px; border: 1px solid #ef4444; border-radius: 8px; color: #ef4444; background: none;">Next Appt Request</button>
-                    </div>
+                        <script>
+                            function toggleLabFields(checked) {
+                                document.getElementById('labField').style.display = checked ? 'block' : 'none';
+                                document.getElementById('labCat').style.display = checked ? 'block' : 'none';
+                            }
+                        </script>
+
+                        <div style="margin-top: 20px; display: flex; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                            <button type="submit" style="flex: 1; padding: 12px; background: #10b981; border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer;"><i class="fas fa-save"></i> Finalize & Close Appointment</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+    
+    <?php if($active_patient): ?>
+    <script>
+        // Use a more robust way to open the modal
+        (function() {
+            var modal = document.getElementById('consultModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                console.log("Consultation modal opened for patient: <?php echo addslashes($active_patient['name']); ?>");
+            }
+        })();
+    </script>
+    <?php endif; ?>
 
     <script>
         // Patient Health Dynamics Chart
