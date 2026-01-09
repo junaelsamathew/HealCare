@@ -37,8 +37,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         // 3. Insert Lab Order if required
         if ($lab_required == 'Yes' && !empty($lab_test_name)) {
-            $stmt_lab = $conn->prepare("INSERT INTO lab_orders (patient_id, doctor_id, appointment_id, lab_category, test_name, instructions) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt_lab->bind_param("iiisss", $patient_id, $doctor_id, $appointment_id, $lab_category, $lab_test_name, $special_notes);
+            $priority = 'Normal';
+            $order_status = 'Pending';
+            $stmt_lab = $conn->prepare("INSERT INTO lab_orders (patient_id, doctor_id, appointment_id, lab_category, test_name, instructions, priority, order_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_lab->bind_param("iiisssss", $patient_id, $doctor_id, $appointment_id, $lab_category, $lab_test_name, $special_notes, $priority, $order_status);
             $stmt_lab->execute();
         }
 

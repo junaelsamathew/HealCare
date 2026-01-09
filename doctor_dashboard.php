@@ -347,7 +347,7 @@ if (isset($_GET['patient_id'])) {
                                                             <input type="hidden" name="new_status" value="Approved">
                                                             <button type="submit" class="btn-consult" style="background:#10b981;"><i class="fas fa-check"></i> Approve</button>
                                                           </form>';
-                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In') {
+                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed') {
                                                     echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult"><i class="fas fa-user-md"></i> Consult</a>';
                                                 }
                                     echo '  </div>
@@ -571,8 +571,20 @@ if (isset($_GET['patient_id'])) {
 
                         <script>
                             function toggleLabFields(checked) {
-                                document.getElementById('labField').style.display = checked ? 'block' : 'none';
-                                document.getElementById('labCat').style.display = checked ? 'block' : 'none';
+                                const labField = document.getElementById('labField');
+                                const labCat = document.getElementById('labCat');
+                                
+                                if (checked) {
+                                    labField.style.display = 'block';
+                                    labCat.style.display = 'block';
+                                    labField.setAttribute('required', 'required');
+                                    labCat.setAttribute('required', 'required');
+                                } else {
+                                    labField.style.display = 'none';
+                                    labCat.style.display = 'none';
+                                    labField.removeAttribute('required');
+                                    labCat.removeAttribute('required');
+                                }
                             }
                         </script>
 

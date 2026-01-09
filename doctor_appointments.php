@@ -211,7 +211,7 @@ $res_appts = $conn->query($sql_appts);
                                 <?php $p_display_name = $appt['profile_name'] ?? $appt['reg_name'] ?? 'Unknown Patient'; ?>
                                 <h3 style="color: white; margin-bottom: 5px;"><?php echo htmlspecialchars($p_display_name); ?></h3>
                                 <p style="font-size: 13px; color: #94a3b8;">
-                                    <i class="fas fa-hashtag"></i> Token: <?php echo htmlspecialchars($appt['token_no'] ?? 'N/A'); ?> • 
+                                    <i class="fas fa-hashtag"></i> Token: <?php echo htmlspecialchars($appt['queue_number'] ?? 'N/A'); ?> • 
                                     ID: <?php echo $appt['patient_id'] ?? 'Walk-in'; ?>
                                 </p>
                             </div>

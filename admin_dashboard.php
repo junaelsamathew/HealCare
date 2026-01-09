@@ -148,6 +148,120 @@ if (isset($_POST['action']) && isset($_POST['reg_id'])) {
             $conn->rollback();
             $error_msg = "Error: " . $e->getMessage();
         }
+    } elseif ($action == 'add_ambulance') {
+        $driver = mysqli_real_escape_string($conn, $_POST['driver_name']);
+        $phone = mysqli_real_escape_string($conn, $_POST['phone_number']);
+        $v_no = mysqli_real_escape_string($conn, $_POST['vehicle_number']);
+        $v_type = mysqli_real_escape_string($conn, $_POST['vehicle_type']);
+        $location = mysqli_real_escape_string($conn, $_POST['location']);
+        
+        $sql = "INSERT INTO ambulance_contacts (driver_name, phone_number, vehicle_number, vehicle_type, location, availability) 
+                VALUES ('$driver', '$phone', '$v_no', '$v_type', '$location', 'Available')";
+        if ($conn->query($sql)) {
+            $success_msg = "Ambulance contact added successfully!";
+        } else {
+            $error_msg = "Error: " . $conn->error;
+        }
+    } elseif ($action == 'delete_ambulance') {
+        $c_id = (int)$_POST['contact_id'];
+        if ($conn->query("DELETE FROM ambulance_contacts WHERE contact_id = $c_id")) {
+            $success_msg = "Contact deleted successfully.";
+        } else {
+            $error_msg = "Error deleting contact.";
+        }
+    } elseif ($action == 'update_doctor_schedule') {
+        $doc_id = (int)$_POST['doctor_id'];
+        $day = mysqli_real_escape_string($conn, $_POST['day_of_week']);
+        $start = mysqli_real_escape_string($conn, $_POST['start_time']);
+        $end = mysqli_real_escape_string($conn, $_POST['end_time']);
+        $status = mysqli_real_escape_string($conn, $_POST['status']);
+        
+        $sql = "INSERT INTO doctor_schedules (doctor_id, day_of_week, start_time, end_time, status) 
+                VALUES ($doc_id, '$day', '$start', '$end', '$status')
+                ON DUPLICATE KEY UPDATE start_time = '$start', end_time = '$end', status = '$status'";
+        if ($conn->query($sql)) {
+            $success_msg = "Doctor schedule updated successfully!";
+        } else {
+            $error_msg = "Error updating schedule: " . $conn->error;
+        }
+    } elseif ($action == 'update_doctor_availability') {
+        $doc_id = (int)$_POST['doctor_id'];
+        $availability = mysqli_real_escape_string($conn, $_POST['availability_status']);
+        if ($conn->query("UPDATE doctors SET availability_status = '$availability' WHERE user_id = $doc_id")) {
+            $success_msg = "Doctor availability updated!";
+        } else {
+            $error_msg = "Error updating availability.";
+        }
+    } elseif ($action == 'update_doctor_dept') {
+        $doc_id = (int)$_POST['doctor_id'];
+        $dept = mysqli_real_escape_string($conn, $_POST['department']);
+        $spec = mysqli_real_escape_string($conn, $_POST['specialization']);
+        if ($conn->query("UPDATE doctors SET department = '$dept', specialization = '$spec' WHERE user_id = $doc_id")) {
+            $success_msg = "Doctor department/specialization updated!";
+        } else {
+            $error_msg = "Error updating department.";
+        }
+    } elseif ($action == 'save_menu_item') {
+        $name = mysqli_real_escape_string($conn, $_POST['food_name']);
+        $cat = mysqli_real_escape_string($conn, $_POST['meal_category']);
+        $diet = mysqli_real_escape_string($conn, $_POST['diet_type']);
+        $price = (float)$_POST['price'];
+        $desc = mysqli_real_escape_string($conn, $_POST['description']);
+        $avail = mysqli_real_escape_string($conn, $_POST['availability']);
+        $mid = isset($_POST['menu_id']) ? (int)$_POST['menu_id'] : null;
+
+        if ($mid) {
+            $sql = "UPDATE canteen_menu SET item_name='$name', item_category='$cat', diet_type='$diet', price=$price, description='$desc', availability='$avail' WHERE menu_id=$mid";
+        } else {
+            $sql = "INSERT INTO canteen_menu (item_name, item_category, diet_type, price, description, availability) VALUES ('$name', '$cat', '$diet', $price, '$desc', '$avail')";
+        }
+        if ($conn->query($sql)) {
+            $success_msg = "Menu item saved successfully!";
+        } else {
+            $error_msg = "Error saving menu item: " . $conn->error;
+        }
+    } elseif ($action == 'delete_menu_item') {
+        $mid = (int)$_POST['menu_id'];
+        if ($conn->query("DELETE FROM canteen_menu WHERE menu_id = $mid")) {
+            $success_msg = "Menu item deleted!";
+        } else {
+            $error_msg = "Error deleting item.";
+        }
+    } elseif ($action == 'update_order_status') {
+        $oid = (int)$_POST['order_id'];
+        $status = mysqli_real_escape_string($conn, $_POST['new_status']);
+        if ($conn->query("UPDATE canteen_orders SET order_status = '$status' WHERE order_id = $oid")) {
+            $success_msg = "Order #$oid status updated!";
+        } else {
+            $error_msg = "Error updating order status.";
+        }
+    } elseif ($action == 'save_package') {
+        $name = mysqli_real_escape_string($conn, $_POST['package_name']);
+        $desc = mysqli_real_escape_string($conn, $_POST['description']);
+        $tests = mysqli_real_escape_string($conn, $_POST['included_tests']);
+        $actual = (float)$_POST['actual_price'];
+        $discount_p = (float)$_POST['discount_price'];
+        $percent = (int)$_POST['discount_percent'];
+        $status = mysqli_real_escape_string($conn, $_POST['status']);
+        $pid = isset($_POST['package_id']) ? (int)$_POST['package_id'] : null;
+
+        if ($pid) {
+            $sql = "UPDATE health_packages SET package_name='$name', package_description='$desc', included_tests='$tests', original_price=$actual, discounted_price=$discount_p, discount_percentage=$percent, status='$status' WHERE package_id=$pid";
+        } else {
+            $sql = "INSERT INTO health_packages (package_name, package_description, included_tests, original_price, discounted_price, discount_percentage, status) VALUES ('$name', '$desc', '$tests', $actual, $discount_p, $percent, '$status')";
+        }
+        if ($conn->query($sql)) {
+            $success_msg = "Health package saved successfully!";
+        } else {
+            $error_msg = "Error saving health package: " . $conn->error;
+        }
+    } elseif ($action == 'delete_package') {
+        $pid = (int)$_POST['package_id'];
+        if ($conn->query("DELETE FROM health_packages WHERE package_id = $pid")) {
+            $success_msg = "Health package deleted!";
+        } else {
+            $error_msg = "Error deleting package.";
+        }
     }
 }
 
@@ -549,6 +663,39 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             color: var(--text-gray);
             font-size: 14px;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: var(--dark-blue);
+            margin: 10% auto;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            width: 500px;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            color: var(--text-gray);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
         /* Admin specific fixes for new header */
         .sidebar { top: 72px !important; height: calc(100vh - 72px) !important; }
         .main-content { margin-top: 72px !important; }
@@ -738,9 +885,42 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     <a href="?section=appointments" class="btn btn-warning" style="text-align: center;">
                         <i class="fas fa-calendar-check"></i> Manage Appointments
                     </a>
-                    <a href="?section=reports" class="btn btn-primary" style="text-align: center;">
-                        <i class="fas fa-chart-bar"></i> Generate Report
+                    <a href="?section=packages" class="btn btn-primary" style="text-align: center;">
+                        <i class="fas fa-box"></i> Health Packages
                     </a>
+                </div>
+            </div>
+
+            <!-- Health Packages Sneak-Peek -->
+            <div class="content-section" style="background: transparent; border: none; padding: 0;">
+                <div class="section-header">
+                    <h3 class="section-title">Health Packages Preview</h3>
+                    <a href="?section=packages" style="color: var(--primary-blue); font-size: 14px; text-decoration: none; font-weight: 600;">Manage All <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <?php
+                    $preview_pkgs = $conn->query("SELECT * FROM health_packages WHERE status = 'Active' ORDER BY created_at DESC LIMIT 3");
+                    if ($preview_pkgs && $preview_pkgs->num_rows > 0):
+                        while($p = $preview_pkgs->fetch_assoc()):
+                            $icon = 'fa-file-medical';
+                            if (stripos($p['package_name'], 'Basic') !== false) $icon = 'fa-user-check';
+                            elseif (stripos($p['package_name'], 'Comprehensive') !== false) $icon = 'fa-heartbeat';
+                            elseif (stripos($p['package_name'], 'Diabetes') !== false) $icon = 'fa-file-prescription';
+                    ?>
+                        <div style="background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                                <div style="width: 40px; height: 40px; background: rgba(59, 130, 246, 0.1); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--primary-blue);">
+                                    <i class="fas <?php echo $icon; ?>"></i>
+                                </div>
+                                <h4 style="margin: 0; color: #1e293b; font-size: 16px;"><?php echo htmlspecialchars($p['package_name']); ?></h4>
+                            </div>
+                            <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin-bottom: 15px;"><?php echo htmlspecialchars($p['package_description']); ?></p>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #f1f5f9;">
+                                <div style="color: #1e293b; font-weight: 800; font-size: 18px;">₹<?php echo number_format($p['discounted_price'], 0); ?></div>
+                                <div style="font-size: 11px; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
+                            </div>
+                        </div>
+                    <?php endwhile; endif; ?>
                 </div>
             </div>
 
@@ -1035,15 +1215,148 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <div class="top-bar">
                 <div class="page-title">
                     <h1>Doctor Scheduling</h1>
-                    <p>Manage doctor availability and assign departments</p>
+                    <p>Manage doctor availability, assign departments, and manage weekly schedules</p>
                 </div>
             </div>
 
             <div class="content-section">
-                <div class="placeholder-section">
-                    <i class="fas fa-user-md"></i>
-                    <h3>Doctor Scheduling Module</h3>
-                    <p>Add doctors, update availability, assign departments, and manage schedules</p>
+                <div class="section-header">
+                    <h3 class="section-title">All Doctors</h3>
+                    <a href="?section=create-user" class="btn btn-primary"><i class="fas fa-plus"></i> Add New Doctor</a>
+                </div>
+
+                <?php
+                $doctors_sql = "SELECT d.*, r.name, u.username, u.email 
+                                FROM doctors d 
+                                JOIN users u ON d.user_id = u.user_id 
+                                JOIN registrations r ON u.registration_id = r.registration_id 
+                                ORDER BY d.department ASC";
+                $doctors_res = $conn->query($doctors_sql);
+                
+                if ($doctors_res && $doctors_res->num_rows > 0):
+                    $current_dept = '';
+                    while($doc = $doctors_res->fetch_assoc()):
+                        if ($current_dept != $doc['department']):
+                            $current_dept = $doc['department'];
+                            echo '<div style="background: rgba(59, 130, 246, 0.05); padding: 10px 20px; border-radius: 8px; margin: 30px 0 15px; border-left: 4px solid var(--primary-blue);">';
+                            echo '<h4 style="color: var(--primary-blue); font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">' . htmlspecialchars($current_dept ?: 'Unassigned Dept') . '</h4>';
+                            echo '</div>';
+                        endif;
+                ?>
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: all 0.3s; hover: background: rgba(255,255,255,0.04);">
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 50px; height: 50px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;">
+                                    <?php echo substr($doc['name'], 0, 1); ?>
+                                </div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 16px;">DR. <?php echo htmlspecialchars($doc['name']); ?></h4>
+                                    <p style="font-size: 12px; color: var(--text-gray);"><?php echo htmlspecialchars($doc['specialization']); ?> • <?php echo htmlspecialchars($doc['username']); ?></p>
+                                    <span class="badge badge-<?php 
+                                        echo ($doc['availability_status'] == 'Available' ? 'active' : ($doc['availability_status'] == 'Busy' ? 'pending' : 'rejected')); 
+                                    ?>" style="margin-top: 5px; display: inline-block;">
+                                        <?php echo $doc['availability_status'] ?: 'Available'; ?>
+                                    </span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button onclick="openScheduleModal(<?php echo $doc['user_id']; ?>, '<?php echo htmlspecialchars($doc['name']); ?>')" class="btn btn-primary" style="font-size: 12px; padding: 8px 15px;"><i class="fas fa-calendar-alt"></i> Schedule</button>
+                                <button onclick="openDeptModal(<?php echo $doc['user_id']; ?>, '<?php echo htmlspecialchars($doc['department']); ?>', '<?php echo htmlspecialchars($doc['specialization']); ?>')" class="btn btn-warning" style="font-size: 12px; padding: 8px 15px;"><i class="fas fa-building"></i> Dept</button>
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="action" value="update_doctor_availability">
+                                    <input type="hidden" name="doctor_id" value="<?php echo $doc['user_id']; ?>">
+                                    <select name="availability_status" onchange="this.form.submit()" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: var(--darkest-blue); color: white; border: 1px solid var(--border-color);">
+                                        <option value="Available" <?php echo $doc['availability_status'] == 'Available' ? 'selected' : ''; ?>>Available</option>
+                                        <option value="Busy" <?php echo $doc['availability_status'] == 'Busy' ? 'selected' : ''; ?>>Busy</option>
+                                        <option value="On Leave" <?php echo $doc['availability_status'] == 'On Leave' ? 'selected' : ''; ?>>On Leave</option>
+                                    </select>
+                                </form>
+                            </div>
+                        </div>
+                <?php endwhile; else: ?>
+                    <div class="placeholder-section">
+                        <i class="fas fa-user-md"></i>
+                        <h3>No Doctors Found</h3>
+                        <p>Start by adding doctors from the "Create User" section.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Schedule Modal -->
+            <div id="scheduleModal" class="modal">
+                <div class="modal-content" style="width: 600px;">
+                    <span class="close-modal" onclick="closeModal('scheduleModal')">&times;</span>
+                    <h3 id="scheduleTitle" style="margin-bottom: 25px;">Manage Schedule</h3>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_doctor_schedule">
+                        <input type="hidden" name="doctor_id" id="sched_doc_id">
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Day of Week</label>
+                                <select name="day_of_week" required>
+                                    <option value="Monday">Monday</option>
+                                    <option value="Tuesday">Tuesday</option>
+                                    <option value="Wednesday">Wednesday</option>
+                                    <option value="Thursday">Thursday</option>
+                                    <option value="Friday">Friday</option>
+                                    <option value="Saturday">Saturday</option>
+                                    <option value="Sunday">Sunday</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select name="status">
+                                    <option value="Available">Available</option>
+                                    <option value="Not Available">Not Available</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Start Time</label>
+                                <input type="time" name="start_time" value="09:00" required>
+                            </div>
+                            <div class="form-group">
+                                <label>End Time</label>
+                                <input type="time" name="end_time" value="17:00" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">Save Schedule Entry</button>
+                    </form>
+                    
+                    <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                        <h4 style="font-size: 14px; margin-bottom: 15px;">Current Weekly Schedule:</h4>
+                        <div id="scheduleList" style="font-size: 12px; color: var(--text-gray);">
+                            <!-- Will be populated via JS or shown in next reload -->
+                            <p>Select a doctor and update entries. Each entry overwrites previous setting for that day.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dept Modal -->
+            <div id="deptModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="closeModal('deptModal')">&times;</span>
+                    <h3>Assign Department</h3>
+                    <form method="POST" style="margin-top: 20px;">
+                        <input type="hidden" name="action" value="update_doctor_dept">
+                        <input type="hidden" name="doctor_id" id="dept_doc_id">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Department</label>
+                            <select name="department" id="dept_select" required>
+                                <option value="General Medicine / Cardiovascular">General Medicine / Cardiovascular</option>
+                                <option value="Gynecology">Gynecology</option>
+                                <option value="Orthopedics">Orthopedics</option>
+                                <option value="ENT">ENT</option>
+                                <option value="Ophthalmology">Ophthalmology</option>
+                                <option value="Dermatology">Dermatology</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label>Specialization</label>
+                            <input type="text" name="specialization" id="spec_input" required>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width: 100%;">Update Details</button>
+                    </form>
                 </div>
             </div>
 
@@ -1051,33 +1364,327 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <!-- Canteen Menu Management -->
             <div class="top-bar">
                 <div class="page-title">
-                    <h1>Canteen Menu Management</h1>
-                    <p>Add food items, set prices, and view daily orders</p>
+                    <h1>Canteen Management</h1>
+                    <p>Track live orders and manage hospital food menu</p>
                 </div>
             </div>
 
             <div class="content-section">
-                <div class="placeholder-section">
-                    <i class="fas fa-utensils"></i>
-                    <h3>Canteen Management Module</h3>
-                    <p>Add food items, set prices, and view daily food orders</p>
+                <!-- Live Orders Section -->
+                <div class="section-header">
+                    <h3 class="section-title">Today's Live Orders</h3>
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <?php
+                    $today = date('Y-m-d');
+                    $active_orders = $conn->query("
+                        SELECT co.*, cm.item_name, cm.item_category,
+                               COALESCE(pp.name, r.name) as pname
+                        FROM canteen_orders co
+                        JOIN canteen_menu cm ON co.menu_id = cm.menu_id
+                        JOIN users u ON co.patient_id = u.user_id
+                        LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                        LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
+                        WHERE co.order_status IN ('Placed', 'Preparing')
+                        ORDER BY co.created_at DESC
+                    ");
+                    if ($active_orders && $active_orders->num_rows > 0):
+                    ?>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#Order</th>
+                                    <th>Patient</th>
+                                    <th>Item</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while ($o = $active_orders->fetch_assoc()): ?>
+                                    <tr>
+                                        <td><strong>#<?php echo $o['order_id']; ?></strong></td>
+                                        <td><?php echo htmlspecialchars($o['pname']); ?></td>
+                                        <td>
+                                            <?php echo htmlspecialchars($o['item_name']); ?><br>
+                                            <small style="color:var(--text-gray);"><?php echo $o['item_category']; ?></small>
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-<?php echo ($o['order_status'] == 'Placed' ? 'pending' : 'active'); ?>">
+                                                <?php echo $o['order_status']; ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <form method="POST" style="display:inline;">
+                                                <input type="hidden" name="action" value="update_order_status">
+                                                <input type="hidden" name="order_id" value="<?php echo $o['order_id']; ?>">
+                                                <?php if ($o['order_status'] == 'Placed'): ?>
+                                                    <button type="submit" name="new_status" value="Preparing" class="btn btn-primary" style="font-size: 11px; padding: 5px 10px;">Prepare</button>
+                                                <?php else: ?>
+                                                    <button type="submit" name="new_status" value="Delivered" class="btn btn-success" style="font-size: 11px; padding: 5px 10px;">Deliver</button>
+                                                <?php endif; ?>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <div class="placeholder-section" style="padding: 30px;">
+                            <i class="fas fa-receipt"></i>
+                            <p>No active orders for today yet.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Menu Management Section -->
+                <div class="section-header" style="margin-top: 50px;">
+                    <h3 class="section-title">Food Menu Management</h3>
+                    <button onclick="openMenuModal()" class="btn btn-success"><i class="fas fa-plus"></i> Add Food Item</button>
+                </div>
+
+                <?php
+                $menu_items = $conn->query("SELECT * FROM canteen_menu ORDER BY item_category, item_name");
+                if ($menu_items && $menu_items->num_rows > 0):
+                ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Item Name</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while ($m = $menu_items->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <strong><?php echo htmlspecialchars($m['item_name']); ?></strong><br>
+                                        <small style="color:var(--text-gray);"><?php echo htmlspecialchars($m['diet_type']); ?></small>
+                                    </td>
+                                    <td><?php echo $m['item_category']; ?></td>
+                                    <td><strong style="color:var(--primary-blue);">₹<?php echo number_format($m['price'], 2); ?></strong></td>
+                                    <td>
+                                        <span class="badge badge-<?php echo ($m['availability'] == 'Available' ? 'active' : 'rejected'); ?>">
+                                            <?php echo $m['availability']; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex; gap: 8px;">
+                                            <button onclick='editMenuItem(<?php echo json_encode($m); ?>)' class="btn btn-primary" style="font-size: 11px; padding: 5px 10px;"><i class="fas fa-edit"></i></button>
+                                            <form method="POST" onsubmit="return confirm('Delete this item?')">
+                                                <input type="hidden" name="action" value="delete_menu_item">
+                                                <input type="hidden" name="menu_id" value="<?php echo $m['menu_id']; ?>">
+                                                <button type="submit" class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;"><i class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="placeholder-section">
+                        <i class="fas fa-utensils"></i>
+                        <p>No food items found. Start by adding to your menu.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Canteen Menu Modal -->
+            <div id="canteenMenuModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="closeModal('canteenMenuModal')">&times;</span>
+                    <h3 id="menuModalTitle" style="margin-bottom: 25px;">Add Food Item</h3>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="save_menu_item">
+                        <input type="hidden" name="menu_id" id="item_id">
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Food Item Name</label>
+                            <input type="text" name="food_name" id="item_name" required>
+                        </div>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select name="meal_category" id="item_cat">
+                                    <option>Morning / Breakfast</option>
+                                    <option>Lunch</option>
+                                    <option>Evening Snacks</option>
+                                    <option>Dinner</option>
+                                    <option>Night Food</option>
+                                    <option>Other Food Items</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Price (₹)</label>
+                                <input type="number" step="0.01" name="price" id="item_price" required>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Diet Type</label>
+                                <select name="diet_type" id="item_diet">
+                                    <option value="Normal">Normal</option>
+                                    <option value="Diabetic">Diabetic</option>
+                                    <option value="Low-Salt">Low-Salt</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select name="availability" id="item_avail">
+                                    <option>Available</option>
+                                    <option>Out of Stock</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label>Short Description</label>
+                            <textarea name="description" id="item_desc" rows="2"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="width: 100%;">Save Menu Item</button>
+                    </form>
                 </div>
             </div>
 
         <?php elseif ($section == 'packages'): ?>
-            <!-- Health Packages -->
-            <div class="top-bar">
-                <div class="page-title">
-                    <h1>Health Checkup Packages</h1>
-                    <p>Create packages and set discount prices</p>
+            <!-- Health Packages Section -->
+            <div style="margin: -40px -50px 40px -50px; background: #1e40af; padding: 60px 50px; text-align: center; color: white;">
+                <h1 style="font-size: 42px; font-weight: 800; margin-bottom: 15px;">Health Packages</h1>
+                <p style="font-size: 18px; opacity: 0.9; max-width: 600px; margin: 0 auto;">Comprehensive checkups for a healthier you. Book directly.</p>
+            </div>
+
+            <div class="content-section" style="background: transparent; border: none; padding: 0;">
+                <div class="section-header" style="margin-bottom: 30px;">
+                    <h3 class="section-title" style="color: white;">Package Management</h3>
+                    <button onclick="openPackageModal()" class="btn btn-success"><i class="fas fa-plus"></i> Create New Package</button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; margin-top: 20px;">
+                    <?php
+                    $pkgs = $conn->query("SELECT * FROM health_packages ORDER BY created_at DESC");
+                    if ($pkgs && $pkgs->num_rows > 0):
+                        while($p = $pkgs->fetch_assoc()):
+                            // Determine icon based on name
+                            $icon = 'fa-file-medical';
+                            $icon_bg = 'rgba(16, 185, 129, 0.1)';
+                            $icon_color = '#10b981';
+                            
+                            if (stripos($p['package_name'], 'Basic') !== false) {
+                                $icon = 'fa-user-check';
+                            } elseif (stripos($p['package_name'], 'Comprehensive') !== false) {
+                                $icon = 'fa-heartbeat';
+                            } elseif (stripos($p['package_name'], 'Diabetes') !== false) {
+                                $icon = 'fa-file-prescription';
+                            }
+                    ?>
+                        <div style="background: #ffffff; border-radius: 24px; padding: 35px; display: flex; flex-direction: column; position: relative; transition: all 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 25px;">
+                                <div style="width: 50px; height: 50px; background: <?php echo $icon_bg; ?>; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: <?php echo $icon_color; ?>;">
+                                    <i class="fas <?php echo $icon; ?>" style="font-size: 22px;"></i>
+                                </div>
+                                <div style="display: flex; gap: 8px;">
+                                    <button onclick='editPackage(<?php echo json_encode($p); ?>)' class="btn" style="background: #f1f5f9; color: #64748b; font-size: 11px; padding: 8px;"><i class="fas fa-edit"></i></button>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this package?')">
+                                        <input type="hidden" name="action" value="delete_package">
+                                        <input type="hidden" name="package_id" value="<?php echo $p['package_id']; ?>">
+                                        <button type="submit" class="btn" style="background: #fee2e2; color: #ef4444; font-size: 11px; padding: 8px;"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <h3 style="margin: 0 0 10px; font-size: 22px; color: #1e293b; font-weight: 700;"><?php echo htmlspecialchars($p['package_name']); ?></h3>
+                            <p style="font-size: 14px; color: #64748b; margin-bottom: 25px; line-height: 1.6;"><?php echo htmlspecialchars($p['package_description']); ?></p>
+
+                            <div style="margin-bottom: 30px; flex-grow: 1;">
+                                <h4 style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 15px; font-weight: 800;">Includes:</h4>
+                                <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px;">
+                                    <?php 
+                                    $tests = explode(',', $p['included_tests']);
+                                    foreach($tests as $t): 
+                                    ?>
+                                        <li style="font-size: 13px; color: #475569; display: flex; align-items: center; gap: 10px;">
+                                            <i class="fas fa-check" style="color: #10b981; font-size: 12px;"></i> 
+                                            <?php echo trim(htmlspecialchars($t)); ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 15px; margin-top: auto; padding-top: 25px; border-top: 1px solid #f1f5f9;">
+                                <div style="font-size: 30px; font-weight: 800; color: #1e293b;">₹<?php echo number_format($p['discounted_price'], 0); ?></div>
+                                <div style="font-size: 16px; text-decoration: line-through; color: #94a3b8; font-weight: 500;">₹<?php echo number_format($p['original_price'], 0); ?></div>
+                                <div style="font-size: 12px; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
+                            </div>
+                            
+                            <button class="btn btn-primary" style="width: 100%; margin-top: 25px; padding: 12px; font-weight: 700; background: #1e40af; border-radius: 12px;">Select Package</button>
+                        </div>
+                    <?php endwhile; else: ?>
+                        <div class="placeholder-section" style="grid-column: 1/-1; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 60px;">
+                            <i class="fas fa-box-open" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i>
+                            <h3 style="color: white;">No Packages Found</h3>
+                            <p>Start by creating a new health checkup package.</p>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
-            <div class="content-section">
-                <div class="placeholder-section">
-                    <i class="fas fa-box"></i>
-                    <h3>Health Packages Module</h3>
-                    <p>Create checkup packages and set discount pricing</p>
+            <!-- Health Package Modal -->
+            <div id="packageModal" class="modal">
+                <div class="modal-content" style="width: 600px;">
+                    <span class="close-modal" onclick="closeModal('packageModal')">&times;</span>
+                    <h3 id="pkgModalTitle" style="margin-bottom: 25px;">Create New Package</h3>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="save_package">
+                        <input type="hidden" name="package_id" id="pkg_id">
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Package Name</label>
+                            <input type="text" name="package_name" id="pkg_name" required>
+                        </div>
+                        
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Short Description</label>
+                            <textarea name="description" id="pkg_desc" rows="2" required></textarea>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Included Tests (Comma separated)</label>
+                            <input type="text" name="included_tests" id="pkg_tests" placeholder="e.g. CBC, Lipid Profile, X-Ray" required>
+                        </div>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Actual Price (₹)</label>
+                                <input type="number" name="actual_price" id="pkg_actual" oninput="calculateDiscount()" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Discounted Price (₹)</label>
+                                <input type="number" name="discount_price" id="pkg_discount" oninput="calculateDiscount()" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Discount %</label>
+                                <input type="number" name="discount_percent" id="pkg_percent" readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label>Status</label>
+                            <select name="status" id="pkg_status">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="width: 100%;">Save Package Details</button>
+                    </form>
                 </div>
             </div>
 
@@ -1086,19 +1693,99 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <div class="top-bar">
                 <div class="page-title">
                     <h1>Ambulance Emergency Service</h1>
-                    <p>Manage emergency contact numbers</p>
+                    <p>Manage emergency contact numbers and ambulance availability</p>
                 </div>
             </div>
 
             <div class="content-section">
                 <div class="section-header">
                     <h3 class="section-title">Emergency Contacts</h3>
-                    <button class="btn btn-success"><i class="fas fa-plus"></i> Add Contact</button>
+                    <button onclick="openModal('ambulanceModal')" class="btn btn-success"><i class="fas fa-plus"></i> Add Contact</button>
                 </div>
-                <div class="placeholder-section">
-                    <i class="fas fa-ambulance"></i>
-                    <h3>Ambulance Service Module</h3>
-                    <p>Manage ambulance emergency contact numbers</p>
+                
+                <?php
+                $ambulances = $conn->query("SELECT * FROM ambulance_contacts ORDER BY availability ASC, created_at DESC");
+                if ($ambulances && $ambulances->num_rows > 0):
+                ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Driver Name</th>
+                                <th>Phone Number</th>
+                                <th>Vehicle Info</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($amb = $ambulances->fetch_assoc()): ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($amb['driver_name']); ?></strong></td>
+                                    <td><span style="color:var(--primary-blue); font-weight:600;"><?php echo htmlspecialchars($amb['phone_number']); ?></span></td>
+                                    <td>
+                                        <small><?php echo htmlspecialchars($amb['vehicle_type']); ?></small><br>
+                                        <strong><?php echo htmlspecialchars($amb['vehicle_number']); ?></strong>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($amb['location']); ?></td>
+                                    <td>
+                                        <span class="badge badge-<?php echo ($amb['availability'] == 'Available' ? 'active' : ($amb['availability'] == 'On Duty' ? 'pending' : 'rejected')); ?>">
+                                            <?php echo $amb['availability']; ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this contact?')">
+                                            <input type="hidden" name="action" value="delete_ambulance">
+                                            <input type="hidden" name="contact_id" value="<?php echo $amb['contact_id']; ?>">
+                                            <button type="submit" class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;"><i class="fas fa-trash"></i></button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="placeholder-section">
+                        <i class="fas fa-ambulance"></i>
+                        <h3>No Active Ambulances</h3>
+                        <p>Start by adding emergency ambulance contacts.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Add Ambulance Modal -->
+            <div id="ambulanceModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="closeModal('ambulanceModal')">&times;</span>
+                    <h3 style="margin-bottom: 25px;">Add New Emergency Contact</h3>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="add_ambulance">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Driver Name</label>
+                            <input type="text" name="driver_name" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Phone Number</label>
+                            <input type="text" name="phone_number" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Vehicle Number</label>
+                            <input type="text" name="vehicle_number" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label>Vehicle Type</label>
+                            <select name="vehicle_type">
+                                <option value="Basic Life Support">Basic Life Support</option>
+                                <option value="Advanced Life Support">Advanced Life Support</option>
+                                <option value="Patient Transport">Patient Transport</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 25px;">
+                            <label>Base Location</label>
+                            <input type="text" name="location" required>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width: 100%;">Save Contact</button>
+                    </form>
                 </div>
             </div>
 
@@ -1170,6 +1857,91 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
         }
         
         window.addEventListener('DOMContentLoaded', toggleDoctorFields);
+
+        function openModal(id) {
+            document.getElementById(id).style.display = 'block';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        }
+
+        function openScheduleModal(id, name) {
+            document.getElementById('sched_doc_id').value = id;
+            document.getElementById('scheduleTitle').innerText = 'Schedule for Dr. ' + name;
+            openModal('scheduleModal');
+        }
+
+        function openDeptModal(id, dept, spec) {
+            document.getElementById('dept_doc_id').value = id;
+            document.getElementById('dept_select').value = dept;
+            document.getElementById('spec_input').value = spec;
+            openModal('deptModal');
+        }
+
+        function openMenuModal() {
+            document.getElementById('menuModalTitle').innerText = 'Add Food Item';
+            document.getElementById('item_id').value = '';
+            document.getElementById('item_name').value = '';
+            document.getElementById('item_price').value = '';
+            document.getElementById('item_desc').value = '';
+            openModal('canteenMenuModal');
+        }
+
+        function editMenuItem(item) {
+            document.getElementById('menuModalTitle').innerText = 'Edit Food Item';
+            document.getElementById('item_id').value = item.menu_id;
+            document.getElementById('item_name').value = item.item_name;
+            document.getElementById('item_cat').value = item.item_category;
+            document.getElementById('item_diet').value = item.diet_type;
+            document.getElementById('item_price').value = item.price;
+            document.getElementById('item_avail').value = item.availability;
+            document.getElementById('item_desc').value = item.description;
+            openModal('canteenMenuModal');
+        }
+
+        function openPackageModal() {
+            document.getElementById('pkgModalTitle').innerText = 'Create New Package';
+            document.getElementById('pkg_id').value = '';
+            document.getElementById('pkg_name').value = '';
+            document.getElementById('pkg_desc').value = '';
+            document.getElementById('pkg_tests').value = '';
+            document.getElementById('pkg_actual').value = '';
+            document.getElementById('pkg_discount').value = '';
+            document.getElementById('pkg_percent').value = '';
+            openModal('packageModal');
+        }
+
+        function editPackage(p) {
+            document.getElementById('pkgModalTitle').innerText = 'Edit Health Package';
+            document.getElementById('pkg_id').value = p.package_id;
+            document.getElementById('pkg_name').value = p.package_name;
+            document.getElementById('pkg_desc').value = p.package_description;
+            document.getElementById('pkg_tests').value = p.included_tests;
+            document.getElementById('pkg_actual').value = p.original_price;
+            document.getElementById('pkg_discount').value = p.discounted_price;
+            document.getElementById('pkg_percent').value = p.discount_percentage;
+            document.getElementById('pkg_status').value = p.status;
+            openModal('packageModal');
+        }
+
+        function calculateDiscount() {
+            const actual = parseFloat(document.getElementById('pkg_actual').value) || 0;
+            const discountP = parseFloat(document.getElementById('pkg_discount').value) || 0;
+            if (actual > 0) {
+                const percent = Math.round(((actual - discountP) / actual) * 100);
+                document.getElementById('pkg_percent').value = percent > 0 ? percent : 0;
+            } else {
+                document.getElementById('pkg_percent').value = 0;
+            }
+        }
     </script>
 </body>
 </html>

@@ -288,10 +288,28 @@ if ($profile_exists) {
                 <div style="margin-top: 40px;">
                     <div class="section-head"><h3>Recent Lab Reports</h3></div>
                     <div style="display: flex; flex-direction: column; gap: 15px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px;">
-                            <span><i class="fas fa-microscope" style="margin-right: 10px;"></i> Blood Test Report</span>
-                            <a href="#" style="color: #4fc3f7; font-size: 14px;"><i class="fas fa-download"></i> PDF</a>
-                        </div>
+                        <?php
+                        $lab_sql = "SELECT * FROM lab_orders WHERE patient_id = $user_id AND order_status = 'Completed' ORDER BY created_at DESC LIMIT 3";
+                        $lab_res = $conn->query($lab_sql);
+                        if ($lab_res && $lab_res->num_rows > 0):
+                            while ($lab_order = $lab_res->fetch_assoc()):
+                        ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+                                <div>
+                                    <span style="display: block; font-size: 14px; font-weight: 600;"><i class="fas fa-flask" style="margin-right: 10px; color: #4fc3f7;"></i> <?php echo htmlspecialchars($lab_order['test_name']); ?></span>
+                                    <small style="color: #94a3b8; font-size: 11px;"><?php echo date('M d, Y', strtotime($lab_order['created_at'])); ?> • <?php echo htmlspecialchars($lab_order['lab_category']); ?></small>
+                                </div>
+                                <?php if (!empty($lab_order['report_path'])): ?>
+                                    <a href="<?php echo htmlspecialchars($lab_order['report_path']); ?>" target="_blank" style="color: #4fc3f7; font-size: 13px; text-decoration: none; font-weight: 600;"><i class="fas fa-file-pdf"></i> Download Result</a>
+                                <?php else: ?>
+                                    <span style="color: #94a3b8; font-size: 11px;">Result Processing</span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endwhile; else: ?>
+                            <div style="text-align: center; padding: 20px; color: #64748b; font-size: 13px; background: rgba(255,255,255,0.01); border-radius: 10px;">
+                                No lab reports available yet.
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 

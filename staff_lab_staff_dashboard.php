@@ -11,7 +11,7 @@ $user_id = $_SESSION['user_id'];
 // Fetch Lab Staff Details
 $res = $conn->query("SELECT * FROM lab_staff WHERE user_id = $user_id");
 $lab = $res->fetch_assoc();
-$lab_type = $lab['lab_type'] ?? 'Pathology';
+$lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
 ?>
 <!DOCTYPE html>
 <html lang="en">

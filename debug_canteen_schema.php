@@ -1,14 +1,18 @@
 <?php
 include 'includes/db_connect.php';
-ob_start();
-$tables = ['canteen_menu', 'canteen_orders'];
+
+echo "--- canteen tables ---\n";
+$tables = ['canteen_menu', 'canteen_orders', 'canteen_items', 'food_items'];
 foreach ($tables as $table) {
-    echo "TABLE: $table\n";
-    $res = $conn->query("DESCRIBE $table");
-    while($row = $res->fetch_assoc()) {
-        printf("%-20s %-20s %-10s %-10s %-20s\n", $row['Field'], $row['Type'], $row['Null'], $row['Key'], $row['Default']);
+    $res = $conn->query("SHOW TABLES LIKE '$table'");
+    if ($res && $res->num_rows > 0) {
+        echo "Table '$table' exists.\n";
+        $res2 = $conn->query("DESCRIBE $table");
+        while($row = $res2->fetch_assoc()) {
+            echo "  " . $row['Field'] . " (" . $row['Type'] . ")\n";
+        }
+    } else {
+        echo "Table '$table' does not exist.\n";
     }
-    echo "\n";
 }
-file_put_contents('schema_output.txt', ob_get_clean());
 ?>

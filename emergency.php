@@ -1,4 +1,7 @@
-<?php include 'includes/header.php'; ?>
+<?php 
+include 'includes/db_connect.php';
+include 'includes/header.php'; 
+?>
 
 <div class="page-header" style="background-color: #f8f9fa; padding: 40px 0; text-align: center;">
     <div class="container">
@@ -31,9 +34,30 @@
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Poisoning & Snake Bite Care</li>
             </ul>
 
-            <div style="margin-top: 40px; text-align: center; background-color: #ffe6e6; padding: 20px; border-radius: 10px;">
-                <h3 style="color: #cc0000; margin-bottom: 10px;">EMERGENCY HOTLINE</h3>
-                <p style="font-size: 24px; font-weight: bold; color: #000;">+91 8281262626</p>
+            <div style="margin-top: 40px; background-color: #ffe6e6; padding: 30px; border-radius: 15px;">
+                <h3 style="color: #cc0000; margin-bottom: 25px; text-align: center;"><i class="fas fa-ambulance"></i> EMERGENCY AMBULANCE DIRECTORY</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <?php
+                    $ambulances = $conn->query("SELECT * FROM ambulance_contacts WHERE availability = 'Available' ORDER BY created_at DESC");
+                    if ($ambulances && $ambulances->num_rows > 0):
+                        while ($amb = $ambulances->fetch_assoc()):
+                    ?>
+                        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,0,0,0.05); border-left: 4px solid #ff4444;">
+                            <h5 style="margin: 0; color: #0a1f44;"><?php echo htmlspecialchars($amb['driver_name']); ?></h5>
+                            <p style="font-size: 11px; color: #777; margin-bottom: 10px;"><?php echo htmlspecialchars($amb['vehicle_type']); ?> • <?php echo htmlspecialchars($amb['vehicle_number']); ?></p>
+                            <p style="font-size: 18px; font-weight: bold; color: #ff4444; margin: 0;">
+                                <i class="fas fa-phone-alt"></i> <?php echo htmlspecialchars($amb['phone_number']); ?>
+                            </p>
+                            <small style="display: block; margin-top: 5px; color: #999;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($amb['location']); ?></small>
+                        </div>
+                    <?php endwhile; else: ?>
+                        <div style="grid-column: 1/-1; text-align: center; padding: 20px;">
+                            <p style="font-size: 14px; font-weight: bold; color: #cc0000; margin: 0;">HOTLINE: (+254) 717 783 146</p>
+                            <small style="color: #777;">No individual ambulance contacts currently listed.</small>
+                        </div>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>
