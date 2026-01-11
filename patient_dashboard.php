@@ -22,7 +22,7 @@ if ($profile_exists) {
     $records_res = $conn->query("
         SELECT mr.*, r.name as doctor_name, 
         (SELECT medicine_details FROM prescriptions WHERE patient_id = $user_id AND (DATE(prescription_date) = DATE(mr.created_at) OR appointment_id = mr.appointment_id) LIMIT 1) as prescription,
-        (SELECT GROUP_CONCAT(test_name SEPARATOR ', ') FROM lab_orders WHERE appointment_id = mr.appointment_id) as lab_tests
+        (SELECT GROUP_CONCAT(test_name SEPARATOR ', ') FROM lab_tests WHERE appointment_id = mr.appointment_id) as lab_tests
         FROM medical_records mr
         LEFT JOIN users u ON mr.doctor_id = u.user_id
         LEFT JOIN registrations r ON u.registration_id = r.registration_id
@@ -289,7 +289,7 @@ if ($profile_exists) {
                     <div class="section-head"><h3>Recent Lab Reports</h3></div>
                     <div style="display: flex; flex-direction: column; gap: 15px;">
                         <?php
-                        $lab_sql = "SELECT * FROM lab_orders WHERE patient_id = $user_id AND order_status = 'Completed' ORDER BY created_at DESC LIMIT 3";
+                        $lab_sql = "SELECT * FROM lab_tests WHERE patient_id = $user_id AND status = 'Completed' ORDER BY created_at DESC LIMIT 3";
                         $lab_res = $conn->query($lab_sql);
                         if ($lab_res && $lab_res->num_rows > 0):
                             while ($lab_order = $lab_res->fetch_assoc()):
@@ -297,7 +297,7 @@ if ($profile_exists) {
                             <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
                                 <div>
                                     <span style="display: block; font-size: 14px; font-weight: 600;"><i class="fas fa-flask" style="margin-right: 10px; color: #4fc3f7;"></i> <?php echo htmlspecialchars($lab_order['test_name']); ?></span>
-                                    <small style="color: #94a3b8; font-size: 11px;"><?php echo date('M d, Y', strtotime($lab_order['created_at'])); ?> • <?php echo htmlspecialchars($lab_order['lab_category']); ?></small>
+                                    <small style="color: #94a3b8; font-size: 11px;"><?php echo date('M d, Y', strtotime($lab_order['created_at'])); ?> • <?php echo htmlspecialchars($lab_order['test_type']); ?></small>
                                 </div>
                                 <?php if (!empty($lab_order['report_path'])): ?>
                                     <a href="<?php echo htmlspecialchars($lab_order['report_path']); ?>" target="_blank" style="color: #4fc3f7; font-size: 13px; text-decoration: none; font-weight: 600;"><i class="fas fa-file-pdf"></i> Download Result</a>

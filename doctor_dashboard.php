@@ -251,6 +251,7 @@ if (isset($_GET['patient_id'])) {
                 <a href="doctor_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> Appointments</a>
                 <a href="doctor_prescriptions.php" class="nav-link"><i class="fas fa-file-prescription"></i> Prescriptions</a>
                 <a href="doctor_lab_orders.php" class="nav-link"><i class="fas fa-flask"></i> Lab Orders</a>
+                <a href="reports_manager.php" class="nav-link"><i class="fas fa-chart-line"></i> Reports</a>
                 <a href="doctor_leave.php" class="nav-link"><i class="fas fa-calendar-minus"></i> Apply Leave</a>
                 <a href="doctor_settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile Settings</a>
             </nav>
@@ -266,7 +267,18 @@ if (isset($_GET['patient_id'])) {
             </div>
 
             <!-- Stats Grid - Scoped to Department -->
-            <div class="stats-grid">
+            <!-- Quick Report Upload -->
+            <div style="grid-column: span 3; background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="color: #fff; margin-bottom: 5px;"><i class="fas fa-file-upload" style="color: #3b82f6;"></i> Need to archive a report?</h3>
+                    <p style="color: #94a3b8; font-size: 13px;">Upload consultation summaries or patient case studies in PDF format.</p>
+                </div>
+                <a href="reports_manager.php?view=repository" class="btn-upload" style="background: #3b82f6; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-plus"></i> Upload PDF Report
+                </a>
+            </div>
+
+            <div class="doctor-stats-grid">
                 <div class="stat-card">
                     <span class="stat-value">08</span>
                     <span class="stat-label">Pending (<?php echo $department; ?>)</span>

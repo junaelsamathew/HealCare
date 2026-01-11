@@ -183,6 +183,9 @@ $section = $_GET['section'] ?? 'active_orders';
             <a href="?section=order_history" class="nav-link <?php echo $section == 'order_history' ? 'active' : ''; ?>">
                 <i class="fas fa-history"></i> Order History
             </a>
+            <a href="reports_manager.php" class="nav-link">
+                <i class="fas fa-chart-line"></i> Sales Analytics
+            </a>
             <a href="?section=profile" class="nav-link <?php echo $section == 'profile' ? 'active' : ''; ?>">
                 <i class="fas fa-cog"></i> Profile Settings
             </a>
@@ -209,6 +212,14 @@ $section = $_GET['section'] ?? 'active_orders';
         </header>
 
         <section class="content-body">
+            <!-- Quick Archive -->
+            <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 20px; border: 1px solid var(--border); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="color: #fff; margin-bottom: 5px; font-size: 16px;"><i class="fas fa-file-upload" style="color: #4fc3f7;"></i> Canteen Sales Analytics</h3>
+                    <p style="color: #94a3b8; font-size: 12px;">Archive manual billing summaries or monthly food waste reports.</p>
+                </div>
+                <a href="reports_manager.php?view=repository" style="background: #4fc3f7; color: #020617; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 700; font-size: 12px;">Archive Report</a>
+            </div>
             <?php if ($success_msg): ?>
                 <div class="banner banner-success"><i class="fas fa-check-circle"></i> <?php echo $success_msg; ?></div>
             <?php endif; ?>

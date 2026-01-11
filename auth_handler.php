@@ -128,10 +128,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $password = password_hash($password_raw, PASSWORD_DEFAULT);
         $role = 'patient';
 
-        // Check if email already registered and active
-        $check_user = $conn->query("SELECT * FROM users WHERE email='$email' AND status='Active'");
-        if ($check_user->num_rows > 0) {
-            echo "<script>alert('This email is already registered and active. Please login.'); window.location.href='login.php'</script>";
+        // Check if email already exists in users or registrations
+        $check_user = $conn->query("SELECT email FROM users WHERE email='$email'");
+        $check_reg = $conn->query("SELECT email FROM registrations WHERE email='$email'");
+        
+        if ($check_user->num_rows > 0 || $check_reg->num_rows > 0) {
+            echo "<script>alert('This email is already registered. Please login or use a different email.'); window.location.href='login.php'</script>";
             exit();
         }
 
@@ -213,8 +215,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $role = mysqli_real_escape_string($conn, $_POST['role']);
         $staff_type = isset($_POST['staff_type']) ? mysqli_real_escape_string($conn, $_POST['staff_type']) : '';
-        $name = mysqli_real_escape_string($conn, $_POST['fullname']);
+$name = mysqli_real_escape_string($conn, $_POST['fullname']);
         $email = mysqli_real_escape_string($conn, $_POST['email']);
+
+        // Server-side Email Validation
+        if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
+             echo "<script>alert('Invalid Email Address! Please use a valid email.'); window.location.href='apply.php'</script>";
+             exit();
+        }
+
+        // Domain Validation (MX Record Check)
+        $domain = substr(strrchr($email, "@"), 1);
+        if (!checkdnsrr($domain, "MX")) {
+             echo "<script>alert('Invalid Email Domain! No mail server found for @$domain.'); window.location.href='apply.php'</script>";
+             exit();
+        }
         $phone = mysqli_real_escape_string($conn, $_POST['phone']);
         $address = mysqli_real_escape_string($conn, $_POST['address']);
         $h_qual = mysqli_real_escape_string($conn, $_POST['highest_qualification']);
@@ -260,16 +275,37 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             exit();
         }
 
-        $sql = "INSERT INTO registrations 
-                (app_id, name, email, phone, user_type, staff_type, status, address, profile_photo, highest_qualification, total_experience, resume_path, specialization, designation, license_number, dept_preference, languages_known, front_desk_exp, canteen_job_role, shift_preference, date_of_joining, relevant_experience, qualification_details) 
-                VALUES 
-                ('$app_id', '$name', '$email', '$phone', '$role', '$staff_type', 'Pending', '$address', '$photo_path', '$h_qual', '$t_exp', '$resume_path', '$spec', '$designation', '$license', '$dept', '$langs', '$fd_exp', '$c_role', '$shift', '$doj', '$rel_exp', '$qual_details')";
-        
-        if ($conn->query($sql)) {
-            header("Location: pending_approval.php?email=" . urlencode($email) . "&app_id=" . urlencode($app_id));
+        // Direct Insert - Skip Email Verification as per user request
+        // Insert 'Pending' Application into Database
+        $sql = "INSERT INTO registrations (
+            user_type, staff_type, app_id, name, email, phone, 
+            address, highest_qualification, total_experience, 
+            shift_preference, date_of_joining, 
+            specialization, designation, dept_preference, license_number, 
+            languages_known, front_desk_exp, 
+            canteen_job_role, qualification_details, 
+            resume_path, profile_photo, 
+            status, registered_date
+        ) VALUES (
+            '$role', '$staff_type', '$app_id', '$name', '$email', '$phone', 
+            '$address', '$h_qual', '$t_exp', 
+            '$shift', '$doj', 
+            '$spec', '$designation', '$dept', '$license', 
+            '$langs', '$fd_exp', 
+            '$c_role', '$qual_details', 
+            '$resume_path', '$photo_path', 
+            'Pending', NOW()
+        )";
+
+        if ($conn->query($sql) === TRUE) {
+             echo "<script>
+                alert('Application Submitted Successfully! Your application ID is $app_id. Please wait for admin approval.');
+                window.location.href = 'index.php'; // Or home page
+             </script>";
         } else {
-            echo "<script>alert('Error submitting application: " . $conn->error . "'); window.location.href='apply.php'</script>";
+             echo "Error: " . $sql . "<br>" . $conn->error;
         }
+        exit();
 
 
 
@@ -282,6 +318,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $_SESSION['logged_in'] = true;
             $_SESSION['user_role'] = 'admin';
             $_SESSION['username'] = 'admin';
+            $_SESSION['user_id'] = 0; // Fixed Admin ID
             $_SESSION['full_name'] = 'Administrator';
             header("Location: admin_dashboard.php");
             exit();
@@ -587,7 +624,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // 1. Create Registration Entry
                     $sql_reg = "INSERT INTO registrations (name, email, phone, password, user_type, status) 
                                 VALUES ('$name', '$email', '$phone', '$pass', '$role', 'Approved')";
-                    $conn->query($sql_reg);
+                    if (!$conn->query($sql_reg)) {
+                        throw new Exception("Registration failed: " . $conn->error);
+                    }
                     $registration_id = $conn->insert_id;
                     
                     // 2. Generate Unique Patient ID
@@ -608,14 +647,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // 5. Clear Pending Session
                     unset($_SESSION['pending_signup']);
 
-                    // 6. AUTO LOGIN
-                    $_SESSION['logged_in'] = true;
-                    $_SESSION['user_id'] = $user_id;
-                    $_SESSION['username'] = $username;
-                    $_SESSION['user_role'] = $role;
-                    $_SESSION['full_name'] = $name;
-
-                    echo "<script>alert('Account verified and created successfully! Redirecting to your dashboard...'); window.location.href='patient_dashboard.php'</script>";
+                    // Redirect to login page as requested, informing them of their ID
+                    echo "<script>
+                        alert('Account verified and created successfully!\\nYour Unique Patient ID is: $username\\nPlease login with your Email or ID to access your dashboard.'); 
+                        window.location.href='login.php';
+                    </script>";
                     exit();
                 } catch (Exception $e) {
                     $conn->rollback();

@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['order_id'])) {
     }
 
     // Update Order Status
-    $stmt = $conn->prepare("UPDATE lab_orders SET result_summary = ?, report_path = ?, order_status = 'Completed' WHERE order_id = ?");
+    $stmt = $conn->prepare("UPDATE lab_tests SET result = ?, report_path = ?, status = 'Completed' WHERE labtest_id = ?");
     $stmt->bind_param("ssi", $result_summary, $report_path, $order_id);
     
     if ($stmt->execute()) {

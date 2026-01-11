@@ -100,6 +100,7 @@ $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
             <a href="#" class="nav-item active"><i class="fas fa-vials"></i> Pending Tests</a>
             <a href="#" class="nav-item"><i class="fas fa-microscope"></i> In Processing</a>
             <a href="#" class="nav-item"><i class="fas fa-file-alt"></i> Completed Reports</a>
+            <a href="reports_manager.php" class="nav-item"><i class="fas fa-chart-line"></i> Analytics</a>
             <a href="#" class="nav-item"><i class="fas fa-archive"></i> Archive</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
@@ -117,12 +118,21 @@ $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
 
             <?php
             // Fetch Counts
-            $q_pending = $conn->query("SELECT COUNT(*) as count FROM lab_orders WHERE lab_category = '$lab_type' AND order_status = 'Pending'");
+            $q_pending = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type = '$lab_type' AND status = 'Pending'");
             $pending_count = $q_pending->fetch_assoc()['count'];
 
-            $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_orders WHERE lab_category = '$lab_type' AND order_status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
+            $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type = '$lab_type' AND status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
             $completed_today = $q_completed->fetch_assoc()['count'];
             ?>
+
+            <!-- Quick Archive -->
+            <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="color: #fff; margin-bottom: 5px; font-size: 16px;"><i class="fas fa-file-upload" style="color: #4fc3f7;"></i> Laboratory Documentation</h3>
+                    <p style="color: #64748b; font-size: 12px;">Archive manual test summaries or complex diagnostic reports.</p>
+                </div>
+                <a href="reports_manager.php?view=repository" style="background: #4fc3f7; color: #020617; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 12px;">Archive Report</a>
+            </div>
 
             <div class="stats-grid">
                 <div class="stat-card-new"><h2><?php echo str_pad($pending_count, 2, '0', STR_PAD_LEFT); ?></h2><p>Pending Requests</p></div>
@@ -139,12 +149,12 @@ $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
                 SELECT lo.*, 
                        rp.name as patient_name, 
                        rd.name as doctor_name
-                FROM lab_orders lo
+                FROM lab_tests lo
                 JOIN users up ON lo.patient_id = up.user_id
                 JOIN registrations rp ON up.registration_id = rp.registration_id
                 JOIN users ud ON lo.doctor_id = ud.user_id
                 JOIN registrations rd ON ud.registration_id = rd.registration_id
-                WHERE lo.lab_category = '$lab_type' AND lo.order_status = 'Pending'
+                WHERE lo.test_type = '$lab_type' AND lo.status = 'Pending'
                 ORDER BY lo.created_at ASC
             ";
             $res_orders = $conn->query($sql_orders);
@@ -155,7 +165,7 @@ $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
             <div class="test-request-card">
                 <div>
                     <span style="font-size: 11px; color: #4fc3f7; font-weight: 800; text-transform: uppercase;">
-                        <?php echo htmlspecialchars($lab_type); ?> • ID: #LAB-<?php echo $order['order_id']; ?>
+                        <?php echo htmlspecialchars($lab_type); ?> • ID: #LAB-<?php echo $order['labtest_id']; ?>
                     </span>
                     <h4 style="color:#fff; margin: 10px 0; font-size: 18px;"><?php echo htmlspecialchars($order['test_name']); ?></h4>
                     <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">
@@ -169,7 +179,7 @@ $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
                 </div>
                 <div style="background: rgba(255,255,255,0.02); padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft);">
                     <form action="finalize_lab_report.php" method="POST" enctype="multipart/form-data">
-                        <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                        <input type="hidden" name="order_id" value="<?php echo $order['labtest_id']; ?>">
                         <div style="display: flex; flex-direction: column; gap: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="font-size: 13px; color: #cbd5e1;">Final Test Results</span>

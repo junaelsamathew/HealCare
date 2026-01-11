@@ -69,8 +69,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
         
         h1 { font-size: 28px; font-weight: 700; margin-bottom: 30px; text-align: center; }
         
-        .item-preview { display: flex; align-items: center; gap: 20px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 30px; }
-        .item-icon { font-size: 32px; color: var(--primary-blue); }
+        .item-preview { display: flex; align-items: center; gap: 20px; padding: 20px; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 30px; overflow: hidden; }
+        .item-img { width: 100px; height: 100px; border-radius: 12px; object-fit: cover; border: 1px solid var(--border-color); }
         .item-info h3 { margin: 0; font-size: 20px; }
         .item-info p { margin: 5px 0 0; color: var(--text-gray); font-size: 14px; }
 
@@ -102,14 +102,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
         <?php endif; ?>
 
         <div class="item-preview">
-            <div class="item-icon"><i class="fas fa-utensils"></i></div>
+            <?php $img_url = $item['image_url'] ?: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'; ?>
+            <img src="<?php echo $img_url; ?>" alt="<?php echo htmlspecialchars($item['item_name']); ?>" class="item-img" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';">
             <div class="item-info">
                 <h3><?php echo htmlspecialchars($item['item_name']); ?></h3>
                 <p><?php echo htmlspecialchars($item['description']); ?> | <strong>Diet: <?php echo htmlspecialchars($requested_diet); ?></strong></p>
             </div>
         </div>
 
-        <form method="POST">
+        <form method="POST" id="orderForm" onsubmit="handleOrderSubmit(event)">
             <div class="form-group">
                 <label>Quantity</label>
                 <input type="number" name="quantity" class="form-control" value="1" min="1" max="20" id="qty-input" onchange="updateTotal()">
@@ -131,7 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
                 </div>
             </div>
 
-            <button type="submit" name="confirm_order" class="btn-confirm">Purchase Now</button>
+            <button type="submit" name="confirm_order" id="buyBtn" class="btn-confirm">Buy Now</button>
             <a href="canteen.php" class="back-link">Cancel and Go Back</a>
         </form>
     </div>
@@ -142,6 +143,42 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
             const price = <?php echo $item['price']; ?>;
             const total = qty * price;
             document.getElementById('total-amount').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        }
+
+        function handleOrderSubmit(e) {
+            e.preventDefault(); // Prevent immediate submission
+            const btn = document.getElementById('buyBtn');
+            const form = document.getElementById('orderForm');
+            
+            // Step 1: Processing Order
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Order...';
+            btn.style.opacity = '0.8';
+            btn.style.cursor = 'not-allowed';
+            btn.disabled = true;
+
+            // Step 2: Confirming Payment (after 1.5s)
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-credit-card"></i> Confirming Payment...';
+                
+                // Step 3: Final Success (after another 1.5s)
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Order Placed Successfully!';
+                    btn.style.background = '#10b981'; // Green color
+                    btn.style.borderColor = '#10b981';
+                    
+                    // Submit the form programmatically
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'confirm_order';
+                    hiddenInput.value = '1';
+                    form.appendChild(hiddenInput);
+                    
+                    setTimeout(() => {
+                        form.submit();
+                    }, 1000); // Short delay to read success message
+                }, 1500);
+
+            }, 1500);
         }
     </script>
 </body>

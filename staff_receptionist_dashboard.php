@@ -218,6 +218,7 @@ $calendar_result = $conn->query("SELECT * FROM appointments WHERE appointment_da
             <a href="#" class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</a>
             <a href="#" class="nav-item"><i class="fas fa-calendar-alt"></i> Reception / Queue</a>
             <a href="#" class="nav-item"><i class="fas fa-file-invoice-dollar"></i> Patient Billing</a>
+            <a href="reports_manager.php" class="nav-item"><i class="fas fa-chart-line"></i> Reports</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
 
@@ -240,6 +241,7 @@ $calendar_result = $conn->query("SELECT * FROM appointments WHERE appointment_da
                     <button class="btn-action-main" onclick="openModal('regModal')"><i class="fas fa-user-plus"></i> New Registration</button>
                     <button class="btn-action-main" onclick="openModal('bookModal')"><i class="fas fa-calendar-plus"></i> Book Appointment</button>
                     <button class="btn-action-main"><i class="fas fa-file-invoice"></i> Generate Bill</button>
+                    <button class="btn-action-main" onclick="location.href='reports_manager.php?view=repository'"><i class="fas fa-file-export"></i> Archive Daily Report</button>
                 </div>
             </div>
 

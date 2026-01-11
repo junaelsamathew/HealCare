@@ -94,11 +94,20 @@ $user_id = $_SESSION['user_id'];
             <a href="#" class="nav-item active"><i class="fas fa-clipboard-list"></i> Prescriptions</a>
             <a href="#" class="nav-item"><i class="fas fa-pills"></i> Inventory / Stock</a>
             <a href="#" class="nav-item"><i class="fas fa-history"></i> Dispensed History</a>
+            <a href="reports_manager.php" class="nav-item"><i class="fas fa-chart-line"></i> Pharmacy Reports</a>
             <a href="#" class="nav-item"><i class="fas fa-bell"></i> Expiry Alerts</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
 
         <main class="main-ops">
+            <!-- Quick Archive -->
+            <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="color: #fff; margin-bottom: 5px; font-size: 16px;"><i class="fas fa-file-upload" style="color: #4fc3f7;"></i> Pharmacy Sales Data</h3>
+                    <p style="color: #64748b; font-size: 12px;">Archive monthly inventory financial reports or narcotics logs.</p>
+                </div>
+                <a href="reports_manager.php?view=repository" style="background: #4fc3f7; color: #020617; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 12px;">Archive Report</a>
+            </div>
             <div class="stock-alert">
                 <span><i class="fas fa-exclamation-circle"></i> <strong>Critical Stock Alert:</strong> Paracetamol 500mg (Batch #990) is below threshold.</span>
                 <button style="background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer;" onclick="alert('Notification sent to Admin & Procurement')">Notify Admin</button>

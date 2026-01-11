@@ -33,11 +33,11 @@ if ($status == 'Approved') {
     $generated_id = $user_data['username'] ?? 'Not assigned yet';
 
     $message = "Your application has been approved!";
-    $subtext = "Welcome to the team! Your record matches our professional standards. Please use your unique Login ID below to access the system.";
+    $subtext = "Welcome to the team! Your record matches our professional standards. Your official hospital account is now active. <br><br> <span style='color: #fbbf24;'>Official login credentials have been sent to your registered email: <strong>$email</strong></span>";
     $show_login = true;
     $credentials = [
         'Login ID' => $generated_id,
-        'Temporary Password' => 'HealCare123'
+        'Access Status' => 'Please check your email for the temporary password.'
     ];
 } elseif ($status == 'Rejected') {
     $message = "Application Status: Rejected";
@@ -150,14 +150,13 @@ if ($status == 'Approved') {
                         <strong style="color: #fff; font-size: 0.95rem;"><?php echo $credentials['Login ID']; ?></strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                        <span style="opacity: 0.7;">Temporary Password:</span>
-                        <strong style="color: #fff; font-size: 0.95rem;"><?php echo $credentials['Temporary Password']; ?></strong>
+                        <span style="opacity: 0.7;">Password:</span>
+                        <strong style="color: #fbbf24; font-size: 0.85rem;"><?php echo $credentials['Access Status']; ?></strong>
                     </div>
                     <div style="border-top: 1px solid rgba(16, 185, 129, 0.2); pt-15; margin-top: 15px; pt: 15px; padding-top: 15px;">
                         <span style="display: block; font-size: 0.85rem; opacity: 0.8; margin-bottom: 5px;">Login URL:</span>
                         <code style="background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 4px; font-size: 0.9rem; color: #4fc3f7; display: block; overflow-x: auto;">http://localhost/HealCare/login.php</code>
                     </div>
-                    <small style="display: block; margin-top: 15px; text-align: center; color: #fbbf24; font-weight: 600;">* Required: You must change this temporary password on your first login.</small>
                 </div>
             <?php endif; ?>
 

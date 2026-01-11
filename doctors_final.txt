@@ -1,0 +1,9 @@
+
+NAME: Mary mariam | DEPT: General Medicine / Cardiovascular | PHOTO: uploads/photos/1767778549_photo_doctor-10.jpg
+NAME: Leena jose | DEPT: Gynecology | PHOTO: uploads/photos/1767778693_photo_doctor-8.jpg
+NAME: Jacob Mathew | DEPT: Orthopedics | PHOTO: uploads/photos/1767778873_photo_doctor-8.jpg
+NAME: Krishnan manoj | DEPT: ENT | PHOTO: uploads/photos/1767779066_photo_doctor-appointment.jpg
+NAME: June Mary Antony | DEPT: Ophthalmology | PHOTO: images/dr_june_mary_antony.png
+NAME: Alan Thomas  | DEPT: Dermatology | PHOTO: uploads/photos/1767779772_photo_doctor-2.jpg
+NAME: Abner Sam Jose | DEPT: ENT | PHOTO: uploads/photos/1767956831_photo_doctor-5.jpg
+NAME: Elsa Mathew | DEPT: Gynecology | PHOTO: 

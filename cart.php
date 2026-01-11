@@ -66,15 +66,20 @@ $total_cart_amount = 0;
         .cart-item:hover { border-color: var(--primary-blue); }
         
         .item-icon {
-            width: 60px;
-            height: 60px;
-            background: rgba(59, 130, 246, 0.1);
+            width: 80px;
+            height: 80px;
             border-radius: 12px;
+            overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            color: var(--primary-blue);
+            border: 1px solid var(--border-color);
+        }
+        
+        .item-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
         
         .item-details { flex: 1; }
@@ -138,14 +143,16 @@ $total_cart_amount = 0;
             <div class="cart-list">
                 <?php while ($item = $cart_items->fetch_assoc()): 
                     $total_cart_amount += $item['price'];
-                    $icon = "fa-utensils";
-                    if ($item['item_category'] == "Morning / Breakfast") $icon = "fa-mug-hot";
-                    elseif ($item['item_category'] == "Lunch") $icon = "fa-bowl-rice";
-                    elseif ($item['item_category'] == "Evening Snacks") $icon = "fa-cookie";
-                    elseif ($item['item_category'] == "Dinner") $icon = "fa-leaf";
+                    // Fetch image from DB
+                    $item_id_for_img = $item['menu_id'];
+                    $img_res = $conn->query("SELECT image_url FROM canteen_menu WHERE menu_id = $item_id_for_img");
+                    $img_data = $img_res->fetch_assoc();
+                    $img_url = $img_data['image_url'] ?: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';
                 ?>
                     <div class="cart-item">
-                        <div class="item-icon"><i class="fas <?php echo $icon; ?>"></i></div>
+                        <div class="item-icon">
+                            <img src="<?php echo $img_url; ?>" alt="<?php echo htmlspecialchars($item['item_name']); ?>" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400';">
+                        </div>
                         <div class="item-details">
                             <h3 class="item-name"><?php echo htmlspecialchars($item['item_name']); ?></h3>
                             <div class="item-meta">Diet: <?php echo htmlspecialchars($item['diet_type']); ?> | Category: <?php echo htmlspecialchars($item['item_category']); ?></div>

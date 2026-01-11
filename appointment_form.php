@@ -5,7 +5,7 @@ include 'includes/db_connect.php';
 // Mock Doctors Data (Consistent with other pages)
 // Fetch Doctors from DB
 $doctors = [];
-$dept_filter = isset($_GET['dept']) ? trim(urldecode($_GET['dept'])) : '';
+$dept_filter = isset($_GET['dept']) ? trim($_GET['dept']) : '';
 
 // Base Query
 $sql = "SELECT d.user_id as id, r.name, d.department as dept, d.experience as exp, d.qualification as qual, r.profile_photo as img, d.consultation_fee 
@@ -16,7 +16,7 @@ $sql = "SELECT d.user_id as id, r.name, d.department as dept, d.experience as ex
 // Apply Filter
 if (!empty($dept_filter) && $dept_filter !== 'Select Department') {
     $safe_dept = mysqli_real_escape_string($conn, $dept_filter);
-    $sql .= " WHERE d.department = '$safe_dept'";
+    $sql .= " WHERE TRIM(d.department) = TRIM('$safe_dept')";
 }
 
 $result = $conn->query($sql);
@@ -28,9 +28,6 @@ if ($result && $result->num_rows > 0) {
         }
         $doctors[] = $row;
     }
-} else {
-    // Debug info in case of no results
-    // echo "<!-- Query: $sql -->";
 }
 
 // Handle Query Params
@@ -255,6 +252,7 @@ if(isset($_SESSION['user_id'])) {
                             <option value="ENT" <?php if($pre_dept == 'ENT') echo 'selected'; ?>>ENT</option>
                             <option value="Ophthalmology" <?php if($pre_dept == 'Ophthalmology') echo 'selected'; ?>>Ophthalmology</option>
                             <option value="Dermatology" <?php if($pre_dept == 'Dermatology') echo 'selected'; ?>>Dermatology</option>
+                            <option value="Pediatrics" <?php if($pre_dept == 'Pediatrics') echo 'selected'; ?>>Pediatrics</option>
                     </select>
                 </div>
                 <div class="filter-group">

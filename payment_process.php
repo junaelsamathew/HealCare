@@ -1,9 +1,28 @@
 <?php
+ob_start();
 session_start();
 include 'includes/db_connect.php';
 
+// Fetch bill data regardless of method if ID is present
+$bill_id = isset($_REQUEST['bill_id']) ? (int)$_REQUEST['bill_id'] : 0;
+$bill = null;
+
+if ($bill_id > 0) {
+    $res = $conn->query("SELECT b.*, r.name as patient_name 
+                         FROM billing b 
+                         JOIN users u ON b.patient_id = u.user_id 
+                         JOIN registrations r ON u.registration_id = r.registration_id 
+                         WHERE b.bill_id = $bill_id");
+    if ($res && $res->num_rows > 0) {
+        $bill = $res->fetch_assoc();
+    }
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $bill_id = $_POST['bill_id'];
+    if (!$bill) {
+        die("Invalid Invoice ID.");
+    }
+
     $method = $_POST['payment_method'];
     $amount = $_POST['amount'];
     $patient_id = $_POST['patient_id'];
@@ -31,27 +50,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $conn->commit();
 
-        // Redirect back to booking success or a final confirmation page
+        // Redirect back to booking success
         header("Location: booking_success.php?booking_id=BK-$appt_id&paid=true&txn=$transaction_id");
         exit();
 
     } catch (Exception $e) {
         $conn->rollback();
-        echo "Payment failed: " . $e->getMessage();
+        echo "<div style='color:red; text-align:center; padding:20px;'>Payment failed: " . $e->getMessage() . "</div>";
     }
 } else {
-    // Show payment form
-    $bill_id = $_GET['bill_id'] ?? 0;
-    
-    $res = $conn->query("SELECT b.*, r.name as patient_name FROM billing b JOIN registrations r ON b.patient_id = (SELECT registration_id FROM users WHERE user_id = b.patient_id) WHERE b.bill_id = $bill_id");
-    // Improvement: join users then registrations correctly.
-    $res = $conn->query("SELECT b.*, r.name as patient_name FROM billing b JOIN users u ON b.patient_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id WHERE b.bill_id = $bill_id");
-    
-    if (!$res || $res->num_rows == 0) {
-        die("Invalid Invoice ID.");
+    if (!$bill) {
+        die("Invalid or missing Invoice ID.");
     }
-    
-    $bill = $res->fetch_assoc();
 }
 ?>
 <!DOCTYPE html>

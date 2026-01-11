@@ -1,4 +1,7 @@
-<?php include 'includes/header.php'; ?>
+<?php 
+include 'includes/db_connect.php'; 
+include 'includes/header.php'; 
+?>
 
     <!-- Hero Section -->
     <section class="hero-section">
@@ -29,7 +32,7 @@
                     </a>
 
                     <!-- 2. Book an Appointment -->
-                    <a href="find_doctor.php" class="action-card primary" style="text-decoration: none; color: inherit;">
+                    <a href="book_appointment.php" class="action-card primary" style="text-decoration: none; color: inherit;">
                         <span class="card-text">Book an Appointment</span>
                         <div class="card-icon">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -184,7 +187,9 @@
                         </p>
                     </div>
                     <div class="team-cta">
-                        <button class="btn-team-consultants">Team Of Consultants</button>
+                        <a href="find_doctor.php" style="text-decoration: none;">
+                            <button class="btn-team-consultants">Team Of Consultants</button>
+                        </a>
                     </div>
                 </div>
 
@@ -193,135 +198,54 @@
                     <!-- Featured Doctors Grid/Carousel -->
                     <div class="doctors-display-wrapper">
                         <div class="doctors-cards-slider">
-                            <!-- Slide 1 -->
-                            <div class="doctor-slide active" style="display: grid;">
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-3.jpg" alt="Dr. Arjun Reddy">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Arjun Reddy</h3>
-                                        <p class="profile-specialty">Cardiology</p>
-                                    </div>
-                                </div>
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-7.jpg" alt="Dr. Meera Krishnan">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Meera Krishnan</h3>
-                                        <p class="profile-specialty">Neurology</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <?php
+                            $target_doctors = [
+                                'mary.mariam@healcare.com' => 'General Medicine',
+                                'leena.jose@healcare.com' => 'Gynecology',
+                                'jacob.mathew@healcare.com' => 'Orthopedics',
+                                'krishnan.manoj@healcare.com' => 'ENT',
+                                'june.antony@healcare.com' => 'Ophthalmology',
+                                'alan.thomas@healcare.com' => 'Dermatology',
+                                'suresh.k@healcare.com' => 'General Medicine',
+                                'maria.vineeth@healcare.com' => 'Pediatrics'
+                            ];
+                            
+                            // Fetch Doctor Data
+                            $doc_query = "SELECT r.name, r.email, r.profile_photo, d.department 
+                                          FROM registrations r 
+                                          JOIN users u ON r.registration_id = u.registration_id 
+                                          LEFT JOIN doctors d ON u.user_id = d.user_id 
+                                          WHERE r.email IN ('" . implode("','", array_keys($target_doctors)) . "') 
+                                          ORDER BY FIELD(r.email, '" . implode("','", array_keys($target_doctors)) . "')";
+                            $doc_res = $conn->query($doc_query);
+                            $docs = [];
+                            while($d = $doc_res->fetch_assoc()) $docs[] = $d;
 
-                            <!-- Slide 2 -->
-                            <div class="doctor-slide" style="display: none;">
+                            // Chunk into pairs for slides
+                            $chunks = array_chunk($docs, 2);
+                            foreach($chunks as $idx => $pair):
+                                $display = ($idx == 0) ? 'grid' : 'none';
+                                $active = ($idx == 0) ? 'active' : '';
+                            ?>
+                            <div class="doctor-slide <?php echo $active; ?>" style="display: <?php echo $display; ?>;">
+                                <?php foreach($pair as $doc): 
+                                    $img = $doc['profile_photo'] ? $doc['profile_photo'] : 'images/default-doctor.jpg';
+                                    $dept = $doc['department'] ? $doc['department'] : $target_doctors[$doc['email']];
+                                ?>
                                 <div class="doctor-profile-card">
                                     <div class="profile-image-container">
                                         <div class="profile-image-circle">
-                                            <img src="images/doctor-2.jpg" alt="Dr. Suresh Kumar">
+                                            <img src="<?php echo $img; ?>" alt="<?php echo $doc['name']; ?>" style="width:100%; height:100%; object-fit:cover;">
                                         </div>
                                     </div>
                                     <div class="profile-info">
-                                        <h3>Dr. Suresh Kumar</h3>
-                                        <p class="profile-specialty">Orthopedics</p>
+                                        <h3><?php echo $doc['name']; ?></h3>
+                                        <p class="profile-specialty"><?php echo $dept; ?></p>
                                     </div>
                                 </div>
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-9.jpg" alt="Dr. Ananya Iyer">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Ananya Iyer</h3>
-                                        <p class="profile-specialty">Pediatrics</p>
-                                    </div>
-                                </div>
+                                <?php endforeach; ?>
                             </div>
-
-                            <!-- Slide 3 -->
-                            <div class="doctor-slide" style="display: none;">
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-5.jpg" alt="Dr. Vikram Singh">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Vikram Singh</h3>
-                                        <p class="profile-specialty">Dermatology</p>
-                                    </div>
-                                </div>
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-10.jpg" alt="Dr. Sneha Gupta">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Sneha Gupta</h3>
-                                        <p class="profile-specialty">Gynecology</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Slide 4 -->
-                            <div class="doctor-slide" style="display: none;">
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-6.jpg" alt="Dr. Rajesh Khanna">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Rajesh Khanna</h3>
-                                        <p class="profile-specialty">ENT</p>
-                                    </div>
-                                </div>
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-4.jpg" alt="Dr. Lakshmi Devi">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Lakshmi Devi</h3>
-                                        <p class="profile-specialty">Ophthalmology</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Slide 5 -->
-                            <div class="doctor-slide" style="display: none;">
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-1.jpg" alt="Dr. Abraham Mohan">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Abraham Mohan</h3>
-                                        <p class="profile-specialty">General Surgery</p>
-                                    </div>
-                                </div>
-                                <div class="doctor-profile-card">
-                                    <div class="profile-image-container">
-                                        <div class="profile-image-circle">
-                                            <img src="images/doctor-8.jpg" alt="Dr. Akshay Kumar">
-                                        </div>
-                                    </div>
-                                    <div class="profile-info">
-                                        <h3>Dr. Akshay Kumar</h3>
-                                        <p class="profile-specialty">Nephrology</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
                 </div>
