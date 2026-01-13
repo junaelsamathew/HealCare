@@ -22,6 +22,19 @@ if ($role == 'staff') {
 $effective_role = $role;
 if ($role == 'staff' && $staff_type) $effective_role = $staff_type;
 
+// Determine Dashboard URL based on role
+$dashboard_url = 'index.php';
+switch($effective_role) {
+    case 'admin': $dashboard_url = 'admin_dashboard.php'; break;
+    case 'doctor': $dashboard_url = 'doctor_dashboard.php'; break;
+    case 'nurse': $dashboard_url = 'staff_nurse_dashboard.php'; break;
+    case 'lab_staff': $dashboard_url = 'staff_lab_staff_dashboard.php'; break;
+    case 'pharmacist': $dashboard_url = 'staff_pharmacist_dashboard.php'; break;
+    case 'receptionist': $dashboard_url = 'staff_receptionist_dashboard.php'; break;
+    case 'canteen_staff': $dashboard_url = 'staff_canteen_staff_dashboard.php?section=reports'; break;
+    default: $dashboard_url = 'staff_dashboard.php';
+}
+
 // Define Report Access Matrix
 $report_access = [
     'overall_revenue' => ['admin'],
@@ -33,7 +46,25 @@ $report_access = [
     'payment_mode' => ['admin'],
     'patient_visit' => ['admin', 'doctor'],
     'doctor_performance' => ['admin', 'doctor'],
-    'canteen_revenue' => ['admin', 'canteen_staff']
+    'canteen_daily_sales' => ['admin', 'canteen_staff'],
+    'canteen_item_sales' => ['admin', 'canteen_staff'],
+    'canteen_payments' => ['admin', 'canteen_staff'],
+    'canteen_stock' => ['admin', 'canteen_staff'],
+    'canteen_revenue' => ['admin'], // Legacy fallback
+    
+    // Receptionist Reports
+    'receptionist_appointment' => ['admin', 'receptionist'],
+    'receptionist_registration' => ['admin', 'receptionist'],
+    'receptionist_checkin' => ['admin', 'receptionist'],
+
+    // Pharmacist Reports
+    'pharmacist_sales' => ['admin', 'pharmacist'],
+    'pharmacist_stock' => ['admin', 'pharmacist'],
+    'pharmacist_expiry' => ['admin', 'pharmacist'],
+
+    // Nurse Reports
+    'nurse_vitals' => ['admin', 'nurse'],
+    'nurse_care' => ['admin', 'nurse']
 ];
 
 function can_view($report_id, $role) {
@@ -143,17 +174,15 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
             <a href="?view=reports" class="nav-link <?php echo $view == 'reports' ? 'active' : ''; ?>">
                 <i class="fas fa-file-invoice"></i> Functional Reports
             </a>
+
             <?php if ($role == 'admin'): ?>
-            <a href="?view=analytics" class="nav-link <?php echo $view == 'analytics' ? 'active' : ''; ?>">
-                <i class="fas fa-chart-pie"></i> Data Analytics
-            </a>
-            <?php endif; ?>
             <a href="?view=repository" class="nav-link <?php echo $view == 'repository' ? 'active' : ''; ?>">
                 <i class="fas fa-folder-open"></i> Document Repository
             </a>
+            <?php endif; ?>
         </nav>
         <div style="padding: 20px;">
-            <a href="javascript:history.back()" class="nav-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            <a href="<?php echo $dashboard_url; ?>" class="nav-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
     </aside>
 
@@ -162,7 +191,7 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
             <h2>Management Console</h2>
             <div style="display: flex; gap: 20px; align-items: center;">
                 <span class="badge"><?php echo $effective_role; ?> Access</span>
-                <button class="btn btn-primary" onclick="document.getElementById('uploadModal').style.display='flex'">
+                <button class="btn btn-primary" onclick="openReportModal('<?php echo $type; ?>')">
                     <i class="fas fa-upload"></i> Upload Report
                 </button>
             </div>
@@ -187,7 +216,25 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                             'payment_mode' => ['icon' => 'fa-credit-card', 'title' => 'Payment Mode Report', 'desc' => 'Breakdown by Cash, Card, and Insurance.'],
                             'patient_visit' => ['icon' => 'fa-users', 'title' => 'Patient Visit Report', 'desc' => 'Demographic trends and daily visit volume.'],
                             'doctor_performance' => ['icon' => 'fa-chart-line', 'title' => 'Doctor Performance', 'desc' => 'Consultation counts and performance stats.'],
-                            'canteen_revenue' => ['icon' => 'fa-hamburger', 'title' => 'Canteen Revenue', 'desc' => 'Earnings from food services and canteen orders.']
+                            'canteen_daily_sales' => ['icon' => 'fa-utensils', 'title' => 'Daily Sales Report', 'desc' => 'Daily food sales tracking.'],
+                            'canteen_item_sales' => ['icon' => 'fa-list-ul', 'title' => 'Item-Wise Sales', 'desc' => 'Popular items and menu performance.'],
+                            'canteen_payments' => ['icon' => 'fa-money-bill-wave', 'title' => 'Payment Collection', 'desc' => 'Cash vs UPI revenue analysis.'],
+                            'canteen_stock' => ['icon' => 'fa-boxes', 'title' => 'Stock Usage Report', 'desc' => 'Inventory usage and wastage.'],
+                            'canteen_revenue' => ['icon' => 'fa-hamburger', 'title' => 'Canteen Revenue', 'desc' => 'Earnings from food services and canteen orders.'],
+
+                            // Receptionist
+                            'receptionist_appointment' => ['icon' => 'fa-calendar-check', 'title' => 'Appointment Booking', 'desc' => 'Scheduled appointments report.'],
+                            'receptionist_registration' => ['icon' => 'fa-user-plus', 'title' => 'Patient Registration', 'desc' => 'New patient registrations.'],
+                            'receptionist_checkin' => ['icon' => 'fa-door-open', 'title' => 'Daily Check-In/Out', 'desc' => 'Patient arrival and departure logs.'],
+
+                            // Pharmacist
+                            'pharmacist_sales' => ['icon' => 'fa-receipt', 'title' => 'Medicine Sales', 'desc' => 'Daily medicine sales records.'],
+                            'pharmacist_stock' => ['icon' => 'fa-cubes', 'title' => 'Stock Usage', 'desc' => 'Stock remaining and usage statistics.'],
+                            'pharmacist_expiry' => ['icon' => 'fa-hourglass-end', 'title' => 'Expiry Alerts', 'desc' => 'Medicines nearing expiration.'],
+
+                            // Nurse
+                            'nurse_vitals' => ['icon' => 'fa-heartbeat', 'title' => 'Vital Signs', 'desc' => 'Patient vitals monitoring logs.'],
+                            'nurse_care' => ['icon' => 'fa-user-nurse', 'title' => 'Patient Care/Duty', 'desc' => 'Nursing care and duty reports.']
                         ];
                         foreach ($reports as $rid => $rdata):
                             if (can_view($rid, $effective_role)): ?>
@@ -210,17 +257,34 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                         </div>
                     </div>
 
-                    <form class="filters" method="POST">
-                        <div class="filter-group">
-                            <label>From Date</label>
-                            <input type="date" name="start_date" value="<?php echo $start_date; ?>">
-                        </div>
-                        <div class="filter-group">
-                            <label>To Date</label>
-                            <input type="date" name="end_date" value="<?php echo $end_date; ?>">
-                        </div>
-                        <button type="submit" class="btn btn-primary">Refresh Report</button>
-                    </form>
+                    <div class="filters" style="align-items: flex-end; flex-wrap: wrap;">
+                        <form method="POST" id="dateForm" style="display:contents;">
+                            <div class="filter-group">
+                                <label>Search Report</label>
+                                <div style="position:relative;">
+                                    <i class="fas fa-search" style="position:absolute; left:12px; top:14px; color:var(--text-dim); font-size:12px;"></i>
+                                    <input type="text" id="tableSearch" placeholder="Search by name, ID, status..." style="padding-left: 35px; width: 250px;">
+                                </div>
+                            </div>
+                            <div class="filter-group">
+                                <label>Date Range</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <button type="button" class="btn btn-outline" onclick="setDateRange('today')" style="padding: 10px 15px; font-size: 12px;">TD</button>
+                                    <button type="button" class="btn btn-outline" onclick="setDateRange('month')" style="padding: 10px 15px; font-size: 12px;">MO</button>
+                                    <button type="button" class="btn btn-outline" onclick="setDateRange('year')" style="padding: 10px 15px; font-size: 12px;">YR</button>
+                                </div>
+                            </div>
+                            <div class="filter-group">
+                                <label>From</label>
+                                <input type="date" name="start_date" id="startDate" value="<?php echo $start_date; ?>">
+                            </div>
+                            <div class="filter-group">
+                                <label>To</label>
+                                <input type="date" name="end_date" id="endDate" value="<?php echo $end_date; ?>">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="height: 42px;"><i class="fas fa-sync-alt"></i></button>
+                        </form>
+                    </div>
 
                     <div class="card">
                         <?php
@@ -233,7 +297,7 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                                 break;
                             case 'consultation_revenue':
                                 $headers = ['Date', 'Token', 'Doctor', 'Patient', 'Fee', 'Status'];
-                                $doc_filter = ($effective_role == 'doctor') ? "AND doctor_id = (SELECT doctor_id FROM doctors WHERE user_id = $user_id)" : "";
+                                $doc_filter = ($effective_role == 'doctor') ? "AND a.doctor_id = $user_id" : "";
                                 $query = "SELECT a.appointment_date, a.queue_number, d.specialization, r.name as patient_name, a.consultation_fee, a.status 
                                           FROM appointments a 
                                           JOIN users u ON a.doctor_id = u.user_id 
@@ -243,15 +307,16 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                                           WHERE a.appointment_date BETWEEN '$start_date' AND '$end_date' AND a.status = 'Completed' $doc_filter";
                                 break;
                             case 'lab_revenue':
-                                $headers = ['Date', 'Order ID', 'Test Name', 'Category', 'Patient', 'Amount'];
-                                $query = "SELECT b.bill_date, l.order_id, l.test_name, l.lab_category, r.name, b.total_amount 
-                                          FROM lab_orders l 
-                                          JOIN billing b ON l.order_id = b.appointment_id AND b.bill_type = 'Lab'
+                                $headers = ['Date', 'Test ID', 'Test Name', 'Type', 'Patient', 'Status'];
+                                $query = "SELECT l.created_at, l.labtest_id, l.test_name, l.test_type, r.name, l.status 
+                                          FROM lab_tests l 
                                           JOIN users u ON l.patient_id = u.user_id
                                           JOIN registrations r ON u.registration_id = r.registration_id
-                                          WHERE b.bill_date BETWEEN '$start_date' AND '$end_date'";
+                                          WHERE DATE(l.created_at) BETWEEN '$start_date' AND '$end_date'
+                                          ORDER BY l.created_at DESC";
                                 break;
                             case 'appointment_report':
+                            case 'receptionist_appointment':
                                 $headers = ['Date', 'Time', 'Specialist', 'Patient', 'Type', 'Status'];
                                 $doc_filter = ($effective_role == 'doctor') ? "AND a.doctor_id = (SELECT doctor_id FROM doctors WHERE user_id = $user_id)" : "";
                                 $query = "SELECT a.appointment_date, a.appointment_time, r.name as doctor, r2.name as patient, a.appointment_type, a.status 
@@ -265,6 +330,7 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                                 $query = "SELECT order_date, order_id, delivery_location, total_amount, order_status FROM canteen_orders WHERE order_date BETWEEN '$start_date' AND '$end_date' AND order_status = 'Delivered'";
                                 break;
                             case 'pharmacy_sales':
+                            case 'pharmacist_sales':
                                  $headers = ['Date', 'Bill ID', 'Price', 'Tax (5%)', 'Total', 'Patient'];
                                  $query = "SELECT bill_date, bill_id, total_amount*0.95 as net, total_amount*0.05 as tax, total_amount, patient_id FROM billing WHERE bill_type = 'Pharmacy' AND bill_date BETWEEN '$start_date' AND '$end_date'";
                                  break;
@@ -304,48 +370,154 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                                     <?php endwhile; ?>
                                 </tbody>
                             </table>
-                        <?php else: echo "<p>No records found.</p>"; endif; endif; ?>
+                        <?php else: echo "<p style='color: #64748b; padding: 20px 0;'>No generated analytics found for this period. Please check uploaded documents below.</p>"; endif; endif; ?>
+                    </div>
+
+                    <!-- Uploaded Documents Section -->
+                    <div class="card" style="margin-top: 30px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                             <h3 style="font-size: 18px; margin-bottom: 20px;">Uploaded Documents (Manual)</h3>
+                        </div>
+                        <?php
+                        // Intelligent mapping of view types to upload keys
+                        $keywords = [];
+                        $check_category = true;
+
+                        switch($type) {
+                            case 'consultation_revenue': $keywords = ['Consultation', 'Revenue']; break;
+                            case 'appointment_report': $keywords = ['Appointment', 'Consultation', 'Diagnosis']; break;
+                            case 'patient_visit': $keywords = ['Patient', 'Visit', 'Treatment']; break;
+                            case 'doctor_performance': $keywords = ['Performance']; break;
+                            
+                            // Canteen Specific Reports (Strict Matching)
+                            case 'canteen_daily_sales': 
+                                $keywords = ['Daily Sales Report', 'Daily Sales']; 
+                                $check_category = false; 
+                                break;
+                            case 'canteen_item_sales': 
+                                $keywords = ['Item-Wise Sales Report', 'Menu Performance Report']; 
+                                $check_category = false; 
+                                break;
+                            case 'canteen_payments': 
+                                $keywords = ['Payment Collection Report', 'Monthly Revenue Report']; 
+                                $check_category = false; 
+                                break;
+                            case 'canteen_stock': 
+                                $keywords = ['Stock Usage Report', 'Inventory Report']; 
+                                $check_category = false; 
+                                break;
+
+                            // Receptionist
+                            case 'receptionist_appointment':
+                                $keywords = ['Appointment Booking Report', 'Appointment Booking'];
+                                $check_category = false;
+                                break;
+                            case 'receptionist_registration':
+                                $keywords = ['Patient Registration Report', 'Patient Registration'];
+                                $check_category = false;
+                                break;
+                            case 'receptionist_checkin':
+                                $keywords = ['Daily Check-In / Check-Out Report', 'Daily Check-In', 'Check-Out'];
+                                $check_category = false;
+                                break;
+
+                            // Pharmacist
+                            case 'pharmacist_sales':
+                                $keywords = ['Medicine Sales Report', 'Medicine Sales'];
+                                $check_category = false;
+                                break;
+                            case 'pharmacist_stock':
+                                $keywords = ['Stock Usage / Remaining Stock Report', 'Stock Usage', 'Remaining Stock'];
+                                $check_category = false;
+                                break;
+                            case 'pharmacist_expiry':
+                                $keywords = ['Expiry Alert Report', 'Expiry Alert'];
+                                $check_category = false;
+                                break;
+
+                            // Nurse
+                            case 'nurse_vitals':
+                                $keywords = ['Vital Signs Monitoring Report', 'Vital Signs'];
+                                $check_category = false;
+                                break;
+                            case 'nurse_care':
+                                $keywords = ['Patient Care / Duty Report', 'Patient Care', 'Duty Report'];
+                                $check_category = false;
+                                break;
+                            
+                            // Lab Staff
+                            case 'lab_daily':
+                                $keywords = ['Daily Test Report', 'Daily Test'];
+                                $check_category = false;
+                                break;
+                            case 'lab_analytics':
+                                $keywords = ['Test Type Analysis', 'Analysis'];
+                                $check_category = false;
+                                break;
+                            case 'lab_equipment':
+                                $keywords = ['Equipment Utilization', 'Equipment'];
+                                $check_category = false;
+                                break;
+                            case 'lab_revenue': 
+                                $keywords = ['Monthly Lab Revenue', 'Lab Revenue']; 
+                                $check_category = false; 
+                                break;
+
+                            case 'dept_revenue': $keywords = ['Department', 'Revenue']; break;
+                            case 'lab_revenue': $keywords = ['Lab', 'Test']; break;
+                            case 'pharmacy_sales': $keywords = ['Pharmacy', 'Medicine', 'Sales']; break; 
+                            case 'canteen_revenue': $keywords = ['Canteen', 'Food']; break; // Legacy fallback
+                            default: $keywords = explode('_', $type);
+                        }
+                        
+                        $like_clauses = ["report_type = '$type'"];
+                        foreach($keywords as $k) {
+                            $like_clauses[] = "report_type LIKE '%$k%'";
+                            $like_clauses[] = "report_title LIKE '%$k%'";
+                            if ($check_category) {
+                                $like_clauses[] = "report_category LIKE '%$k%'";
+                            }
+                        }
+                        $type_sql = "(" . implode(' OR ', $like_clauses) . ")";
+
+                        $manual_query = "SELECT m.*, r.name as u_name FROM manual_reports m JOIN users u ON m.user_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id WHERE $type_sql AND (m.report_date BETWEEN '$start_date' AND '$end_date') ";
+                        if ($effective_role != 'admin') {
+                            $manual_query .= " AND m.user_id = $user_id";
+                        }
+                        $manual_query .= " ORDER BY m.report_date DESC";
+                        
+                        $m_res = $conn->query($manual_query);
+                        if ($m_res && $m_res->num_rows > 0):
+                        ?>
+                        <table id="manualReportTable" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <th style="padding: 12px; text-align: left; color: #94a3b8; cursor: pointer;">Date <i class="fas fa-sort" style="font-size:10px;"></i></th>
+                                    <th style="padding: 12px; text-align: left; color: #94a3b8; cursor: pointer;">Title <i class="fas fa-sort" style="font-size:10px;"></i></th>
+                                    <th style="padding: 12px; text-align: left; color: #94a3b8; cursor: pointer;">Uploaded By <i class="fas fa-sort" style="font-size:10px;"></i></th>
+                                    <th style="padding: 12px; text-align: left; color: #94a3b8;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while($doc = $m_res->fetch_assoc()): ?>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 12px;"><?php echo date('M d, Y', strtotime($doc['report_date'])); ?></td>
+                                    <td style="padding: 12px;"><?php echo htmlspecialchars($doc['report_title']); ?></td>
+                                    <td style="padding: 12px;"><?php echo htmlspecialchars($doc['u_name']); ?></td>
+                                    <td style="padding: 12px;">
+                                        <a href="<?php echo $doc['file_path']; ?>" target="_blank" class="btn btn-outline" style="padding: 5px 10px; font-size: 12px;"><i class="fas fa-eye"></i> View</a>
+                                    </td>
+                                </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                        <?php else: ?>
+                            <p style="color: #64748b; padding: 10px 0;">No manual documents uploaded for this specific report type in this period.</p>
+                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
 
-            <?php elseif ($view == 'analytics'): ?>
-                <div style="margin-bottom: 40px;">
-                    <h2 style="font-size: 28px; margin-bottom: 10px;">Executive Analytics</h2>
-                    <p style="color:var(--text-dim);">Visual data study and comparative department analysis.</p>
-                </div>
 
-                <div class="analytics-grid">
-                    <div class="chart-card">
-                        <h3><i class="fas fa-chart-line"></i> Revenue Trends (Monthly)</h3>
-                        <canvas id="revenueTrendChart"></canvas>
-                    </div>
-                    <div class="chart-card">
-                        <h3><i class="fas fa-chart-pie"></i> Department Distribution</h3>
-                        <canvas id="deptDistChart"></canvas>
-                    </div>
-                    <div class="chart-card" style="grid-column: span 2;">
-                        <h3><i class="fas fa-chart-bar"></i> Daily Consultation Traffic</h3>
-                        <canvas id="trafficChart"></canvas>
-                    </div>
-                </div>
-
-                <?php
-                // Fetch Data for Charts
-                // 1. Monthly Revenue
-                $rev_data = $conn->query("SELECT DATE_FORMAT(bill_date, '%b') as month, SUM(total_amount) as total FROM billing WHERE payment_status = 'Paid' GROUP BY month ORDER BY bill_date ASC LIMIT 6")->fetch_all(MYSQLI_ASSOC);
-                $labels_rev = json_encode(array_column($rev_data, 'month'));
-                $values_rev = json_encode(array_column($rev_data, 'total'));
-
-                // 2. Dept Distribution
-                $dept_data = $conn->query("SELECT specialization, COUNT(appointment_id) as count FROM appointments a JOIN doctors d ON a.doctor_id = d.doctor_id GROUP BY specialization")->fetch_all(MYSQLI_ASSOC);
-                $labels_dept = json_encode(array_column($dept_data, 'specialization'));
-                $values_dept = json_encode(array_column($dept_data, 'count'));
-
-                // 3. Traffic
-                $traffic_data = $conn->query("SELECT DATE_FORMAT(appointment_date, '%d %b') as day, COUNT(*) as count FROM appointments GROUP BY day ORDER BY appointment_date DESC LIMIT 7")->fetch_all(MYSQLI_ASSOC);
-                $labels_traf = json_encode(array_reverse(array_column($traffic_data, 'day')));
-                $values_traf = json_encode(array_reverse(array_column($traffic_data, 'count')));
-                ?>
 
             <?php elseif ($view == 'repository'): ?>
                 <div style="margin-bottom: 40px;">
@@ -356,15 +528,16 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                 <div class="card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                         <h3>All Uploaded Documents</h3>
+                        <input type="text" id="repoSearch" placeholder="Search files..." style="background: #020617; border: 1px solid var(--border); padding: 8px 15px; border-radius: 8px; color: #fff; width: 200px;">
                     </div>
 
-                    <table>
+                    <table id="repoTable">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Report Title</th>
-                                <th>Department</th>
-                                <th>Uploaded By</th>
+                                <th style="cursor:pointer;">Date <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;">Report Title <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;">Department <i class="fas fa-sort"></i></th>
+                                <th style="cursor:pointer;">Uploaded By <i class="fas fa-sort"></i></th>
                                 <th>File</th>
                                 <th>Actions</th>
                             </tr>
@@ -396,42 +569,72 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
         </div>
     </main>
 
-    <!-- Upload Modal -->
-    <div class="upload-modal" id="uploadModal">
-        <div class="modal-content">
-            <h3 style="margin-bottom:20px;"><i class="fas fa-file-upload"></i> Upload New Report</h3>
-            <form action="upload_report_handler.php" method="POST" enctype="multipart/form-data">
-                <div class="filter-group" style="margin-bottom:20px;">
-                    <label>Report Title</label>
-                    <input type="text" name="report_title" placeholder="e.g. Monthly Lab Summary" required style="width:100%;">
-                </div>
-                <div class="filter-group" style="margin-bottom:20px;">
-                    <label>Report Date</label>
-                    <input type="date" name="report_date" value="<?php echo date('Y-m-d'); ?>" required style="width:100%;">
-                </div>
-                <div class="filter-group" style="margin-bottom:20px;">
-                    <label>Department / Category</label>
-                    <select name="department" style="width:100%;">
-                        <option>General</option>
-                        <option>Laboratory</option>
-                        <option>Pharmacy</option>
-                        <option>Canteen</option>
-                        <option>Medical Records</option>
-                    </select>
-                </div>
-                <div class="filter-group" style="margin-bottom:30px;">
-                    <label>PDF Document</label>
-                    <input type="file" name="report_file" accept=".pdf" required style="width:100%; border: 1px dashed var(--border); padding: 30px; text-align: center;">
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button type="submit" class="btn btn-primary" style="flex:1; justify-content:center;">Submit Report</button>
-                    <button type="button" class="btn btn-outline" onclick="document.getElementById('uploadModal').style.display='none'" style="flex:1; justify-content:center;">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Upload Modal removed (using included component) -->
+
 
     <script>
+        // Set Date Range Logic
+        function setDateRange(type) {
+            const today = new Date();
+            let start = new Date();
+            let end = new Date();
+
+            if (type === 'today') {
+                // Already set
+            } else if (type === 'month') {
+                start = new Date(today.getFullYear(), today.getMonth(), 1);
+            } else if (type === 'year') {
+                start = new Date(today.getFullYear(), 0, 1);
+            }
+
+            // Format to YYYY-MM-DD
+            const fmt = (d) => d.toISOString().split('T')[0];
+            document.getElementById('startDate').value = fmt(start);
+            document.getElementById('endDate').value = fmt(end);
+            document.getElementById('dateForm').submit();
+        }
+
+        // Universal Table Search
+        function setupSearch(inputId, tableIds) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+
+            input.addEventListener('keyup', function() {
+                const filter = this.value.toLowerCase();
+                tableIds.forEach(tblId => {
+                    const table = document.getElementById(tblId);
+                    if (table) {
+                        const tr = table.getElementsByTagName('tr');
+                        for (let i = 1; i < tr.length; i++) { // Skip header
+                            let txtValue = tr[i].textContent || tr[i].innerText;
+                            tr[i].style.display = txtValue.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+                        }
+                    }
+                });
+            });
+        }
+        setupSearch('tableSearch', ['reportTable', 'manualReportTable']);
+        setupSearch('repoSearch', ['repoTable']);
+
+        // Universal Table Sort
+        document.querySelectorAll('th').forEach(th => {
+            th.addEventListener('click', function() {
+                const table = th.closest('table');
+                const tbody = table.querySelector('tbody');
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                const index = Array.from(th.parentNode.children).indexOf(th);
+                const asc = this.asc = !this.asc;
+                
+                rows.sort((a, b) => {
+                    const valA = a.children[index].innerText;
+                    const valB = b.children[index].innerText;
+                    return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                });
+
+                rows.forEach(row => tbody.appendChild(row));
+            });
+        });
+
         <?php if ($view == 'analytics'): ?>
         // 1. Revenue Chart
         new Chart(document.getElementById('revenueTrendChart'), {
@@ -497,5 +700,10 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
             }
         }
     </script>
+    <?php 
+    // Set staff_type for the modal usage
+    $staff_type = $effective_role;
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

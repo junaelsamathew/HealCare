@@ -43,7 +43,7 @@ $username = $_SESSION['username'];
         }
         .status-Pending, .status-Requested { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
         .status-Scheduled, .status-Approved, .status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-        .status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .status-Completed, .status-Checked { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
     </style>
 
@@ -103,8 +103,8 @@ $username = $_SESSION['username'];
                                 LEFT JOIN users u ON a.doctor_id = u.user_id 
                                 LEFT JOIN doctors d ON u.user_id = d.user_id 
                                 LEFT JOIN registrations r ON u.registration_id = r.registration_id
-                                WHERE a.patient_id = $user_id AND a.status IN ('Completed', 'Cancelled')
-                                ORDER BY a.appointment_date DESC";
+                                WHERE a.patient_id = $user_id AND a.status IN ('Completed', 'Cancelled', 'Checked')
+                                ORDER BY a.appointment_date DESC LIMIT 1";
                     $past_res = $conn->query($past_sql);
 
                     if ($past_res && $past_res->num_rows > 0):

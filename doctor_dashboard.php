@@ -28,7 +28,10 @@ if ($res->num_rows > 0) {
     $designation = "Professional Consultant";
 }
 
-$doctor_name = "Dr. " . htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
+$doctor_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
+if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') === false) {
+    $doctor_name = "Dr. " . $doctor_name;
+}
 
 // Handle Status Updates (Accept Appointment)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
@@ -82,6 +85,32 @@ if (isset($_GET['patient_id'])) {
         $history_records[] = $row;
     }
 }
+
+// --- Fetch Dynamic Stats for Cards ---
+// 1. Pending Appointments
+$stmt_pending = $conn->prepare("SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ? AND status IN ('Requested', 'Pending')");
+$stmt_pending->bind_param("i", $user_id);
+$stmt_pending->execute();
+$stats_pending = $stmt_pending->get_result()->fetch_assoc()['count'];
+
+// 2. Patients Today
+$today_date = date('Y-m-d');
+$stmt_today = $conn->prepare("SELECT COUNT(DISTINCT patient_id) as count FROM appointments WHERE doctor_id = ? AND appointment_date = ?");
+$stmt_today->bind_param("is", $user_id, $today_date);
+$stmt_today->execute();
+$stats_today = $stmt_today->get_result()->fetch_assoc()['count'];
+
+// 3. Critical/Pending Lab Reports
+$stmt_lab = $conn->prepare("SELECT COUNT(*) as count FROM lab_tests WHERE doctor_id = ? AND status = 'Pending'");
+$stmt_lab->bind_param("i", $user_id);
+$stmt_lab->execute();
+$stats_lab = $stmt_lab->get_result()->fetch_assoc()['count'];
+
+// 4. Total Consults
+$stmt_total = $conn->prepare("SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ? AND status = 'Completed'");
+$stmt_total->bind_param("i", $user_id);
+$stmt_total->execute();
+$stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -115,6 +144,19 @@ if (isset($_GET['patient_id'])) {
         .stats-grid {
             gap: 25px !important;
             margin-bottom: 10px;
+        }
+
+        .doctor-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .doctor-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
 
         .content-section {
@@ -273,26 +315,26 @@ if (isset($_GET['patient_id'])) {
                     <h3 style="color: #fff; margin-bottom: 5px;"><i class="fas fa-file-upload" style="color: #3b82f6;"></i> Need to archive a report?</h3>
                     <p style="color: #94a3b8; font-size: 13px;">Upload consultation summaries or patient case studies in PDF format.</p>
                 </div>
-                <a href="reports_manager.php?view=repository" class="btn-upload" style="background: #3b82f6; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-plus"></i> Upload PDF Report
-                </a>
+                <button onclick="openReportModal()" class="btn-upload" style="background: #3b82f6; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px; border: none; cursor: pointer;">
+                    <i class="fas fa-upload"></i> Upload PDF Report
+                </button>
             </div>
 
             <div class="doctor-stats-grid">
                 <div class="stat-card">
-                    <span class="stat-value">08</span>
+                    <span class="stat-value"><?php echo str_pad($stats_pending, 2, '0', STR_PAD_LEFT); ?></span>
                     <span class="stat-label">Pending (<?php echo $department; ?>)</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value">14</span>
+                    <span class="stat-value"><?php echo str_pad($stats_today, 2, '0', STR_PAD_LEFT); ?></span>
                     <span class="stat-label">Patients Today</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value">03</span>
-                    <span class="stat-label">Critical Dept Reports</span>
+                    <span class="stat-value"><?php echo str_pad($stats_lab, 2, '0', STR_PAD_LEFT); ?></span>
+                    <span class="stat-label">Pending Lab Reports</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value">120+</span>
+                    <span class="stat-value"><?php echo $stats_total; ?></span>
                     <span class="stat-label">Total Dept Consults</span>
                 </div>
             </div>
@@ -715,5 +757,11 @@ if (isset($_GET['patient_id'])) {
             document.getElementById('consultModal').style.display = 'none';
         }
     </script>
+
+    <?php 
+    // Set staff_type for the modal
+    $staff_type = 'doctor';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

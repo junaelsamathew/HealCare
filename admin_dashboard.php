@@ -490,6 +490,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $error_msg = "Error updating stock status.";
         }
+    } elseif ($action == 'approve_leave') {
+        $lid = (int)$_POST['leave_id'];
+        if ($conn->query("UPDATE doctor_leaves SET status = 'Approved' WHERE leave_id = $lid")) {
+            $success_msg = "Leave request approved!";
+        } else {
+            $error_msg = "Error approving leave.";
+        }
+    } elseif ($action == 'reject_leave') {
+        $lid = (int)$_POST['leave_id'];
+        if ($conn->query("UPDATE doctor_leaves SET status = 'Rejected' WHERE leave_id = $lid")) {
+            $success_msg = "Leave request rejected.";
+        } else {
+            $error_msg = "Error rejecting leave.";
+        }
     }
 }
 
@@ -531,12 +545,41 @@ for ($i = 6; $i >= 0; $i--) {
     $chart_values[] = (int)$traffic;
 }
 
-// Pharmacy stock alerts (placeholder - table may not exist yet)
+// Pharmacy stock alerts (Low Stock & Expiry)
+$low_stock_list = [];
+$expiry_list = [];
 try {
-    $result = $conn->query("SELECT COUNT(*) as count FROM pharmacy_stock WHERE quantity < minimum_stock");
-    $pharmacy_alerts = $result ? $result->fetch_assoc()['count'] : 3;
+    $check_table = $conn->query("SHOW TABLES LIKE 'pharmacy_stock'");
+    if($check_table && $check_table->num_rows > 0) {
+        // Low Stock
+        $result = $conn->query("SELECT COUNT(*) as count FROM pharmacy_stock WHERE quantity < 20");
+        $pharmacy_alerts = $result ? $result->fetch_assoc()['count'] : 0;
+        
+        if ($pharmacy_alerts > 0) {
+            $list_res = $conn->query("SELECT medicine_name, quantity FROM pharmacy_stock WHERE quantity < 20 LIMIT 5");
+            while($row = $list_res->fetch_assoc()) {
+                $low_stock_list[] = $row;
+            }
+        }
+
+        // Expiry Alerts (Next 3 Months)
+        $exp_result = $conn->query("SELECT COUNT(*) as count FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH)");
+        $expiry_alerts = $exp_result ? $exp_result->fetch_assoc()['count'] : 0;
+
+        if ($expiry_alerts > 0) {
+            // Get most urgent first
+            $list_exp = $conn->query("SELECT medicine_name, expiry_date, DATEDIFF(expiry_date, CURDATE()) as days_left FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH) ORDER BY expiry_date ASC LIMIT 5");
+            while($row = $list_exp->fetch_assoc()) {
+                $expiry_list[] = $row;
+            }
+        }
+    } else {
+        $pharmacy_alerts = 0;
+        $expiry_alerts = 0;
+    }
 } catch (Exception $e) {
-    $pharmacy_alerts = 3; // Default placeholder
+    $pharmacy_alerts = 0;
+    $expiry_alerts = 0;
 }
 
 // Fetch data based on section
@@ -1112,7 +1155,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
     </div>
     <!-- Sidebar -->
     <aside class="sidebar">
-        <a href="admin_dashboard.php" class="logo">HEALTHCARE ADMIN</a>
+        <a href="admin_dashboard.php" class="logo">HEALCARE ADMIN</a>
         
         <div class="nav-section">
             <div class="nav-section-title">Overview</div>
@@ -1139,6 +1182,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <a href="?section=appointments" class="nav-link <?php echo $section == 'appointments' ? 'active' : ''; ?>">
                 <i class="fas fa-calendar-check"></i> Appointments
             </a>
+            <a href="?section=leaves" class="nav-link <?php echo $section == 'leaves' ? 'active' : ''; ?>">
+                <i class="fas fa-calendar-minus"></i> Leave Requests
+            </a>
             <a href="?section=doctor-scheduling" class="nav-link <?php echo $section == 'doctor-scheduling' ? 'active' : ''; ?>">
                 <i class="fas fa-user-md"></i> Doctor Scheduling
             </a>
@@ -1147,6 +1193,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             </a>
             <a href="?section=packages" class="nav-link <?php echo $section == 'packages' ? 'active' : ''; ?>">
                 <i class="fas fa-box"></i> Health Packages
+            </a>
+            <a href="?section=pharmacy-alerts" class="nav-link <?php echo $section == 'pharmacy-alerts' ? 'active' : ''; ?>">
+                <i class="fas fa-pills"></i> Pharmacy Alerts
             </a>
         </div>
 
@@ -1161,6 +1210,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <div class="nav-section-title">Reports & Analytics</div>
             <a href="reports_manager.php" class="nav-link">
                 <i class="fas fa-chart-bar"></i> Revenue Reports
+            </a>
+            <a href="?section=analytics" class="nav-link <?php echo $section == 'analytics' ? 'active' : ''; ?>">
+                <i class="fas fa-project-diagram"></i> Operational Intelligence
             </a>
             <a href="?section=complaints" class="nav-link <?php echo $section == 'complaints' ? 'active' : ''; ?>">
                 <i class="fas fa-exclamation-triangle"></i> Complaint Logs
@@ -1203,9 +1255,11 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         <i class="fas fa-bell"></i>
                         <?php 
                         $notif_count = $pending_requests->num_rows; 
-                        if ($notif_count > 0): 
+                        $total_pharmacy = ($pharmacy_alerts > 0 ? 1 : 0) + ($expiry_alerts > 0 ? 1 : 0);
+                        $total_notifs = $notif_count + $total_pharmacy;
+                        if ($total_notifs > 0): 
                         ?>
-                            <span class="notification-badge"><?php echo $notif_count; ?></span>
+                            <span class="notification-badge"><?php echo $total_notifs; ?></span>
                         <?php endif; ?>
                     </div>
                     
@@ -1226,11 +1280,41 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             <?php endif; ?>
                             
                             <?php if ($pharmacy_alerts > 0): ?>
-                                <div class="notification-item">
-                                    <i class="fas fa-exclamation-triangle" style="color: var(--accent-orange);"></i>
+                                <div class="notification-item" style="align-items: flex-start;">
+                                    <i class="fas fa-exclamation-triangle" style="color: var(--accent-orange); margin-top: 5px;"></i>
                                     <div>
-                                        <p>Low stock alert</p>
-                                        <span><?php echo $pharmacy_alerts; ?> items are below minimum level</span>
+                                        <p style="margin-bottom: 5px;">Low Stock Alert (<?php echo $pharmacy_alerts; ?>)</p>
+                                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px; color: var(--text-gray);">
+                                            <?php foreach($low_stock_list as $item): ?>
+                                                <li style="margin-bottom: 2px;">• <?php echo htmlspecialchars($item['medicine_name']); ?> <strong style="color: var(--accent-red);">(<?php echo $item['quantity']; ?>)</strong></li>
+                                            <?php endforeach; ?>
+                                            <?php if($pharmacy_alerts > 5): ?>
+                                                <li><em>...and <?php echo ($pharmacy_alerts - 5); ?> more</em></li>
+                                            <?php endif; ?>
+                                        </ul>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if ($expiry_alerts > 0): ?>
+                                <div class="notification-item" style="align-items: flex-start;">
+                                    <i class="fas fa-hourglass-end" style="color: var(--accent-red); margin-top: 5px;"></i>
+                                    <div>
+                                        <p style="margin-bottom: 5px;">Expiry Alert (<?php echo $expiry_alerts; ?>)</p>
+                                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px; color: var(--text-gray);">
+                                            <?php foreach($expiry_list as $item): ?>
+                                                <li style="margin-bottom: 2px;">• <?php echo htmlspecialchars($item['medicine_name']); ?> 
+                                                <?php if($item['days_left'] < 0): ?>
+                                                    <strong style="color: var(--accent-red);">(EXPIRED)</strong>
+                                                <?php else: ?>
+                                                    <strong style="color: var(--accent-orange);">(<?php echo $item['days_left']; ?>d left)</strong>
+                                                <?php endif; ?>
+                                                </li>
+                                            <?php endforeach; ?>
+                                            <?php if($expiry_alerts > 5): ?>
+                                                <li><em>...and <?php echo ($expiry_alerts - 5); ?> more</em></li>
+                                            <?php endif; ?>
+                                        </ul>
                                     </div>
                                 </div>
                             <?php endif; ?>
@@ -1284,7 +1368,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     <div class="stat-card-subtitle">170/200 beds occupied</div>
                 </div>
 
-                <div class="stat-card">
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='?section=pharmacy-alerts'">
                     <div class="stat-card-header">
                         <div class="stat-card-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--accent-red);">
                             <i class="fas fa-pills"></i>
@@ -1292,7 +1376,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     </div>
                     <div class="stat-card-title">Pharmacy Alerts</div>
                     <div class="stat-card-value" style="color: var(--accent-red);"><?php echo $pharmacy_alerts; ?></div>
-                    <div class="stat-card-subtitle">Low stock items</div>
+                    <div class="stat-card-subtitle">Low stock items • Click to view</div>
                 </div>
             </div>
 
@@ -1363,6 +1447,121 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         </div>
                     <?php endwhile; endif; ?>
                 </div>
+            </div>
+
+        <?php elseif ($section == 'pharmacy-alerts'): ?>
+            <!-- Pharmacy Alerts Detailed View -->
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Pharmacy Stock Alerts</h1>
+                    <p>Monitor critical medicine stock levels</p>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <?php
+                try {
+                // Fetch critical stock for the detailed view
+                $stock_sql = "SELECT * FROM pharmacy_stock WHERE quantity < 20 ORDER BY quantity ASC";
+                $stock_res = $conn->query($stock_sql);
+                } catch (Exception $e) {
+                    $stock_res = false;
+                }
+                ?>
+
+                <?php if ($stock_res && $stock_res->num_rows > 0): ?>
+                    <div class="alert alert-error" style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 20px;"></i>
+                        <div>
+                            <strong>Low Stock Warning:</strong> 
+                            Found <?php echo $stock_res->num_rows; ?> medicines below the minimum stock threshold (20 units).
+                        </div>
+                    </div>
+                    <table style="margin-bottom: 40px;">
+                        <thead>
+                            <tr>
+                                <th>Medicine Name</th>
+                                <th>Batch No</th>
+                                <th>Manufacturer</th>
+                                <th>Current Stock</th>
+                                <th>Status</th>
+                                <th>Restock Needed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($item = $stock_res->fetch_assoc()): ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($item['medicine_name']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($item['batch_number']); ?></td>
+                                     <td><?php echo htmlspecialchars($item['manufacturer']); ?></td>
+                                    <td style="font-weight: bold; color: var(--accent-red);"><?php echo $item['quantity']; ?> Units</td>
+                                    <td><span class="badge badge-rejected">Critical</span></td>
+                                     <td><a href="#" style="color:var(--primary-blue)">Notify Procurement</a></td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+
+                <?php
+                // Fetch Expiry Data
+                try {
+                     $exp_sql = "SELECT *, DATEDIFF(expiry_date, CURDATE()) as days_left FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH) ORDER BY expiry_date ASC";
+                     $exp_res = $conn->query($exp_sql);
+                } catch (Exception $e) { $exp_res = false; }
+                ?>
+
+                <?php if ($exp_res && $exp_res->num_rows > 0): ?>
+                    <h3 style="margin-bottom: 15px; color: var(--accent-orange); display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-hourglass-end"></i> Expiry Alerts
+                    </h3>
+                    <div class="alert alert-warning" style="margin-bottom: 20px; background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; color: #f59e0b; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-info-circle" style="font-size: 20px;"></i>
+                        <div>
+                            <strong>Expiry Warning:</strong> 
+                            Found <?php echo $exp_res->num_rows; ?> medicines expiring within the next 3 months.
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Medicine Name</th>
+                                <th>Batch No</th>
+                                <th>Expiry Date</th>
+                                <th>Stock Remaining</th>
+                                <th>Days Left</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($item = $exp_res->fetch_assoc()): 
+                                $is_expired = $item['days_left'] < 0;
+                                $color = $is_expired ? '#ef4444' : '#f59e0b';
+                            ?>
+                                <tr>
+                                    <td><strong><?php echo htmlspecialchars($item['medicine_name']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($item['batch_number']); ?></td>
+                                    <td style="color: <?php echo $color; ?>; font-weight: bold;"><?php echo htmlspecialchars($item['expiry_date']); ?></td>
+                                    <td><?php echo $item['quantity']; ?> Units</td>
+                                    <td style="font-weight: bold; color: <?php echo $color; ?>;">
+                                        <?php echo $is_expired ? 'EXPIRED' : $item['days_left'] . ' Days'; ?>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;">Discard / Write-off</button>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php endif; ?>
+
+                <?php if ((!$stock_res || $stock_res->num_rows == 0) && (!$exp_res || $exp_res->num_rows == 0)): ?>
+                     <div class="placeholder-section">
+                        <i class="fas fa-check-circle" style="color: var(--accent-green);"></i>
+                        <h3>All Systems Go</h3>
+                        <p>All pharmacy stock levels are healthy and no upcoming expiries.</p>
+                    </div>
+                <?php endif; ?>
             </div>
 
         <?php elseif ($section == 'pending-requests'): ?>
@@ -2016,6 +2215,89 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
             </div>
 
+        <?php elseif ($section == 'leaves'): ?>
+            <!-- Leave Management -->
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Leave Requests</h1>
+                    <p>Manage doctor leave applications</p>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <?php
+                $leaves_sql = "
+                    SELECT dl.*, r.name as doc_name, d.department 
+                    FROM doctor_leaves dl 
+                    JOIN users u ON dl.doctor_id = u.user_id 
+                    JOIN registrations r ON u.registration_id = r.registration_id
+                    LEFT JOIN doctors d ON u.user_id = d.user_id 
+                    WHERE dl.status = 'Pending' 
+                    ORDER BY dl.start_date ASC
+                ";
+                $leave_reqs = $conn->query($leaves_sql);
+                ?>
+
+                <?php if ($leave_reqs && $leave_reqs->num_rows > 0): ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Doctor</th>
+                                <th>Department</th>
+                                <th>Leave Dates</th>
+                                <th>Reason</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php while($lr = $leave_reqs->fetch_assoc()): ?>
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 600;">Dr. <?php echo htmlspecialchars($lr['doc_name']); ?></div>
+                                    </td>
+                                    <td><?php echo htmlspecialchars($lr['department']); ?></td>
+                                    <td>
+                                        <?php echo date('M d', strtotime($lr['start_date'])); ?> - <?php echo date('M d, Y', strtotime($lr['end_date'])); ?>
+                                        <div style="font-size: 11px; color: #94a3b8;">
+                                            <?php 
+                                            $d1 = new DateTime($lr['start_date']);
+                                            $d2 = new DateTime($lr['end_date']);
+                                            echo ($d1->diff($d2)->days + 1) . ' Days';
+                                            ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="max-width: 250px; font-size: 13px; color: #cbd5e1;"><?php echo htmlspecialchars($lr['reason']); ?></div>
+                                    </td>
+                                    <td><span class="badge" style="background: rgba(255,255,255,0.1);"><?php echo htmlspecialchars($lr['leave_type']); ?></span></td>
+                                    <td>
+                                        <div style="display: flex; gap: 8px;">
+                                            <form method="POST" style="display:inline;">
+                                                <input type="hidden" name="action" value="approve_leave">
+                                                <input type="hidden" name="leave_id" value="<?php echo $lr['leave_id']; ?>">
+                                                <button type="submit" class="btn btn-success" style="font-size: 11px; padding: 6px 12px;"><i class="fas fa-check"></i> Approve</button>
+                                            </form>
+                                            <form method="POST" style="display:inline;">
+                                                <input type="hidden" name="action" value="reject_leave">
+                                                <input type="hidden" name="leave_id" value="<?php echo $lr['leave_id']; ?>">
+                                                <button type="submit" class="btn btn-danger" style="font-size: 11px; padding: 6px 12px;"><i class="fas fa-times"></i> Reject</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endwhile; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div class="placeholder-section">
+                        <i class="fas fa-umbrella-beach"></i>
+                        <h3>No Pending Leave Requests</h3>
+                        <p>All leave applications have been processed.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
         <?php elseif ($section == 'canteen-menu'): ?>
             <!-- Canteen Menu Management -->
             <div class="top-bar">
@@ -2659,6 +2941,246 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     }
                     ?>
                 </div>
+
+        <?php elseif ($section == 'analytics'): ?>
+            <!-- Operational Intelligence Section -->
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Operational Intelligence</h1>
+                    <p>Centralized Analytics & Report Management System</p>
+                </div>
+            </div>
+
+            <?php
+            // --- FILTER LOGIC ---
+            $f_type = $_GET['f_type'] ?? '';
+            $f_period = $_GET['f_period'] ?? 'all';
+            $f_search = $_GET['f_search'] ?? '';
+            $f_sort = $_GET['f_sort'] ?? 'newest';
+
+            // Base Query
+            $sql = "SELECT m.*, u.username, u.role, r.name as uploader_name 
+                    FROM manual_reports m 
+                    JOIN users u ON m.user_id = u.user_id 
+                    LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                    WHERE 1=1";
+            
+            // Apply Filters
+            if ($f_type) {
+                $sql .= " AND m.report_type = '" . $conn->real_escape_string($f_type) . "'";
+            }
+
+            if ($f_search) {
+                $safe_search = $conn->real_escape_string($f_search);
+                $sql .= " AND (m.report_title LIKE '%$safe_search%' OR r.name LIKE '%$safe_search%')";
+            }
+
+            if ($f_period == 'day') {
+                $sql .= " AND DATE(m.report_date) = CURDATE()";
+            } elseif ($f_period == 'month') {
+                $sql .= " AND MONTH(m.report_date) = MONTH(CURDATE()) AND YEAR(m.report_date) = YEAR(CURDATE())";
+            } elseif ($f_period == 'year') {
+                $sql .= " AND YEAR(m.report_date) = YEAR(CURDATE())";
+            }
+
+            // Sorting
+            if ($f_sort == 'newest') $sql .= " ORDER BY m.report_date DESC";
+            elseif ($f_sort == 'oldest') $sql .= " ORDER BY m.report_date ASC";
+            elseif ($f_sort == 'az') $sql .= " ORDER BY m.report_title ASC";
+            elseif ($f_sort == 'za') $sql .= " ORDER BY m.report_title DESC";
+            else $sql .= " ORDER BY m.created_at DESC";
+
+            $result = $conn->query($sql);
+            $reports = [];
+            
+            // Analytic Arrays
+            $dist_type = [];
+            $dist_role = [];
+            $timeline = [];
+            
+            if ($result) {
+                while($row = $result->fetch_assoc()) {
+                    $reports[] = $row;
+                    
+                    // Populate Analytics
+                    $t = $row['report_type'] ?: 'Unspecified';
+                    $dist_type[$t] = ($dist_type[$t] ?? 0) + 1;
+
+                    $c = $row['report_category'] ?: 'General';
+                    $dist_role[$c] = ($dist_role[$c] ?? 0) + 1;
+
+                    $d = date('Y-m-d', strtotime($row['report_date']));
+                    $timeline[$d] = ($timeline[$d] ?? 0) + 1;
+                }
+            }
+            ksort($timeline); // Sort timeline by date
+            ?>
+
+            <!-- Analytics Visuals -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title"><i class="fas fa-chart-line"></i> Intelligence Overview</h3>
+                    <div style="font-size: 13px; color: #94a3b8;">Analysis based on <?php echo count($reports); ?> filtered reports</div>
+                </div>
+                <!-- Charts Grid -->
+                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Report Composition</h4>
+                        <canvas id="chartType" style="height: 200px; width: 100%;"></canvas>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Departmental Activity</h4>
+                        <canvas id="chartRole" style="height: 200px; width: 100%;"></canvas>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Submission Timeline</h4>
+                        <canvas id="chartTimeline" style="height: 200px; width: 100%;"></canvas>
+                    </div>
+                 </div>
+            </div>
+
+            <!-- Filters & Controls -->
+            <div class="content-section">
+                <form method="GET" class="filter-container" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; padding: 20px; background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <input type="hidden" name="section" value="analytics">
+                    
+                    <div class="search-input-group" style="min-width: 250px; flex: 1;">
+                        <i class="fas fa-search"></i>
+                        <input type="text" name="f_search" value="<?php echo htmlspecialchars($f_search); ?>" placeholder="Search report content...">
+                    </div>
+
+                    <select name="f_type" style="padding: 12px; background: #0f172a; border: 1px solid var(--border-color); color: white; border-radius: 8px; min-width: 150px;">
+                        <option value="">All Types</option>
+                        <?php 
+                        $d_types = $conn->query("SELECT DISTINCT report_type FROM manual_reports");
+                        while($dt = $d_types->fetch_assoc()) echo "<option value='{$dt['report_type']}' ".($f_type==$dt['report_type']?'selected':'').">{$dt['report_type']}</option>";
+                        ?>
+                    </select>
+
+                    <select name="f_period" style="padding: 12px; background: #0f172a; border: 1px solid var(--border-color); color: white; border-radius: 8px; min-width: 150px;">
+                        <option value="all" <?php echo $f_period=='all'?'selected':''; ?>>All Time</option>
+                        <option value="day" <?php echo $f_period=='day'?'selected':''; ?>>Today</option>
+                        <option value="month" <?php echo $f_period=='month'?'selected':''; ?>>This Month</option>
+                        <option value="year" <?php echo $f_period=='year'?'selected':''; ?>>This Year</option>
+                    </select>
+
+                    <select name="f_sort" style="padding: 12px; background: #0f172a; border: 1px solid var(--border-color); color: white; border-radius: 8px; min-width: 150px;">
+                        <option value="newest" <?php echo $f_sort=='newest'?'selected':''; ?>>Newest First</option>
+                        <option value="oldest" <?php echo $f_sort=='oldest'?'selected':''; ?>>Oldest First</option>
+                        <option value="az" <?php echo $f_sort=='az'?'selected':''; ?>>Name (A-Z)</option>
+                    </select>
+
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i> Analyzing</button>
+                    <a href="?section=analytics" class="btn" style="background: rgba(255,255,255,0.1); color: white;">Reset</a>
+                </form>
+            </div>
+
+            <!-- Data Table -->
+            <div class="content-section">
+                <table id="reportsTable" style="font-size: 14px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">Report Details</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Uploaded By</th>
+                            <th>Report Date</th>
+                            <th style="text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($reports) > 0): foreach($reports as $r): ?>
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600; color: #fff; margin-bottom: 4px;"><?php echo htmlspecialchars($r['report_title']); ?></div>
+                                <div style="font-size: 11px; color: #64748b; font-family: monospace;">ID: <?php echo $r['report_id']; ?></div>
+                            </td>
+                            <td><?php echo htmlspecialchars($r['report_type']); ?></td>
+                            <td><span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa;"><?php echo htmlspecialchars($r['report_category']); ?></span></td>
+                            <td>
+                                <div style="font-weight: 500;"><?php echo htmlspecialchars($r['uploader_name'] ?? 'Unknown'); ?></div>
+                                <div style="font-size: 11px; color: #64748b;"><?php echo ucfirst($r['role']); ?></div>
+                            </td>
+                            <td><?php echo date('M d, Y', strtotime($r['report_date'])); ?></td>
+                            <td style="text-align: right;">
+                                <a href="<?php echo $r['file_path']; ?>" target="_blank" class="btn" style="background: rgba(255,255,255,0.05); color: #fff; padding: 6px 12px; font-size: 12px;"><i class="fas fa-eye"></i> View</a>
+                            </td>
+                        </tr>
+                        <?php endforeach; else: ?>
+                        <tr><td colspan="6" style="text-align:center; padding: 40px; color: #64748b;">No analytics data available for the selected criteria.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Include Report Upload Modal -->
+            <?php include 'includes/report_upload_modal.php'; ?>
+
+            <script>
+            // Data Injection for Charts
+            const typeLabels = <?php echo json_encode(array_keys($dist_type)); ?>;
+            const typeData = <?php echo json_encode(array_values($dist_type)); ?>;
+            
+            const roleLabels = <?php echo json_encode(array_keys($dist_role)); ?>;
+            const roleData = <?php echo json_encode(array_values($dist_role)); ?>;
+            
+            const timeLabels = <?php echo json_encode(array_keys($timeline)); ?>;
+            const timeData = <?php echo json_encode(array_values($timeline)); ?>;
+
+            // Chart Configs
+            const commonOptions = {
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+                }
+            };
+
+            // 1. Types (Doughnut)
+            new Chart(document.getElementById('chartType'), {
+                type: 'doughnut',
+                data: {
+                    labels: typeLabels,
+                    datasets: [{
+                        data: typeData,
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'],
+                        borderWidth: 0
+                    }]
+                },
+                options: commonOptions
+            });
+
+            // 2. Roles (Bar)
+            new Chart(document.getElementById('chartRole'), {
+                type: 'bar',
+                data: {
+                    labels: roleLabels,
+                    datasets: [{
+                        label: 'Reports',
+                        data: roleData,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 4
+                    }]
+                },
+                options: { ...commonOptions, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } }
+            });
+
+            // 3. Timeline (Line)
+            new Chart(document.getElementById('chartTimeline'), {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Submissions',
+                        data: timeData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: { ...commonOptions, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } }
+            });
+            </script>
 
         <?php elseif ($section == 'complaints'): ?>
             <!-- Complaint Logs -->

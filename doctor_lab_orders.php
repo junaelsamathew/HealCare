@@ -27,7 +27,73 @@ if ($res->num_rows > 0) {
     $designation = "Professional Consultant";
 }
 
-$doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
+$doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']); // Fallback, will be overwritten by logic below if needed.
+$doctor_full_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
+if (stripos($doctor_full_name, 'Dr.') === false && stripos($doctor_full_name, 'Doctor') === false) {
+    $doctor_name = "Dr. " . $doctor_full_name;
+} else {
+    $doctor_name = $doctor_full_name;
+}
+
+// Fetch Assigned Patients for Dropdown
+$dropdown_patients = [];
+$dp_query = "
+    SELECT DISTINCT u.user_id, r.name, pp.patient_code
+    FROM appointments a
+    JOIN users u ON a.patient_id = u.user_id
+    JOIN registrations r ON u.registration_id = r.registration_id
+    LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
+    WHERE a.doctor_id = ?
+    ORDER BY r.name ASC
+";
+$stmt_dp = $conn->prepare($dp_query);
+$stmt_dp->bind_param("i", $user_id);
+$stmt_dp->execute();
+$res_dp = $stmt_dp->get_result();
+while ($row = $res_dp->fetch_assoc()) {
+    $dropdown_patients[] = $row;
+}
+
+// Fetch Available Lab Tests (from Packages + History + Defaults)
+$available_tests = [];
+
+// 1. From Health Packages
+$pkg_q = $conn->query("SELECT included_tests FROM health_packages");
+while($pkg = $pkg_q->fetch_assoc()) {
+    if(!empty($pkg['included_tests'])) {
+        $parts = explode(',', $pkg['included_tests']);
+        foreach($parts as $p) {
+            $t = trim($p);
+            if(!empty($t) && !in_array($t, $available_tests)) {
+                $available_tests[] = $t;
+            }
+        }
+    }
+}
+
+// 2. From Past Lab Tests (History)
+$hist_q = $conn->query("SELECT DISTINCT test_name FROM lab_tests");
+while($hist = $hist_q->fetch_assoc()) {
+    $t = trim($hist['test_name']);
+    if(!empty($t) && !in_array($t, $available_tests)) {
+        $available_tests[] = $t;
+    }
+}
+
+// 3. Robust Defaults (aligned with Lab Staff types)
+$defaults = [
+    'Blood Test (CBC)', 'Lipid Profile', 'Thyroid Profile', 'Blood Sugar (Fasting)', 'Blood Sugar (PP)', 
+    'Urine Culture', 'Kidney Function Test', 'Liver Function Test', 
+    'X-Ray (Chest)', 'X-Ray (Fracture)', 'MRI Scan', 'CT Scan', 
+    'Ultrasound (Abdominal)', 'Doppler Scan', 
+    'ECG', 'Hearing Test', 'Eye Test'
+];
+foreach($defaults as $d) {
+    if(!in_array($d, $available_tests)) {
+        $available_tests[] = $d;
+    }
+}
+sort($available_tests);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -56,6 +122,10 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
         .form-input { 
             width: 100%; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); 
             padding: 12px; border-radius: 10px; color: #fff; outline: none;
+        }
+        .form-input option {
+            background: #1e293b;
+            color: #fff;
         }
         .order-card {
             background: rgba(255, 255, 255, 0.02);
@@ -132,21 +202,22 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
                     <div class="order-grid">
                         <div>
                             <label class="form-label">Select Patient</label>
-                            <select class="form-input">
-                                <option>-- Select Patient --</option>
-                                <option>Dileep Mathew (HC-P-2026-9901)</option>
-                                <option>Anjali Sharma (HC-P-2026-8842)</option>
+                            <select class="form-input" name="patient_id" required>
+                                <option value="">-- Select Patient --</option>
+                                <?php foreach($dropdown_patients as $p): ?>
+                                    <option value="<?php echo $p['user_id']; ?>">
+                                        <?php echo htmlspecialchars($p['name']) . ' (' . ($p['patient_code'] ?? 'ID: '.$p['user_id']) . ')'; ?>
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div>
                             <label class="form-label">Test Type</label>
-                            <select class="form-input">
-                                <option>Blood Test (CBC)</option>
-                                <option>Thyroid Profile</option>
-                                <option>X-Ray (Chest)</option>
-                                <option>MRI Scan</option>
-                                <option>CT Scan</option>
-                                <option>Urine Culture</option>
+                            <select class="form-input" name="test_type" required>
+                                <option value="">-- Select Test --</option>
+                                <?php foreach($available_tests as $test): ?>
+                                    <option value="<?php echo htmlspecialchars($test); ?>"><?php echo htmlspecialchars($test); ?></option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div>

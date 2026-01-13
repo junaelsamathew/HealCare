@@ -57,6 +57,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS canteen_cart (
     cart_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     menu_id INT NOT NULL,
+    diet_type VARCHAR(50) DEFAULT 'Normal',
     quantity INT DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,

@@ -130,76 +130,284 @@ $department = $nurse['department'] ?? 'General';
 
     <div class="dashboard-body">
         <aside class="side-nav">
-            <a href="#" class="nav-item active"><i class="fas fa-hospital-user"></i> My Patients</a>
-            <a href="#" class="nav-item"><i class="fas fa-heartbeat"></i> Vitals Monitor</a>
-            <a href="#" class="nav-item"><i class="fas fa-notes-medical"></i> Nursing Notes</a>
-            <a href="#" class="nav-item"><i class="fas fa-syringe"></i> Medication</a>
-            <a href="#" class="nav-item"><i class="fas fa-clock"></i> Shift handover</a>
+            <a href="?section=patients" class="nav-item active"><i class="fas fa-hospital-user"></i> My Patients</a>
+            <a href="?section=vitals" class="nav-item"><i class="fas fa-heartbeat"></i> Vitals Monitor</a>
+            <a href="?section=notes" class="nav-item"><i class="fas fa-notes-medical"></i> Nursing Notes</a>
+            <a href="?section=medication" class="nav-item"><i class="fas fa-syringe"></i> Medication</a>
+            <a href="?section=handover" class="nav-item"><i class="fas fa-clock"></i> Shift handover</a>
+            <a href="?section=reports" class="nav-item"><i class="fas fa-chart-line"></i> Nursing Reports</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
 
         <main class="main-ops">
-            <div style="margin-bottom: 30px;">
-                <h1 style="color:#fff; font-size: 28px;">Ward Management - <?php echo $department; ?></h1>
-                <p style="color:#64748b; font-size:14px;">Monitor assigned patients and update vital signs.</p>
-            </div>
+            <?php if (!isset($_GET['section']) || $_GET['section'] == 'dashboard' || $_GET['section'] == 'patients'): ?>
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color:#fff; font-size: 28px;">Ward Management - <?php echo $department; ?></h1>
+                    <p style="color:#64748b; font-size:14px;">Monitor assigned patients and update vital signs.</p>
+                </div>
 
-            <div class="stats-grid">
-                <div class="stat-card-new"><h2>08</h2><p>Assigned Patients</p></div>
-                <div class="stat-card-new"><h2>03</h2><p>Critical Monitoring</p></div>
-                <div class="stat-card-new"><h2>05</h2><p>Doses Ready</p></div>
-                <div class="stat-card-new"><h2>102</h2><p>Ward Cap.</p></div>
-            </div>
+                <div class="stats-grid">
+                    <?php
+                    // Dynamic Stats Calculation
+                    $today = date('Y-m-d');
+                    
+                    // 1. Assigned Patients (Active Today)
+                    $sql_assigned = "SELECT COUNT(*) as c FROM appointments 
+                                     WHERE appointment_date = '$today' 
+                                     AND status IN ('Approved', 'Checked-In', 'In-Treatment', 'Admitted')";
+                    $assigned_count = $conn->query($sql_assigned)->fetch_assoc()['c'] ?? 0;
 
-            <h3 style="color:#fff; margin-bottom: 25px;">Live Department Queue - Assigned Patients</h3>
+                    // 2. Critical/In-Patient (Admitted)
+                    $sql_critical = "SELECT COUNT(*) as c FROM appointments 
+                                     WHERE status IN ('Admitted', 'In-Treatment')";
+                    $critical_count = $conn->query($sql_critical)->fetch_assoc()['c'] ?? 0;
 
-            <div class="patient-list-container">
-                <!-- Patient 1 -->
+                    // 3. Doses Ready (Prescriptions Today)
+                    // Assuming 'prescriptions' table exists with created_at or checking if it returns result
+                    $doses_count = 0;
+                    $sql_doses = "SELECT COUNT(*) as c FROM prescriptions WHERE DATE(created_at) = '$today'";
+                    if ($res_doses = $conn->query($sql_doses)) {
+                        $doses_count = $res_doses->fetch_assoc()['c'] ?? 0;
+                    }
+
+                    // 4. Ward Capacity (Static Max 50)
+                    $ward_display = str_pad($critical_count, 2, '0', STR_PAD_LEFT) . ' / 50';
+                    ?>
+                    <div class="stat-card-new"><h2><?php echo str_pad($assigned_count, 2, '0', STR_PAD_LEFT); ?></h2><p>Assigned Patients</p></div>
+                    <div class="stat-card-new"><h2><?php echo str_pad($critical_count, 2, '0', STR_PAD_LEFT); ?></h2><p>Critical Monitoring</p></div>
+                    <div class="stat-card-new"><h2><?php echo str_pad($doses_count, 2, '0', STR_PAD_LEFT); ?></h2><p>Doses Ready</p></div>
+                    <div class="stat-card-new"><h2><?php echo $ward_display; ?></h2><p>Ward Cap.</p></div>
+                </div>
+
+                <!-- Quick Archive -->
+                <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: #fff; margin-bottom: 5px; font-size: 16px;"><i class="fas fa-file-upload" style="color: #4fc3f7;"></i> Nursing Department Reports</h3>
+                        <p style="color: #64748b; font-size: 12px;">Upload shift handover reports or patient care summaries.</p>
+                    </div>
+                    <button onclick="openReportModal()" style="background: #4fc3f7; color: #020617; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 12px; border: none; cursor: pointer;">
+                        <i class="fas fa-upload"></i> Upload Report
+                    </button>
+                </div>
+
+                <h3 style="color:#fff; margin-bottom: 25px;">Live Department Queue - Assigned Patients</h3>
+
+                <div class="patient-list-container">
+                    <?php
+                    // Fetch Active Patients for Nurse (Today's appointments or Admitted)
+                    // Logic: Get appointments for today that are confirmed/checked-in/admitted
+                    // In a real scenario, this might filter by the nurse's specific ward or department
+                    $sql_patients = "SELECT a.appointment_id, a.status as appt_status, 
+                                            r.name, r.phone, u.user_id as patient_id, 
+                                            d.name as doctor_name, d.specialization
+                                     FROM appointments a
+                                     JOIN users u ON a.patient_id = u.user_id
+                                     JOIN registrations r ON u.registration_id = r.registration_id
+                                     LEFT JOIN users du ON a.doctor_id = du.user_id
+                                     LEFT JOIN registrations d ON du.registration_id = d.registration_id
+                                     WHERE a.appointment_date = CURDATE() 
+                                     AND a.status IN ('Approved', 'Checked-In', 'Admitted', 'In-Treatment')
+                                     ORDER BY a.appointment_time ASC";
+                    
+                    $res_patients = $conn->query($sql_patients);
+
+                    if ($res_patients && $res_patients->num_rows > 0):
+                        while($pt = $res_patients->fetch_assoc()):
+                            $status_color = ($pt['appt_status'] == 'In-Treatment' || $pt['appt_status'] == 'Admitted') ? '#4fc3f7' : '#fbbf24';
+                            $status_text = ($pt['appt_status'] == 'Approved') ? 'Waiting' : $pt['appt_status'];
+                            $opacity = ($pt['appt_status'] == 'Approved') ? '0.8' : '1';
+                    ?>
+                    <div class="patient-card" style="opacity: <?php echo $opacity; ?>;">
+                        <div class="token-badge" style="background: rgba(<?php echo ($status_color == '#4fc3f7') ? '79, 195, 247' : '251, 191, 36'; ?>, 0.1); color: <?php echo $status_color; ?>; border-color: rgba(<?php echo ($status_color == '#4fc3f7') ? '79, 195, 247' : '251, 191, 36'; ?>, 0.2);">
+                            TOKEN: #APT-<?php echo $pt['appointment_id']; ?>
+                        </div>
+                        <div style="border-right: 1px solid var(--border-soft); padding-right: 30px;">
+                            <span style="font-size:11px; color:<?php echo $status_color; ?>; font-weight:800; text-transform:uppercase;"><?php echo htmlspecialchars($status_text); ?></span>
+                            <h4 style="color:#fff; margin: 10px 0; font-size: 18px;"><?php echo htmlspecialchars($pt['name']); ?></h4>
+                            <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">ID: HC-P-<?php echo $pt['patient_id']; ?></p>
+                            
+                            <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; font-size: 13px; color: #cbd5e1;">
+                                <p style="margin-bottom: 5px;"><i class="fas fa-bed" style="width:20px;"></i> General Ward</p>
+                                <p><i class="fas fa-stethoscope" style="width:20px;"></i> Dr. <?php echo htmlspecialchars($pt['doctor_name']); ?> (<?php echo htmlspecialchars($pt['specialization']); ?>)</p>
+                            </div>
+                        </div>
+                        <div>
+                            <?php if ($pt['appt_status'] == 'Approved'): ?>
+                                <p style="color: #64748b; font-size: 14px; font-style: italic;">Patient is currently waiting for initial vital check. Please call the patient to the nursing station.</p>
+                                <button style="margin-top: 20px; padding: 10px 25px; background: #fbbf24; border: none; border-radius: 10px; color: #000; font-weight: 700; cursor: pointer;">Call Patient</button>
+                            <?php else: ?>
+                                <div class="vital-inputs">
+                                    <div class="form-group-staff"><label>Heart Rate (BPM)</label><input type="text" placeholder="--"></div>
+                                    <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" placeholder="--/--"></div>
+                                    <div class="form-group-staff"><label>Temp (°F)</label><input type="text" placeholder="--"></div>
+                                    <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" placeholder="--"></div>
+                                </div>
+                                <div class="form-group-staff" style="margin-top: 20px;">
+                                    <label>Nursing Care Notes</label>
+                                    <textarea rows="3" placeholder="Enter patient observation, pain levels, or medication response..."></textarea>
+                                </div>
+                                <div style="display: flex; gap: 15px; margin-top: 20px;">
+                                    <button style="flex: 1; padding: 12px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Update Vitals</button>
+                                    <button style="padding: 12px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); border-radius: 10px; color: #fff; cursor: pointer;"><i class="fas fa-history"></i> History</button>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php 
+                        endwhile;
+                    else: 
+                    ?>
+                        <div style="grid-column: 1/-1; text-align: center; padding: 60px; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px dashed var(--border-soft);">
+                            <i class="fas fa-user-injured" style="font-size: 40px; color: #64748b; margin-bottom: 20px;"></i>
+                            <h3 style="color: #94a3b8; font-size: 18px;">No Active Patients</h3>
+                            <p style="color: #64748b; font-size: 14px;">There are no patients currently assigned or waiting in the queue for today.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+            <?php elseif ($_GET['section'] == 'vitals'): ?>
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color:#fff; font-size: 28px;">Vitals Monitoring</h1>
+                    <p style="color:#64748b; font-size:14px;">Quick vitals entry for assigned patients.</p>
+                </div>
+                <div class="stat-card-new">
+                    <h3 style="color:#fff; margin-bottom:20px;">Select Patient</h3>
+                    <select style="width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border-soft); color: #fff; border-radius: 8px;">
+                        <option>Ravi Sharma (HC-P-2026-1025) - Ward B/15</option>
+                        <option>Sneha Gupta (HC-P-2026-1026) - Waiting</option>
+                    </select>
+                    
+                    <div class="vital-inputs" style="margin-top: 20px;">
+                        <div class="form-group-staff"><label>Heart Rate (BPM)</label><input type="text" placeholder="--"></div>
+                        <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" placeholder="--/--"></div>
+                        <div class="form-group-staff"><label>Temp (°F)</label><input type="text" placeholder="--"></div>
+                        <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" placeholder="--"></div>
+                        <div class="form-group-staff"><label>Resp. Rate</label><input type="text" placeholder="--"></div>
+                    </div>
+                    <button style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Log Vitals</button>
+                </div>
+
+            <?php elseif ($_GET['section'] == 'notes'): ?>
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color:#fff; font-size: 28px;">Nursing Notes</h1>
+                    <p style="color:#64748b; font-size:14px;">Clinical observations and care notes.</p>
+                </div>
+                <div class="stat-card-new">
+                     <div class="form-group-staff" style="margin-bottom: 20px;">
+                        <label>Patient</label>
+                        <select style="width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border-soft); color: #fff; border-radius: 8px;">
+                            <option value="">-- Select Patient --</option>
+                            <?php
+                            $today_notes = date('Y-m-d');
+                            $sql_notes_pt = "SELECT u.user_id as patient_id, r.name 
+                                             FROM appointments a
+                                             JOIN users u ON a.patient_id = u.user_id
+                                             JOIN registrations r ON u.registration_id = r.registration_id
+                                             WHERE a.appointment_date = '$today_notes' 
+                                             AND a.status IN ('Approved', 'Checked-In', 'Admitted', 'In-Treatment')
+                                             ORDER BY r.name ASC";
+                            $res_notes_pt = $conn->query($sql_notes_pt);
+                            
+                            if ($res_notes_pt && $res_notes_pt->num_rows > 0) {
+                                while ($npt = $res_notes_pt->fetch_assoc()) {
+                                    echo '<option value="'.$npt['patient_id'].'">' . htmlspecialchars($npt['name']) . ' (HC-P-'.$npt['patient_id'].')</option>';
+                                }
+                            } else {
+                                echo '<option disabled>No active patients found today</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="form-group-staff">
+                        <label>Note Content</label>
+                        <textarea rows="6" placeholder="Detailed nursing notes..."></textarea>
+                    </div>
+                    <button style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Save Note</button>
+                </div>
+
+            <?php elseif ($_GET['section'] == 'medication'): ?>
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color:#fff; font-size: 28px;">Medication Administration</h1>
+                    <p style="color:#64748b; font-size:14px;">Track and administer prescribed doses.</p>
+                </div>
                 <div class="patient-card">
-                    <div class="token-badge">TOKEN: #TK-101</div>
-                    <div style="border-right: 1px solid var(--border-soft); padding-right: 30px;">
-                        <span style="font-size:11px; color:#4fc3f7; font-weight:800; text-transform:uppercase;">In Treatment</span>
-                        <h4 style="color:#fff; margin: 10px 0; font-size: 18px;">Ravi Sharma</h4>
-                        <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">ID: HC-P-2026-1025 • Male / 32 Yrs</p>
-                        
-                        <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; font-size: 13px; color: #cbd5e1;">
-                            <p style="margin-bottom: 5px;"><i class="fas fa-bed" style="width:20px;"></i> Ward B / Bed 15</p>
-                            <p><i class="fas fa-stethoscope" style="width:20px;"></i> Dr. Sathish (ENT)</p>
-                        </div>
-                    </div>
-                    <div>
-                        <div class="vital-inputs">
-                            <div class="form-group-staff"><label>Heart Rate (BPM)</label><input type="text" value="72" placeholder="72"></div>
-                            <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" value="120/80" placeholder="120/80"></div>
-                            <div class="form-group-staff"><label>Temp (°F)</label><input type="text" value="98.6" placeholder="98.6"></div>
-                            <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" value="98" placeholder="98"></div>
-                        </div>
-                        <div class="form-group-staff" style="margin-top: 20px;">
-                            <label>Nursing Care Notes</label>
-                            <textarea rows="3" placeholder="Enter patient observation, pain levels, or medication response..."></textarea>
-                        </div>
-                        <div style="display: flex; gap: 15px; margin-top: 20px;">
-                            <button style="flex: 1; padding: 12px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Update Vitals</button>
-                            <button style="padding: 12px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); border-radius: 10px; color: #fff; cursor: pointer;"><i class="fas fa-history"></i> History</button>
-                        </div>
-                    </div>
+                     <h3 style="color:#fff; margin-bottom:15px;">Ravi Sharma - Ward B/15</h3>
+                     <table style="width:100%; color:#cbd5e1; border-collapse:collapse;">
+                        <tr style="border-bottom:1px solid var(--border-soft); text-align:left;"><th style="padding:10px;">Drug</th><th style="padding:10px;">Dose</th><th style="padding:10px;">Time</th><th style="padding:10px;">Status</th></tr>
+                        <tr style="border-bottom:1px solid var(--border-soft);">
+                            <td style="padding:10px;">Paracetamol</td>
+                            <td style="padding:10px;">500mg</td>
+                            <td style="padding:10px;">14:00</td>
+                            <td style="padding:10px;"><span style="color:#4fc3f7;">Due Now</span></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:10px;">Amoxicillin</td>
+                            <td style="padding:10px;">250mg</td>
+                            <td style="padding:10px;">20:00</td>
+                            <td style="padding:10px;"><span style="color:#64748b;">Upcoming</span></td>
+                        </tr>
+                     </table>
                 </div>
 
-                <!-- Patient 2 -->
-                <div class="patient-card" style="opacity: 0.7;">
-                    <div class="token-badge" style="background: rgba(251, 191, 36, 0.1); color: #fbbf24; border-color: rgba(251, 191, 36, 0.2);">TOKEN: #TK-102</div>
-                    <div style="border-right: 1px solid var(--border-soft); padding-right: 30px;">
-                        <span style="font-size:11px; color:#fbbf24; font-weight:800; text-transform:uppercase;">Waiting in Queue</span>
-                        <h4 style="color:#fff; margin: 10px 0; font-size: 18px;">Sneha Gupta</h4>
-                        <p style="font-size: 13px; color: #64748b;">ID: HC-P-2026-1026 • Female / 28 Yrs</p>
+            <?php elseif ($_GET['section'] == 'handover'): ?>
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color:#fff; font-size: 28px;">Shift Handover</h1>
+                    <p style="color:#64748b; font-size:14px;">Prepare handover notes for the next shift.</p>
+                </div>
+                 <div class="stat-card-new">
+                    <div class="form-group-staff">
+                        <label>Shift Summary</label>
+                        <textarea rows="8" placeholder="Summarize critical events, pending tasks, and patient status changes..."></textarea>
                     </div>
-                    <div>
-                        <p style="color: #64748b; font-size: 14px; font-style: italic;">Patient is currently waiting for initial vital check. Please call the patient to the nursing station.</p>
-                        <button style="margin-top: 20px; padding: 10px 25px; background: #fbbf24; border: none; border-radius: 10px; color: #000; font-weight: 700; cursor: pointer;">Call Patient</button>
+                     <button style="margin-top: 20px; padding: 12px 30px; background: #10b981; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Submit Handover Log</button>
+                </div>
+
+            <?php elseif ($_GET['section'] == 'reports'): ?>
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color:#fff; font-size: 28px;">Nursing Reports</h1>
+                    <p style="color:#64748b; font-size:14px;">Vital signs logs and patient care records.</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
+                    <!-- Vitals Report -->
+                    <div class="stat-card-new" style="cursor: pointer; transition: 0.3s;" onclick="location.href='reports_manager.php?view=reports&type=nurse_vitals'">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                            <div>
+                                <h3 style="font-size:18px; color: var(--accent-blue);">Vital Signs</h3>
+                                <p style="color:#64748b; font-size:13px; margin-top:5px;">Patient monitoring logs</p>
+                            </div>
+                            <i class="fas fa-heartbeat" style="font-size:24px; color: var(--accent-blue);"></i>
+                        </div>
+                        <ul style="color:#cbd5e1; font-size:13px; margin-bottom:20px; padding-left:20px;">
+                            <li>Daily Vital Check Logs</li>
+                            <li>Critical Patient Alerts</li>
+                        </ul>
+                        <button class="btn-logout-alt" style="width:100%; text-align:center;">View Report</button>
+                    </div>
+
+                    <!-- Care/Duty Report -->
+                    <div class="stat-card-new" style="cursor: pointer; transition: 0.3s;" onclick="location.href='reports_manager.php?view=reports&type=nurse_care'">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                            <div>
+                                <h3 style="font-size:18px; color: #10b981;">Patient Care & Duty</h3>
+                                <p style="color:#64748b; font-size:13px; margin-top:5px;">Nursing shift handouts</p>
+                            </div>
+                            <i class="fas fa-user-nurse" style="font-size:24px; color: #10b981;"></i>
+                        </div>
+                        <ul style="color:#cbd5e1; font-size:13px; margin-bottom:20px; padding-left:20px;">
+                            <li>Shift Handover Notes</li>
+                            <li>Patient Care Summaries</li>
+                        </ul>
+                        <button class="btn-logout-alt" style="width:100%; text-align:center; border-color: #10b981; color: #10b981;">View Report</button>
                     </div>
                 </div>
-            </div>
+            <?php endif; ?>
         </main>
     </div>
+    <?php 
+    // Set staff_type for the modal
+    $staff_type = 'nurse';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

@@ -42,7 +42,10 @@ $doctor_email = $reg_data['email'] ?? 'doctor@healcare.com';
 $doctor_phone = $reg_data['phone'] ?? '';
 $doctor_address = $reg_data['address'] ?? '';
 
-$doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
+$doctor_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
+if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') === false) {
+    $doctor_name = "Dr. " . $doctor_name;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

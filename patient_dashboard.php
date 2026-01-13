@@ -27,7 +27,7 @@ if ($profile_exists) {
         LEFT JOIN users u ON mr.doctor_id = u.user_id
         LEFT JOIN registrations r ON u.registration_id = r.registration_id
         WHERE mr.patient_id = $user_id 
-        ORDER BY mr.created_at DESC
+        ORDER BY mr.created_at DESC LIMIT 1
     ");
     while ($row = $records_res->fetch_assoc()) {
         $medical_records[] = $row;
@@ -133,6 +133,7 @@ if ($profile_exists) {
         .status-Requested { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
         .status-Scheduled { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
         .status-Approved, .status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .status-Completed, .status-Checked { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
     </style>
 </head>
@@ -211,21 +212,48 @@ if ($profile_exists) {
 
             <!-- Enhanced Stats Overview Cards -->
             <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <?php
+                // 1. Upcoming Appointments
+                $upcoming_sql = "SELECT COUNT(*) as count FROM appointments WHERE patient_id = $user_id AND status IN ('Scheduled', 'Approved', 'Confirmed', 'Pending', 'Requested') AND appointment_date >= CURDATE()";
+                $upcoming_count = $conn->query($upcoming_sql)->fetch_assoc()['count'];
+
+                // 2. Past Visits
+                $past_sql = "SELECT COUNT(*) as count FROM appointments WHERE patient_id = $user_id AND (status = 'Completed' OR (appointment_date < CURDATE() AND status != 'Cancelled'))";
+                $past_count = $conn->query($past_sql)->fetch_assoc()['count'];
+
+                // 3. Queue Status (Today)
+                $queue_display = 'N/A';
+                $today = date('Y-m-d');
+                $queue_sql = "SELECT queue_number FROM appointments WHERE patient_id = $user_id AND appointment_date = '$today' AND status NOT IN ('Cancelled', 'Completed') ORDER BY appointment_time ASC LIMIT 1";
+                $q_res = $conn->query($queue_sql);
+                if ($q_res && $q_res->num_rows > 0) {
+                    $queue_display = '#' . $q_res->fetch_assoc()['queue_number'];
+                }
+
+                // 4. Bed Status
+                $bed_display = 'Not Admitted';
+                $bed_color = '#94a3b8'; // gray
+                $admit_sql = "SELECT appointment_id FROM appointments WHERE patient_id = $user_id AND status = 'Admitted' LIMIT 1";
+                if ($conn->query($admit_sql)->num_rows > 0) {
+                    $bed_display = 'Admitted'; // Placeholder as we don't have bed numbers in DB yet
+                    $bed_color = '#10b981'; // green
+                }
+                ?>
                 <div class="stat-card">
-                    <span class="stat-value">02</span>
+                    <span class="stat-value"><?php echo str_pad($upcoming_count, 2, '0', STR_PAD_LEFT); ?></span>
                     <span class="stat-label">Upcoming Appts</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value">15</span>
+                    <span class="stat-value"><?php echo str_pad($past_count, 2, '0', STR_PAD_LEFT); ?></span>
                     <span class="stat-label">Past Visits</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value" style="color: #f59e0b;">#12</span>
+                    <span class="stat-value" style="color: #f59e0b;"><?php echo $queue_display; ?></span>
                     <span class="stat-label">Queue Status</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-value" style="color: #10b981;">B-204</span>
-                    <span class="stat-label">Bed Status (Allocated)</span>
+                    <span class="stat-value" style="color: <?php echo $bed_color; ?>;"><?php echo $bed_display; ?></span>
+                    <span class="stat-label">Bed Status</span>
                 </div>
             </div>
 

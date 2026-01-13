@@ -180,11 +180,8 @@ $section = $_GET['section'] ?? 'active_orders';
             <a href="?section=menu_management" class="nav-link <?php echo $section == 'menu_management' ? 'active' : ''; ?>">
                 <i class="fas fa-utensils"></i> Menu Management
             </a>
-            <a href="?section=order_history" class="nav-link <?php echo $section == 'order_history' ? 'active' : ''; ?>">
-                <i class="fas fa-history"></i> Order History
-            </a>
-            <a href="reports_manager.php" class="nav-link">
-                <i class="fas fa-chart-line"></i> Sales Analytics
+            <a href="?section=reports" class="nav-link <?php echo $section == 'reports' ? 'active' : ''; ?>">
+                <i class="fas fa-chart-pie"></i> Reports & Analytics
             </a>
             <a href="?section=profile" class="nav-link <?php echo $section == 'profile' ? 'active' : ''; ?>">
                 <i class="fas fa-cog"></i> Profile Settings
@@ -201,7 +198,7 @@ $section = $_GET['section'] ?? 'active_orders';
                 <?php 
                     if($section == 'active_orders') echo "Active Orders Module";
                     elseif($section == 'menu_management') echo "Menu Management Module";
-                    elseif($section == 'order_history') echo "Order History Module";
+                    elseif($section == 'reports') echo "Reports & Analytics Module";
                     elseif($section == 'profile') echo "Profile Settings Module";
                 ?>
             </div>
@@ -218,7 +215,9 @@ $section = $_GET['section'] ?? 'active_orders';
                     <h3 style="color: #fff; margin-bottom: 5px; font-size: 16px;"><i class="fas fa-file-upload" style="color: #4fc3f7;"></i> Canteen Sales Analytics</h3>
                     <p style="color: #94a3b8; font-size: 12px;">Archive manual billing summaries or monthly food waste reports.</p>
                 </div>
-                <a href="reports_manager.php?view=repository" style="background: #4fc3f7; color: #020617; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 700; font-size: 12px;">Archive Report</a>
+                <button onclick="openReportModal()" style="background: #4fc3f7; color: #020617; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 700; font-size: 12px; border: none; cursor: pointer;">
+                    <i class="fas fa-upload"></i> Upload Report
+                </button>
             </div>
             <?php if ($success_msg): ?>
                 <div class="banner banner-success"><i class="fas fa-check-circle"></i> <?php echo $success_msg; ?></div>
@@ -335,75 +334,71 @@ $section = $_GET['section'] ?? 'active_orders';
                     </table>
                 </div>
 
-            <?php elseif ($section == 'order_history'): ?>
-                <div class="card">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                        <h2 style="margin: 0;">Past Orders & History</h2>
-                        <form method="GET" style="display: flex; gap: 15px;">
-                            <input type="hidden" name="section" value="order_history">
-                            <input type="date" name="filter_date" value="<?php echo $_GET['filter_date'] ?? ''; ?>" class="form-input" style="width: 150px; padding: 8px;" onchange="this.form.submit()">
-                            <select name="filter_cat" class="form-input" style="width: 170px; padding: 8px;" onchange="this.form.submit()">
-                                <option value="">All Categories</option>
-                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Morning / Breakfast') ? 'selected' : ''; ?>>Morning / Breakfast</option>
-                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Lunch') ? 'selected' : ''; ?>>Lunch</option>
-                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Evening Snacks') ? 'selected' : ''; ?>>Evening Snacks</option>
-                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Dinner') ? 'selected' : ''; ?>>Dinner</option>
-                                <option <?php echo (($_GET['filter_cat'] ?? '') == 'Night Food') ? 'selected' : ''; ?>>Night Food</option>
-                            </select>
-                        </form>
+            <?php elseif ($section == 'reports'): ?>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
+                    <!-- 1. Daily Sales Report -->
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                            <div>
+                                <h3 style="margin:0; font-size:18px; color:var(--accent);">Daily Sales Report</h3>
+                                <p style="color:var(--text-dim); font-size:13px; margin-top:5px;">Revenue tracking & payment modes</p>
+                            </div>
+                            <i class="fas fa-calendar-day" style="font-size:24px; color:rgba(79, 195, 247, 0.5);"></i>
+                        </div>
+                        <ul style="color:#cbd5e1; font-size:13px; margin-bottom:20px; padding-left:20px;">
+                            <li>Total Orders & Sales Amount</li>
+                            <li>Cash vs UPI Breakdown</li>
+                        </ul>
+                        <a href="reports_manager.php?view=reports&type=canteen_daily_sales" class="btn btn-outline" style="width:100%; justify-content:center;">View Report</a>
                     </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Order ID</th>
-                                <th>Delivered Time</th>
-                                <th>Patient</th>
-                                <th>Ordered Item</th>
-                                <th>Total</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $filter_date = $_GET['filter_date'] ?? '';
-                            $filter_cat = $_GET['filter_cat'] ?? '';
 
-                            $history_query = "
-                                SELECT co.*, cm.item_name, COALESCE(pp.name, r.name) as pname
-                                FROM canteen_orders co
-                                JOIN canteen_menu cm ON co.menu_id = cm.menu_id
-                                JOIN users u ON co.patient_id = u.user_id
-                                LEFT JOIN registrations r ON u.registration_id = r.registration_id
-                                LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
-                                WHERE co.order_status = 'Delivered'
-                            ";
+                    <!-- 2. Item-Wise Sales -->
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                            <div>
+                                <h3 style="margin:0; font-size:18px; color:#f59e0b;">Item-Wise Sales</h3>
+                                <p style="color:var(--text-dim); font-size:13px; margin-top:5px;">Popular items & total quantity</p>
+                            </div>
+                            <i class="fas fa-hamburger" style="font-size:24px; color:rgba(245, 158, 11, 0.5);"></i>
+                        </div>
+                        <ul style="color:#cbd5e1; font-size:13px; margin-bottom:20px; padding-left:20px;">
+                            <li>Quantity Sold per Item</li>
+                            <li>Total Amount per Item</li>
+                        </ul>
+                        <a href="reports_manager.php?view=reports&type=canteen_item_sales" class="btn btn-outline" style="width:100%; justify-content:center;">View Report</a>
+                    </div>
 
-                            if ($filter_date) {
-                                $history_query .= " AND co.order_date = '$filter_date'";
-                            }
-                            if ($filter_cat) {
-                                $history_query .= " AND cm.item_category = '$filter_cat'";
-                            }
+                     <!-- 3. Payment Collection -->
+                     <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                            <div>
+                                <h3 style="margin:0; font-size:18px; color:#10b981;">Payment Collection</h3>
+                                <p style="color:var(--text-dim); font-size:13px; margin-top:5px;">Cash & UPI reconciliation</p>
+                            </div>
+                            <i class="fas fa-wallet" style="font-size:24px; color:rgba(16, 185, 129, 0.5);"></i>
+                        </div>
+                        <ul style="color:#cbd5e1; font-size:13px; margin-bottom:20px; padding-left:20px;">
+                            <li>Cash Amount Collected</li>
+                            <li>Total Daily Collection</li>
+                        </ul>
+                        <a href="reports_manager.php?view=reports&type=canteen_payments" class="btn btn-outline" style="width:100%; justify-content:center;">View Report</a>
+                    </div>
 
-                            $history_query .= " ORDER BY co.updated_at DESC";
-                            $history = $conn->query($history_query);
-                            
-                            if ($history && $history->num_rows > 0):
-                                while ($h = $history->fetch_assoc()):
-                            ?>
-                                <tr>
-                                    <td>#<?php echo $h['order_id']; ?></td>
-                                    <td><?php echo date('M d, h:i A', strtotime($h['updated_at'])); ?></td>
-                                    <td><strong><?php echo htmlspecialchars($h['pname']); ?></strong></td>
-                                    <td><?php echo $h['item_name']; ?></td>
-                                    <td>₹<?php echo number_format($h['total_amount'], 0); ?></td>
-                                    <td><span class="status-badge status-delivered">DELIVERED</span></td>
-                                </tr>
-                            <?php endwhile; else: ?>
-                                <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-dim);">No past orders found matching the filters.</td></tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                    <!-- 4. Stock Usage -->
+                    <div class="card">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px;">
+                            <div>
+                                <h3 style="margin:0; font-size:18px; color:#ef4444;">Stock Usage</h3>
+                                <p style="color:var(--text-dim); font-size:13px; margin-top:5px;">Inventory & Wastage control</p>
+                            </div>
+                            <i class="fas fa-boxes" style="font-size:24px; color:rgba(239, 68, 68, 0.5);"></i>
+                        </div>
+                        <ul style="color:#cbd5e1; font-size:13px; margin-bottom:20px; padding-left:20px;">
+                            <li>Used Quantity vs Remaining</li>
+                            <li>Inventory Status</li>
+                        </ul>
+                        <a href="reports_manager.php?view=reports&type=canteen_stock" class="btn btn-outline" style="width:100%; justify-content:center;">View Report</a>
+                    </div>
                 </div>
 
             <?php elseif ($section == 'profile'): ?>
@@ -544,5 +539,11 @@ $section = $_GET['section'] ?? 'active_orders';
         }, 60000); 
         <?php endif; ?>
     </script>
+
+    <?php 
+    // Set staff_type for the modal
+    $staff_type = 'canteen_staff';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

@@ -27,7 +27,10 @@ if ($res->num_rows > 0) {
     $designation = "Professional Consultant";
 }
 
-$doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
+$doctor_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
+if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') === false) {
+    $doctor_name = "Dr. " . $doctor_name;
+}
 
 // Handle Status Updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {

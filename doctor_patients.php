@@ -27,7 +27,10 @@ if ($res->num_rows > 0) {
     $designation = "Professional Consultant";
 }
 
-$doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
+$doctor_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
+if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') === false) {
+    $doctor_name = "Dr. " . $doctor_name;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -162,36 +165,74 @@ $doctor_name = "Dr. " . htmlspecialchars($_SESSION['username']);
                         </tr>
                     </thead>
                     <tbody>
+                        <?php
+                        // Fetch patients who have had appointments with this doctor
+                        $p_query = "
+                            SELECT 
+                                u.user_id as patient_user_id,
+                                r.name as patient_name,
+                                r.email as patient_email,
+                                p.gender,
+                                p.date_of_birth,
+                                MAX(a.appointment_date) as last_appointment
+                            FROM appointments a
+                            JOIN users u ON a.patient_id = u.user_id
+                            JOIN registrations r ON u.registration_id = r.registration_id
+                            LEFT JOIN patient_profiles p ON u.user_id = p.user_id
+                            WHERE a.doctor_id = ?
+                            GROUP BY u.user_id
+                            ORDER BY last_appointment DESC
+                        ";
+                        
+                        $stmt = $conn->prepare($p_query);
+                        $stmt->bind_param("i", $user_id);
+                        $stmt->execute();
+                        $result = $stmt->get_result();
+
+                        if ($result->num_rows > 0):
+                            while ($row = $result->fetch_assoc()):
+                                // Calculate Age
+                                $age = 'N/A';
+                                if (!empty($row['date_of_birth'])) {
+                                    $dob = new DateTime($row['date_of_birth']);
+                                    $now = new DateTime();
+                                    $diff = $now->diff($dob);
+                                    $age = $diff->y;
+                                }
+                                
+                                // Format Gender
+                                $gender = !empty($row['gender']) ? ucfirst($row['gender']) : 'Unknown';
+                                
+                                // Format Last Appointment
+                                $last_appt = date('d M Y', strtotime($row['last_appointment']));
+                                if (date('Y-m-d') == date('Y-m-d', strtotime($row['last_appointment']))) {
+                                    $last_appt = 'Today';
+                                }
+                                
+                                // Generate Display ID (Mocking the format requested: HC-P-YEAR-ID)
+                                $display_id = 'HC-P-' . date('Y') . '-' . str_pad($row['patient_user_id'], 4, '0', STR_PAD_LEFT);
+                        ?>
                         <tr class="patient-row">
-                            <td>HC-P-2026-9901</td>
-                            <td><strong style="color: white;">Dileep Mathew</strong></td>
-                            <td>32 / Male</td>
-                            <td>12 Sep 2025</td>
+                            <td><?php echo $display_id; ?></td>
                             <td>
-                                <a href="#" class="btn-view"><i class="fas fa-user-md"></i> Profile</a>
-                                <a href="#" class="btn-view" style="margin-left: 10px;"><i class="fas fa-history"></i> History</a>
+                                <strong style="color: white;"><?php echo htmlspecialchars($row['patient_name']); ?></strong>
+                                <br><small style="color: #64748b;"><?php echo htmlspecialchars($row['patient_email']); ?></small>
+                            </td>
+                            <td><?php echo $age; ?> / <?php echo $gender; ?></td>
+                            <td><?php echo $last_appt; ?></td>
+                            <td>
+                                <a href="doctor_patient_profile.php?id=<?php echo $row['patient_user_id']; ?>" class="btn-view"><i class="fas fa-user-md"></i> Profile</a>
+                                <a href="doctor_patient_history.php?id=<?php echo $row['patient_user_id']; ?>" class="btn-view" style="margin-left: 10px;"><i class="fas fa-history"></i> History</a>
                             </td>
                         </tr>
-                        <tr class="patient-row">
-                            <td>HC-P-2026-8842</td>
-                            <td><strong style="color: white;">Anjali Sharma</strong></td>
-                            <td>28 / Female</td>
-                            <td>Today</td>
-                            <td>
-                                <a href="#" class="btn-view"><i class="fas fa-user-md"></i> Profile</a>
-                                <a href="#" class="btn-view" style="margin-left: 10px;"><i class="fas fa-history"></i> History</a>
+                        <?php endwhile; 
+                        else: ?>
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 30px; color: #94a3b8;">
+                                No assigned patients found. Patients will appear here once they book an appointment with you.
                             </td>
                         </tr>
-                        <tr class="patient-row">
-                            <td>HC-P-2026-7215</td>
-                            <td><strong style="color: white;">Rahul Kumar</strong></td>
-                            <td>45 / Male</td>
-                            <td>15 Oct 2025</td>
-                            <td>
-                                <a href="#" class="btn-view"><i class="fas fa-user-md"></i> Profile</a>
-                                <a href="#" class="btn-view" style="margin-left: 10px;"><i class="fas fa-history"></i> History</a>
-                            </td>
-                        </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>

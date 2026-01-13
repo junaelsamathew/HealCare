@@ -448,6 +448,8 @@ $menu_items = null; // Placeholder
                 const badge = document.getElementById('cart-count');
                 badge.textContent = data.count;
                 badge.style.display = 'inline-block';
+            } else {
+                showToast('Error: ' + (data.message || 'Could not add to bag'));
             }
         })
         .catch(err => console.error(err));
