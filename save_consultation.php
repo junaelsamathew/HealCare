@@ -17,10 +17,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->begin_transaction();
 
     try {
-        // 1. Update Appointment Status
-        $stmt_appt = $conn->prepare("UPDATE appointments SET status = 'Checked' WHERE appointment_id = ?");
+        // 1. Update Appointment Status to COMPLETED
+        $stmt_appt = $conn->prepare("UPDATE appointments SET status = 'Completed' WHERE appointment_id = ?");
         $stmt_appt->bind_param("i", $appt_id);
         $stmt_appt->execute();
+
+        // 1.5 Generate Billing for Consultation (IF NOT EXISTS)
+        // Check if bill exists
+        $check_bill = $conn->query("SELECT bill_id FROM billing WHERE appointment_id = $appt_id AND bill_type = 'Consultation'");
+        if ($check_bill->num_rows == 0) {
+            // Fetch fee first
+            $stmt_fee = $conn->prepare("SELECT consultation_fee FROM doctors WHERE user_id = ?");
+            $stmt_fee->bind_param("i", $doctor_id);
+            $stmt_fee->execute();
+            $res_fee = $stmt_fee->get_result();
+            $fee = 500; // Default fallback
+            if ($res_fee->num_rows > 0) {
+                $d_row = $res_fee->fetch_assoc();
+                $fee = $d_row['consultation_fee'] ?: 500;
+            }
+
+            // Insert Bill
+            $bill_type = 'Consultation';
+            $bill_status = 'Pending';
+            $bill_date = date('Y-m-d');
+            $stmt_bill = $conn->prepare("INSERT INTO billing (patient_id, appointment_id, doctor_id, bill_type, total_amount, payment_status, bill_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt_bill->bind_param("iiisdss", $patient_id, $appt_id, $doctor_id, $bill_type, $fee, $bill_status, $bill_date);
+            $stmt_bill->execute();
+        }
 
         // 2. Save Prescription if exists
         $prescription_id = null;

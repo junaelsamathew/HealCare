@@ -1,3 +1,9 @@
+<?php
+session_start();
+if (isset($_GET['redirect'])) {
+    $_SESSION['redirect_after_login'] = $_GET['redirect'];
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>

@@ -45,6 +45,68 @@ $username = $_SESSION['username'];
         .status-Scheduled, .status-Approved, .status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
         .status-Completed, .status-Checked { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+        /* Flow Steps CSS */
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .flow-step {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        .step-circle {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            border: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: var(--text-gray);
+            z-index: 2;
+        }
+        .step-label {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            white-space: nowrap;
+            color: var(--text-gray);
+        }
+        .step-line {
+            flex: 1;
+            height: 2px;
+            background: rgba(255,255,255,0.1);
+            margin: 0 5px;
+            min-width: 50px;
+        }
+        
+        .flow-step.active .step-circle {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: white;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+        }
+        .flow-step.active .step-label { color: var(--primary-blue); font-weight: 600; }
+        .flow-step.completed .step-circle {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+        .flow-step.completed .step-label { color: #10b981; }
+        .step-line.completed { background: #10b981; }
+        
+        /* Cancelled State */
+        .flow-step.cancelled .step-circle { background: #ef4444; border-color: #ef4444; color: white; }
+        .flow-step.cancelled .step-label { color: #ef4444; }
     </style>
 
     <div class="dashboard-layout">
@@ -80,13 +142,51 @@ $username = $_SESSION['username'];
                     if ($upcoming_res && $upcoming_res->num_rows > 0):
                         while($appt = $upcoming_res->fetch_assoc()):
                             $appt_time = date('M d, Y \a\t h:i A', strtotime($appt['appointment_date']));
+                            $status = $appt['status'];
+                            
+                            // Determine Steps State
+                            // 1. Requested
+                            // 2. Approved
+                            // 3. Completed
+                            $s1 = 'completed'; 
+                            $s2 = ''; 
+                            $s3 = '';
+                            $l1 = ''; $l2 = '';
+
+                            if ($status == 'Pending' || $status == 'Requested') {
+                                $s1 = 'active'; 
+                            } elseif ($status == 'Approved' || $status == 'Scheduled' || $status == 'Confirmed') {
+                                $s1 = 'completed'; $l1 = 'completed'; $s2 = 'active';
+                            } elseif ($status == 'Completed') {
+                                $s1 = 'completed'; $l1 = 'completed'; $s2 = 'completed'; $l2 = 'completed'; $s3 = 'completed';
+                            }
                     ?>
-                        <div class="appointment-item">
-                            <div class="doc-info">
-                                <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
-                                <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                        <div class="appointment-item" style="display:block;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="doc-info">
+                                    <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
+                                    <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                                </div>
+                                <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo $appt['status']; ?></span>
                             </div>
-                            <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo $appt['status']; ?></span>
+                            
+                            <!-- Flow Steps -->
+                            <div class="flow-steps">
+                                <div class="flow-step <?php echo $s1; ?>">
+                                    <div class="step-circle"><i class="fas fa-paper-plane"></i></div>
+                                    <span class="step-label">Requested</span>
+                                </div>
+                                <div class="step-line <?php echo $l1; ?>"></div>
+                                <div class="flow-step <?php echo $s2; ?>">
+                                    <div class="step-circle"><i class="fas fa-check"></i></div>
+                                    <span class="step-label">Approved</span>
+                                </div>
+                                <div class="step-line <?php echo $l2; ?>"></div>
+                                <div class="flow-step <?php echo $s3; ?>">
+                                    <div class="step-circle"><i class="fas fa-flag-checkered"></i></div>
+                                    <span class="step-label">Completed</span>
+                                </div>
+                            </div>
                         </div>
                     <?php endwhile; else: ?>
                         <div class="empty-state"><p>No upcoming appointments found. <a href="appointment_form.php">Book Now</a></p></div>
@@ -104,19 +204,47 @@ $username = $_SESSION['username'];
                                 LEFT JOIN doctors d ON u.user_id = d.user_id 
                                 LEFT JOIN registrations r ON u.registration_id = r.registration_id
                                 WHERE a.patient_id = $user_id AND a.status IN ('Completed', 'Cancelled', 'Checked')
-                                ORDER BY a.appointment_date DESC LIMIT 1";
+                                ORDER BY a.appointment_date DESC";
                     $past_res = $conn->query($past_sql);
 
                     if ($past_res && $past_res->num_rows > 0):
                         while($appt = $past_res->fetch_assoc()):
                             $appt_time = date('M d, Y \a\t h:i A', strtotime($appt['appointment_date']));
+                            
+                            // For Past, usually Completed or Cancelled
+                            // If Cancelled, show differnet flow?
+                            $is_cancelled = ($appt['status'] == 'Cancelled');
                     ?>
-                        <div class="appointment-item">
-                            <div class="doc-info">
-                                <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
-                                <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                        <div class="appointment-item" style="display:block;">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <div class="doc-info">
+                                    <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
+                                    <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                                </div>
+                                <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo $appt['status']; ?></span>
                             </div>
-                            <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo $appt['status']; ?></span>
+
+                             <!-- Flow Steps (Static Completed for Past for now) -->
+                             <?php if (!$is_cancelled): ?>
+                             <div class="flow-steps">
+                                <div class="flow-step completed">
+                                    <div class="step-circle"><i class="fas fa-paper-plane"></i></div>
+                                    <span class="step-label">Requested</span>
+                                </div>
+                                <div class="step-line completed"></div>
+                                <div class="flow-step completed">
+                                    <div class="step-circle"><i class="fas fa-check"></i></div>
+                                    <span class="step-label">Approved</span>
+                                </div>
+                                <div class="step-line completed"></div>
+                                <div class="flow-step completed">
+                                    <div class="step-circle"><i class="fas fa-flag-checkered"></i></div>
+                                    <span class="step-label">Completed</span>
+                                </div>
+                            </div>
+                            <?php else: ?>
+                                <div style="margin-top:15px; color:#ef4444; font-size:13px;"><i class="fas fa-times-circle"></i> This appointment was cancelled.</div>
+                            <?php endif; ?>
                         </div>
                     <?php endwhile; else: ?>
                         <div class="empty-state"><p>No past appointments found.</p></div>

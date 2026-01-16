@@ -1,3 +1,9 @@
+<?php
+session_start();
+if (isset($_GET['redirect'])) {
+    $_SESSION['redirect_after_login'] = $_GET['redirect'];
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -306,7 +312,7 @@
                     <div class="login-footer-links">
                         <a href="javascript:void(0)" class="toggle-auth" data-target="forgot">Forgot Password?</a>
                         <div class="or-divider">Or</div>
-                        <a href="signup.php">Sign Up</a>
+                        <a href="signup.php<?php echo isset($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : ''; ?>">Sign Up</a>
                     </div>
                     
                     <div class="google-login-container">

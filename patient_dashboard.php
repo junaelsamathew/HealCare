@@ -196,6 +196,7 @@ if ($profile_exists) {
                 <a href="book_appointment.php" class="nav-link"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
                 <a href="my_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> My Appointments</a>
                 <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+                <a href="patient_lab_results.php" class="nav-link"><i class="fas fa-flask"></i> Lab Reports</a>
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
@@ -327,10 +328,16 @@ if ($profile_exists) {
                                     <span style="display: block; font-size: 14px; font-weight: 600;"><i class="fas fa-flask" style="margin-right: 10px; color: #4fc3f7;"></i> <?php echo htmlspecialchars($lab_order['test_name']); ?></span>
                                     <small style="color: #94a3b8; font-size: 11px;"><?php echo date('M d, Y', strtotime($lab_order['created_at'])); ?> • <?php echo htmlspecialchars($lab_order['test_type']); ?></small>
                                 </div>
-                                <?php if (!empty($lab_order['report_path'])): ?>
-                                    <a href="<?php echo htmlspecialchars($lab_order['report_path']); ?>" target="_blank" style="color: #4fc3f7; font-size: 13px; text-decoration: none; font-weight: 600;"><i class="fas fa-file-pdf"></i> Download Result</a>
+                                <?php if ($lab_order['status'] == 'Completed'): ?>
+                                    <?php if (!empty($lab_order['report_path'])): ?>
+                                        <a href="<?php echo htmlspecialchars($lab_order['report_path']); ?>" target="_blank" style="color: #4fc3f7; font-size: 13px; text-decoration: none; font-weight: 600;"><i class="fas fa-file-pdf"></i> Download Result</a>
+                                    <?php else: ?>
+                                        <span style="color: #10b981; font-size: 11px; font-weight: 600;"><i class="fas fa-check-circle"></i> Completed</span>
+                                    <?php endif; ?>
+                                <?php elseif ($lab_order['status'] == 'Processing'): ?>
+                                    <span style="color: #f59e0b; font-size: 11px;">Processing...</span>
                                 <?php else: ?>
-                                    <span style="color: #94a3b8; font-size: 11px;">Result Processing</span>
+                                    <span style="color: #94a3b8; font-size: 11px;">Pending Action</span>
                                 <?php endif; ?>
                             </div>
                         <?php endwhile; else: ?>

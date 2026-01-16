@@ -12,6 +12,11 @@ $user_id = $_SESSION['user_id'];
 $res = $conn->query("SELECT * FROM lab_staff WHERE user_id = $user_id");
 $lab = $res->fetch_assoc();
 $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
+
+// Fetch current name dynamically
+$name_q = $conn->query("SELECT r.name FROM users u JOIN registrations r ON u.registration_id = r.registration_id WHERE u.user_id = $user_id");
+$name_row = $name_q->fetch_assoc();
+$display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['username']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -92,16 +97,16 @@ $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
 
     <div class="secondary-nav">
         <div style="display: flex; align-items: center; gap: 15px;"><div style="background: #4fc3f7; color:#fff; width:35px; height:35px; display:flex; align-items:center; justify-content:center; border-radius:8px; font-weight:bold;">T</div><h2 style="color:#fff; font-size:20px;">Technician Panel</h2></div>
-        <div style="display: flex; align-items: center;"><span class="staff-label" style="color: #94a3b8; font-size: 14px; margin-right: 15px;"><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']); ?></span><a href="logout.php" style="color: #94a3b8; text-decoration: none; border: 1px solid #4fc3f7; padding: 5px 20px; border-radius: 20px;">Log Out</a></div>
+        <div style="display: flex; align-items: center;"><span class="staff-label" style="color: #94a3b8; font-size: 14px; margin-right: 15px;"><?php echo htmlspecialchars($display_name); ?></span><a href="logout.php" style="color: #94a3b8; text-decoration: none; border: 1px solid #4fc3f7; padding: 5px 20px; border-radius: 20px;">Log Out</a></div>
     </div>
 
     <div class="dashboard-body">
         <aside class="side-nav">
-            <a href="#" class="nav-item active"><i class="fas fa-vials"></i> Pending Tests</a>
-            <a href="?section=processing" class="nav-item"><i class="fas fa-microscope"></i> In Processing</a>
-            <a href="?section=completed" class="nav-item"><i class="fas fa-file-alt"></i> Completed Reports</a>
-            <a href="?section=reports" class="nav-item"><i class="fas fa-chart-line"></i> Reports</a>
-            <a href="?section=archive" class="nav-item"><i class="fas fa-archive"></i> Archive</a>
+            <?php $section = $_GET['section'] ?? 'dashboard'; ?>
+            <a href="?section=dashboard" class="nav-item <?php echo $section == 'dashboard' ? 'active' : ''; ?>"><i class="fas fa-vials"></i> Pending Tests</a>
+            <a href="?section=processing" class="nav-item <?php echo $section == 'processing' ? 'active' : ''; ?>"><i class="fas fa-microscope"></i> In Processing</a>
+            <a href="?section=reports" class="nav-item <?php echo $section == 'reports' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reports</a>
+            <a href="?section=archive" class="nav-item <?php echo $section == 'archive' ? 'active' : ''; ?>"><i class="fas fa-archive"></i> Archive</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
 

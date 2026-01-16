@@ -32,7 +32,7 @@ if ($res->num_rows > 0) {
 }
 
 // Fetch Personal Details from Registrations
-$stmt_reg = $conn->prepare("SELECT r.phone, r.address, r.email FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE u.user_id = ?");
+$stmt_reg = $conn->prepare("SELECT r.phone, r.address, r.email, r.profile_photo FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE u.user_id = ?");
 $stmt_reg->bind_param("i", $user_id);
 $stmt_reg->execute();
 $res_reg = $stmt_reg->get_result();
@@ -164,9 +164,26 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 <div class="settings-content">
                     <!-- Personal Details -->
                     <div id="personal" class="settings-section">
-                        <form action="profile_handler.php" method="POST">
+                        <form action="profile_handler.php" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="action" value="update_profile">
                             <h3 style="color: white; margin-bottom: 25px;">Personal Information</h3>
+                            
+                            <!-- Profile Photo Section -->
+                            <div class="form-group" style="margin-bottom: 25px; display: flex; align-items: center; gap: 20px;">
+                                <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #eee; border: 2px solid rgba(255,255,255,0.2);">
+                                    <?php 
+                                        $photo_path = $reg_data['profile_photo'] ?? 'assets/images/default_doctor.png';
+                                        if (empty($photo_path) || !file_exists($photo_path)) $photo_path = 'assets/images/default_doctor.png';
+                                    ?>
+                                    <img src="<?php echo $photo_path; ?>" style="width: 100%; height: 100%; object-fit: cover;">
+                                </div>
+                                <div style="flex: 1;">
+                                    <label>Profile Photo</label>
+                                    <input type="file" name="profile_photo" class="form-input" style="padding: 10px;" accept="image/*">
+                                    <small style="color: #94a3b8;">Max size 2MB. JPG, PNG only.</small>
+                                </div>
+                            </div>
+
                             <div class="form-row">
                                 <div class="form-group">
                                     <label>Full Name</label>
@@ -187,44 +204,56 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                                     <input type="text" name="address" class="form-input" value="<?php echo $doctor_address; ?>">
                                 </div>
                             </div>
-                            <button type="submit" class="btn-save">Update Profile</button>
+                            <button type="submit" class="btn-save">Update Personal Details</button>
                         </form>
                     </div>
 
-                    <!-- Professional Details (Read Only for now) -->
+                    <!-- Professional Details (Editable) -->
                     <div id="professional" class="settings-section">
-                        <h3 style="color: white; margin-bottom: 25px;">Professional Profile</h3>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Doctor ID (Read-only)</label>
-                                <input type="text" class="form-input" value="HC-DR-<?php echo date('Y'); ?>-0001" readonly style="opacity: 0.6;">
+                        <form action="profile_handler.php" method="POST">
+                            <input type="hidden" name="action" value="update_professional">
+                            <h3 style="color: white; margin-bottom: 25px;">Professional Profile</h3>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Department</label>
+                                    <input type="text" class="form-input" value="<?php echo htmlspecialchars($department); ?>" readonly style="opacity: 0.6; cursor: not-allowed;">
+                                </div>
+                                <div class="form-group">
+                                    <label>Designation</label>
+                                    <input type="text" class="form-input" value="<?php echo htmlspecialchars($designation); ?>" readonly style="opacity: 0.6; cursor: not-allowed;">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Department</label>
-                                <input type="text" class="form-input" value="<?php echo $department; ?>" readonly style="opacity: 0.6;">
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Specialization</label>
+                                    <input type="text" name="specialization" class="form-input" value="<?php echo htmlspecialchars($specialization); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Qualification</label>
+                                    <input type="text" name="qualification" class="form-input" value="<?php echo htmlspecialchars($qualification); ?>">
+                                </div>
                             </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Specialization</label>
-                                <input type="text" class="form-input" value="<?php echo $specialization; ?>" readonly style="opacity: 0.6;">
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Experience (Years)</label>
+                                    <input type="number" name="experience" class="form-input" value="<?php echo htmlspecialchars($experience); ?>">
+                                </div>
+                                <div class="form-group">
+                                    <label>Consultation Fee (₹)</label>
+                                    <input type="number" name="consultation_fee" class="form-input" value="<?php echo htmlspecialchars($doctor['consultation_fee'] ?? '500'); ?>">
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Qualification</label>
-                                <input type="text" class="form-input" value="<?php echo $qualification; ?>" readonly style="opacity: 0.6;">
+
+                            <div class="form-group" style="margin-bottom: 25px;">
+                                <label>Professional Bio / About Me</label>
+                                <textarea name="bio" class="form-input" rows="4" style="resize: vertical;"><?php echo htmlspecialchars($doctor['bio'] ?? ''); ?></textarea>
                             </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Experience (Years)</label>
-                                <input type="text" class="form-input" value="<?php echo $experience; ?> Years" readonly style="opacity: 0.6;">
-                            </div>
-                            <div class="form-group">
-                                <label>Designation</label>
-                                <input type="text" class="form-input" value="<?php echo $designation; ?>" readonly style="opacity: 0.6;">
-                            </div>
-                        </div>
-                        <button class="btn-save" style="background:rgba(255,255,255,0.1); cursor:not-allowed;">Contact Admin to Update</button>
+
+                            <button type="submit" class="btn-save">Save Professional Details</button>
+                        </form>
                     </div>
 
                     <!-- Availability -->

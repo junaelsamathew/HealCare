@@ -113,7 +113,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Convert to 24h format for safety
         $appt_time = date("H:i", strtotime($time_slot));
         
-        $stmt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, appointment_time, appointment_type, status, queue_number, consultation_fee) VALUES (?, ?, ?, ?, ?, 'Walk-in', 'Requested', ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, appointment_time, appointment_type, status, queue_number, consultation_fee) VALUES (?, ?, ?, ?, ?, 'Walk-in', 'Pending', ?, ?)");
         $stmt->bind_param("iisssid", $patient_id, $doctor_id, $department, $date, $appt_time, $token, $doc_fee);
         $stmt->execute();
         

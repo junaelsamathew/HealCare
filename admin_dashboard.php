@@ -173,7 +173,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     } elseif ($action == 'reject') {
         $admin_msg = "We regret to inform you that your application has been rejected after review.";
         $conn->query("UPDATE registrations SET status = 'Rejected', admin_message = '$admin_msg' WHERE registration_id = $reg_id");
-        $success_msg = "Application Rejected. Notification sent successfully.";
+        
+        // --- SEND REJECTION EMAIL ---
+        try {
+            $res = $conn->query("SELECT email, name FROM registrations WHERE registration_id = $reg_id");
+            if ($res && $row = $res->fetch_assoc()) {
+                $email = $row['email'];
+                $name = $row['name'];
+                
+                $mail = new PHPMailer(true);
+                $mail->isSMTP();
+                $mail->Host       = 'smtp.gmail.com';
+                $mail->SMTPAuth   = true;
+                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
+                $mail->Password   = 'yiuwcrykatkfzdwv';
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                $mail->Port       = 465;
+                $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
+                
+                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare HR');
+                $mail->addAddress($email, $name);
+                $mail->isHTML(true);
+                $mail->Subject = 'Update on your HealCare Application';
+                $mail->Body = '
+                <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 30px; border: 1px solid #e1e8ed; border-radius: 12px; color: #334155;">
+                    <h2 style="color: #ef4444; border-bottom: 2px solid #ef4444; padding-bottom: 10px;">Application Status Update</h2>
+                    <p>Dear ' . htmlspecialchars($name) . ',</p>
+                    <p>We have reviewed your application for the position at HealCare Hospital.</p>
+                    <p>After careful consideration, we regret to inform you that we are <strong>unable to proceed with your application</strong> at this time.</p>
+                    <p><em>Reason: ' . $admin_msg . '</em></p>
+                    <p>We appreciate your interest in joining our team and wish you the best in your future endeavors.</p>
+                    <hr style="border:0; border-top:1px solid #f1f5f9; margin: 30px 0;">
+                    <p style="font-size: 0.8em; color: #94a3b8; text-align: center;">HealCare Hospital HR Department</p>
+                </div>';
+                
+                $mail->send();
+                $success_msg = "Application Rejected. Notification email sent to $email.";
+            } else {
+                 $success_msg = "Application Rejected, but could not retrieve email to send notification.";
+            }
+        } catch (Exception $e) {
+             $success_msg = "Application Rejected. Email send failed: " . $e->getMessage();
+        }
     } elseif ($action == 'add_user') {
         $name = mysqli_real_escape_string($conn, $_POST['full_name']);
         $username = mysqli_real_escape_string($conn, $_POST['username']);
@@ -389,6 +430,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $success_msg = "Doctor availability updated!";
         } else {
             $error_msg = "Error updating availability.";
+        }
+    } elseif ($action == 'discard_stock') {
+        $stock_id = (int)$_POST['stock_id'];
+        if ($conn->query("DELETE FROM pharmacy_stock WHERE stock_id = $stock_id")) {
+             $success_msg = "Medicine batch discarded and removed from inventory.";
+        } else {
+             $error_msg = "Error discarding stock: " . $conn->error;
         }
     } elseif ($action == 'update_doctor_dept') {
         $doc_id = (int)$_POST['doctor_id'];
@@ -1547,7 +1595,11 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                         <?php echo $is_expired ? 'EXPIRED' : $item['days_left'] . ' Days'; ?>
                                     </td>
                                     <td>
-                                        <button class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;">Discard / Write-off</button>
+                                        <form method="POST" onsubmit="return confirm('Are you sure you want to discard this batch? This cannot be undone.');">
+                                            <input type="hidden" name="action" value="discard_stock">
+                                            <input type="hidden" name="stock_id" value="<?php echo $item['stock_id']; ?>">
+                                            <button type="submit" class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;">Discard / Write-off</button>
+                                        </form>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>

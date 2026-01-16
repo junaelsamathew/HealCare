@@ -1,100 +1,133 @@
-<?php session_start(); include 'includes/header.php'; ?>
+<?php
+session_start();
+include 'includes/db_connect.php';
+
+if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
+    $redirect = urlencode(basename($_SERVER['PHP_SELF']));
+    if (!empty($_SERVER['QUERY_STRING'])) {
+        $redirect .= urlencode('?' . $_SERVER['QUERY_STRING']);
+    }
+    header("Location: login.php?redirect=$redirect");
+    exit();
+}
+
+$username = $_SESSION['username'];
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appointments - HealCare</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Book Appointment - HealCare</title>
+    <link rel="stylesheet" href="styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #f0f4f8; font-family: 'Poppins', sans-serif; }
-        .page-container {
-            max-width: 900px;
-            margin: 80px auto;
-            text-align: center;
-            padding: 20px;
-        }
-        .page-title {
-            font-size: 2.5rem;
-            color: #1e293b;
-            margin-bottom: 50px;
-            font-weight: 600;
-        }
         .cards-wrapper {
             display: flex;
-            justify-content: center;
-            gap: 40px;
+            gap: 30px;
             flex-wrap: wrap;
+            margin-top: 40px;
         }
         .option-card {
-            background: white;
+            background: rgba(255,255,255,0.03);
             padding: 40px;
             border-radius: 16px;
             width: 280px;
             text-decoration: none;
-            color: inherit;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
+            color: var(--text-light);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
             transition: all 0.3s ease;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
         .option-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            border-color: #3b82f6;
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.05);
+            border-color: var(--primary-blue);
         }
         .icon-box {
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 25px;
-            font-size: 3rem;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
         }
         .icon-booking {
-            background: #0f4c5c; /* Dark Teal from image */
-            color: white;
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary-blue);
         }
         .icon-cancel {
-            background: #0f4c5c; /* Dark Teal from image */
-            color: white;
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
         }
         .card-label {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
             font-weight: 600;
-            color: #0f4c5c;
+            color: var(--text-light);
         }
     </style>
 </head>
 <body>
-
-    <div class="page-container">
-        <h1 class="page-title">Appointments</h1>
-        
-        <div class="cards-wrapper">
-            <!-- Booking Card -->
-            <a href="appointment_form.php" class="option-card">
-                <div class="icon-box icon-booking">
-                    <i class="fas fa-calendar-plus"></i>
-                </div>
-                <span class="card-label">Appointment Booking</span>
-            </a>
-
-            <!-- Cancel Card -->
-            <a href="cancel_booking.php" class="option-card">
-                <div class="icon-box icon-cancel">
-                    <i class="fas fa-calendar-times"></i>
-                </div>
-                <span class="card-label">Cancel Booking</span>
-            </a>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
         </div>
-    </div>
+    </header>
 
-    <?php include 'includes/footer.php'; ?>
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+        <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <nav>
+                <a href="patient_dashboard.php" class="nav-link">Dashboard</a>
+                <a href="book_appointment.php" class="nav-link active">Book Appointment</a>
+                <a href="my_appointments.php" class="nav-link">My Appointments</a>
+                <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <h1>Appointments</h1>
+                <p>Schedule a new visit or cancel an existing one</p>
+            </div>
+        
+            <div class="cards-wrapper">
+                <!-- Booking Card -->
+                <a href="appointment_form.php" class="option-card">
+                    <div class="icon-box icon-booking">
+                        <i class="fas fa-calendar-plus"></i>
+                    </div>
+                    <span class="card-label">Book New Appointment</span>
+                    <span style="font-size: 0.85rem; color: var(--text-gray); margin-top: 5px;">Schedule a consultation with a doctor</span>
+                </a>
+
+                <!-- Cancel Card -->
+                <a href="cancel_booking.php" class="option-card">
+                    <div class="icon-box icon-cancel">
+                        <i class="fas fa-calendar-times"></i>
+                    </div>
+                    <span class="card-label">Cancel Booking</span>
+                    <span style="font-size: 0.85rem; color: var(--text-gray); margin-top: 5px;">Cancel an existing scheduled appointment</span>
+                </a>
+            </div>
+        </main>
+    </div>
 </body>
 </html>

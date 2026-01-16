@@ -65,15 +65,32 @@ if ($action == 'update_password') {
         $reg_id = $u_row['registration_id'];
         
         if ($reg_id) {
+            // Handle Photo Upload
+            if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] == 0) {
+                $target_dir = "uploads/photos/";
+                if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
+                
+                $file_ext = strtolower(pathinfo($_FILES["profile_photo"]["name"], PATHINFO_EXTENSION));
+                $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+                
+                if (in_array($file_ext, $allowed)) {
+                    $new_filename = "doc_" . $user_id . "_" . time() . "." . $file_ext;
+                    $target_file = $target_dir . $new_filename;
+                    
+                    if (move_uploaded_file($_FILES["profile_photo"]["tmp_name"], $target_file)) {
+                        $p_stmt = $conn->prepare("UPDATE registrations SET profile_photo = ? WHERE registration_id = ?");
+                        $p_stmt->bind_param("si", $target_file, $reg_id);
+                        $p_stmt->execute();
+                    }
+                }
+            }
+
             $stmt = $conn->prepare("UPDATE registrations SET phone = ?, address = ? WHERE registration_id = ?");
             $stmt->bind_param("ssi", $phone, $address, $reg_id);
             $stmt->execute();
-            
-            // Also update doctors table if it exists and has these fields
-            // $conn->query("UPDATE doctors SET contact_number = '$phone' WHERE user_id = $user_id");
         }
         
-        echo "<script>alert('Profile updated successfully!'); window.location.href='doctor_settings.php';</script>";
+        echo "<script>alert('Personal Details updated successfully!'); window.location.href='doctor_settings.php';</script>";
         
     } elseif ($role == 'staff') {
         $u_res = $conn->query("SELECT registration_id FROM users WHERE user_id = $user_id");
@@ -86,6 +103,28 @@ if ($action == 'update_password') {
             $stmt->execute();
         }
         echo "<script>alert('Profile updated successfully!'); window.location.href='staff_settings.php';</script>";
+    }
+    exit();
+
+} elseif ($action == 'update_professional') {
+    if ($role != 'doctor') {
+        header("Location: login.php");
+        exit();
+    }
+
+    $spec = $_POST['specialization'];
+    $qual = $_POST['qualification'];
+    $exp = (int)$_POST['experience'];
+    $fee = (int)$_POST['consultation_fee'];
+    $bio = $_POST['bio'];
+
+    $stmt = $conn->prepare("UPDATE doctors SET specialization = ?, qualification = ?, experience = ?, consultation_fee = ?, bio = ? WHERE user_id = ?");
+    $stmt->bind_param("ssissi", $spec, $qual, $exp, $fee, $bio, $user_id);
+    
+    if ($stmt->execute()) {
+        echo "<script>alert('Professional Details updated successfully!'); window.location.href='doctor_settings.php';</script>";
+    } else {
+        echo "<script>alert('Error updating details: " . $conn->error . "'); window.location.href='doctor_settings.php';</script>";
     }
     exit();
 }

@@ -1,11 +1,14 @@
 <?php
+session_start();
 include 'includes/db_connect.php';
 
 $search_query = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
 $dept_filter = isset($_GET['dept']) ? mysqli_real_escape_string($conn, $_GET['dept']) : '';
 
+$is_logged_in = isset($_SESSION['user_id']);
+
 // Base Query
-$sql = "SELECT r.name, r.profile_photo, d.department, d.specialization, d.qualification, d.experience, u.user_id 
+$sql = "SELECT r.name, r.profile_photo, d.department, d.specialization, d.qualification, d.experience, d.bio, d.consultation_fee, u.user_id 
         FROM registrations r 
         JOIN users u ON r.registration_id = u.registration_id 
         LEFT JOIN doctors d ON u.user_id = d.user_id 
@@ -214,7 +217,23 @@ include 'includes/header.php';
                         <span><i class="fas fa-user-clock"></i> <?php echo htmlspecialchars($row['experience'] ?? '5+'); ?> Exp</span>
                         <span><i class="fas fa-check-circle"></i> Verified</span>
                     </div>
-                    <a href="login.php" class="btn-book-now">BOOK APPOINTMENT</a>
+                    <button class="btn-book-now" onclick='openProfile(<?php echo htmlspecialchars(json_encode([
+                        "id" => $row["user_id"],
+                        "name" => $row["name"],
+                        "dept" => $row["department"],
+                        "spec" => $row["specialization"],
+                        "qual" => $row["qualification"],
+                        "exp" => $row["experience"],
+                        "bio" => $row["bio"] ?? "No biography available.",
+                        "fee" => $row["consultation_fee"] ?? "500",
+                        "photo" => $row["profile_photo"]
+                    ], JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>)' style="background: transparent; border: 1px solid #0c2d6a; color: #0c2d6a; margin-right: 10px;">View Profile</button>
+                    
+                    <?php 
+                    $redirect_url = urlencode("appointment_form.php?doctor_id=" . $row['user_id']);
+                    $book_link = $is_logged_in ? "appointment_form.php?doctor_id=" . $row['user_id'] : "login.php?redirect=" . $redirect_url;
+                    ?>
+                    <a href="<?php echo $book_link; ?>" class="btn-book-now">Book Now</a>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
@@ -229,5 +248,88 @@ include 'includes/header.php';
 </div>
 
 <div style="margin-bottom: 100px;"></div>
+
+<!-- Profile Modal -->
+<div id="profileModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; width: 90%; max-width: 600px; border-radius: 20px; padding: 30px; position: relative; animation: slideIn 0.3s ease-out;">
+        <span onclick="closeProfile()" style="position: absolute; right: 20px; top: 20px; font-size: 24px; cursor: pointer; color: #999;">&times;</span>
+        
+        <div style="text-align: center; margin-bottom: 25px;">
+            <div id="modalPhoto" style="width: 120px; height: 120px; border-radius: 50%; overflow: hidden; margin: 0 auto 15px; border: 4px solid #f0f0f0;">
+                <img src="" style="width: 100%; height: 100%; object-fit: cover;">
+            </div>
+            <h2 id="modalName" style="color: #0c2d6a; margin-bottom: 5px;"></h2>
+            <p id="modalDept" style="color: #1e90ff; font-weight: 700; text-transform: uppercase; font-size: 13px;"></p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; text-align: center; background: #f8fafc; padding: 15px; border-radius: 12px;">
+            <div>
+                <small style="color: #64748b;">Qualification</small>
+                <div id="modalQual" style="font-weight: 600; color: #334155;"></div>
+            </div>
+            <div>
+                 <small style="color: #64748b;">Experience</small>
+                <div id="modalExp" style="font-weight: 600; color: #334155;"></div>
+            </div>
+            <div>
+                 <small style="color: #64748b;">Specialization</small>
+                <div id="modalSpec" style="font-weight: 600; color: #334155;"></div>
+            </div>
+             <div>
+                 <small style="color: #64748b;">Consultation Fee</small>
+                <div id="modalFee" style="font-weight: 600; color: #10b981;"></div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+            <h4 style="color: #334155; margin-bottom: 10px;">About Doctor</h4>
+            <p id="modalBio" style="color: #64748b; line-height: 1.6; font-size: 14px; background: #fff; padding: 15px; border: 1px solid #f1f5f9; border-radius: 10px;"></p>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="#" id="modalBookBtn" class="btn-book-now" style="width: 100%; display: block; text-align: center; padding: 15px;">Book Now</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    var isLoggedIn = <?php echo json_encode($is_logged_in); ?>;
+
+    function openProfile(data) {
+        document.getElementById('modalName').innerText = data.name;
+        document.getElementById('modalDept').innerText = data.dept;
+        document.getElementById('modalSpec').innerText = data.spec;
+        document.getElementById('modalQual').innerText = data.qual;
+        document.getElementById('modalExp').innerText = data.exp + " Years";
+        document.getElementById('modalFee').innerText = "₹" + data.fee;
+        document.getElementById('modalBio').innerText = data.bio;
+        
+        let photo = data.photo && data.photo != '' ? data.photo : 'assets/images/default_doctor.png';
+        document.getElementById('modalPhoto').innerHTML = '<img src="' + photo + '" style="width: 100%; height: 100%; object-fit: cover;">';
+        
+        let btn = document.getElementById('modalBookBtn');
+        if (btn) {
+            if (isLoggedIn) {
+                btn.href = "appointment_form.php?doctor_id=" + data.id;
+            } else {
+                let redirect = encodeURIComponent("appointment_form.php?doctor_id=" + data.id);
+                btn.href = "login.php?redirect=" + redirect;
+            }
+        }
+
+        document.getElementById('profileModal').style.display = 'flex';
+    }
+
+    function closeProfile() {
+        document.getElementById('profileModal').style.display = 'none';
+    }
+
+    // Close on outside click
+    window.onclick = function(event) {
+        if (event.target == document.getElementById('profileModal')) {
+            closeProfile();
+        }
+    }
+</script>
 
 <?php include 'includes/footer.php'; ?>

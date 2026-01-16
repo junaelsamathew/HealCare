@@ -647,10 +647,16 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
                     // 5. Clear Pending Session
                     unset($_SESSION['pending_signup']);
 
-                    // Redirect to login page as requested, informing them of their ID
+                    $alert_msg = "Account verified and created successfully!\\nYour Unique Patient ID is: $username\\nPlease login to continue.";
+                    $redirect_target = "login.php";
+                    
+                    if(isset($_SESSION['redirect_after_login'])) {
+                         $redirect_target .= "?redirect=" . urlencode($_SESSION['redirect_after_login']);
+                    }
+
                     echo "<script>
-                        alert('Account verified and created successfully!\\nYour Unique Patient ID is: $username\\nPlease login with your Email or ID to access your dashboard.'); 
-                        window.location.href='login.php';
+                        alert('$alert_msg'); 
+                        window.location.href='$redirect_target';
                     </script>";
                     exit();
                 } catch (Exception $e) {

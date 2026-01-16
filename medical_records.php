@@ -98,8 +98,52 @@ $username = $_SESSION['username'];
             </div>
 
             <div class="content-section" style="margin-top: 30px;">
-                <div class="section-head"><h3>Radiology / Scans</h3></div>
-                <div class="empty-state"><p>No scan reports available yet.</p></div>
+                <div class="section-head"><h3>Lab Reports & Results</h3></div>
+                
+                <?php
+                $lab_sql = "
+                    SELECT lt.*, r.name as doctor_name 
+                    FROM lab_tests lt
+                    LEFT JOIN users u ON lt.doctor_id = u.user_id
+                    LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                    WHERE lt.patient_id = $user_id AND lt.status = 'Completed'
+                    ORDER BY lt.updated_at DESC
+                ";
+                $lab_res = $conn->query($lab_sql);
+
+                if ($lab_res && $lab_res->num_rows > 0):
+                    while ($lab_row = $lab_res->fetch_assoc()):
+                        // Determine type icon
+                        $icon = 'fa-flask'; // generic
+                        if(strpos($lab_row['test_type'], 'X-Ray') !== false) $icon = 'fa-x-ray';
+                        elseif(strpos($lab_row['test_type'], 'Ultrasound') !== false) $icon = 'fa-wave-square';
+                ?>
+                <div class="record-card">
+                    <div style="display:flex; align-items:center;">
+                        <div style="width:40px; height:40px; background:rgba(59, 130, 246, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:var(--primary-blue);">
+                            <i class="fas <?php echo $icon; ?>"></i>
+                        </div>
+                        <div>
+                            <h4 style="margin-bottom: 5px;"><?php echo htmlspecialchars($lab_row['test_name']); ?></h4>
+                            <p style="color: var(--text-gray); font-size: 13px;">
+                                <span style="color: var(--primary-blue); font-weight:600;"><?php echo htmlspecialchars($lab_row['test_type']); ?></span> • 
+                                Dr. <?php echo htmlspecialchars($lab_row['doctor_name']); ?> • 
+                                <?php echo date('M d, Y', strtotime($lab_row['updated_at'])); ?>
+                            </p>
+                        </div>
+                    </div>
+                    <?php if(!empty($lab_row['report_path'])): ?>
+                        <a href="<?php echo htmlspecialchars($lab_row['report_path']); ?>" target="_blank" class="btn-download"><i class="fas fa-file-pdf"></i> View Report</a>
+                    <?php else: ?>
+                        <span style="color:#64748b; font-size:12px;">Processing...</span>
+                    <?php endif; ?>
+                </div>
+                <?php 
+                    endwhile;
+                else: 
+                ?>
+                    <div class="empty-state"><p>No lab reports available yet.</p></div>
+                <?php endif; ?>
             </div>
         </main>
     </div>

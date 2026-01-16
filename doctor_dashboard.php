@@ -495,10 +495,39 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                     <div class="content-section">
                         <div class="section-head"><h3>Reports to Review</h3></div>
                         <div style="display: flex; flex-direction: column; gap: 12px;">
-                            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                                <div><span style="font-size: 13px; font-weight: 600;">Rahul K. - CBC</span><br><span style="font-size: 11px; color: #ef4444;">Abnormal Findings</span></div>
-                                <a href="#" style="color: #4fc3f7;"><i class="fas fa-file-pdf"></i> View</a>
-                            </div>
+                            <?php
+                            $stmt_reports = $conn->prepare("
+                                SELECT l.labtest_id, l.test_name, l.result, l.report_path, r.name as patient_name 
+                                FROM lab_tests l 
+                                JOIN users u ON l.patient_id = u.user_id 
+                                JOIN registrations r ON u.registration_id = r.registration_id 
+                                WHERE l.doctor_id = ? AND l.status = 'Completed' 
+                                ORDER BY l.updated_at DESC LIMIT 5
+                            ");
+                            $stmt_reports->bind_param("i", $user_id);
+                            $stmt_reports->execute();
+                            $res_reports = $stmt_reports->get_result();
+
+                            if ($res_reports->num_rows > 0) {
+                                while ($rep = $res_reports->fetch_assoc()) {
+                                    $has_pdf = !empty($rep['report_path']);
+                                    $link = $has_pdf ? htmlspecialchars($rep['report_path']) : '#';
+                                    $target = $has_pdf ? 'target="_blank"' : '';
+                                    echo '
+                                    <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
+                                            <span style="font-size: 13px; font-weight: 600; display: block;">' . htmlspecialchars($rep['patient_name']) . '</span>
+                                            <span style="font-size: 11px; color: #94a3b8;">' . htmlspecialchars($rep['test_name']) . '</span>
+                                        </div>
+                                        <a href="' . $link . '" ' . $target . ' style="color: #4fc3f7; font-size: 12px; display: flex; align-items: center; gap: 5px; text-decoration: none;">
+                                            <i class="fas fa-file-pdf"></i> View
+                                        </a>
+                                    </div>';
+                                }
+                            } else {
+                                echo '<p style="font-size: 12px; color: #64748b; text-align: center;">No new reports.</p>';
+                            }
+                            ?>
                         </div>
                     </div>
                 </div>

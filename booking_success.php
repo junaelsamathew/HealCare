@@ -1,4 +1,5 @@
 <?php
+session_start();
 include 'includes/db_connect.php';
 // Support both POST (direct) and GET (redirect)
 $token = $_REQUEST['token'] ?? null;
@@ -31,7 +32,7 @@ if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
         
         $token = $appt_data['queue_number'] ?? $appt_data['token_no'] ?? '00';
         $doctor_name = $appt_data['doc_realname'] ?? $appt_data['doc_username'] ?? 'Doctor';
-        $date = $appt_data['appointment_date'];
+        $date = date('Y-m-d', strtotime($appt_data['appointment_date']));
         $time = date('h:i A', strtotime($appt_data['appointment_time'])); // Format time
         $patient_name = $appt_data['pat_realname'] ?? 'Valued Patient';
         $fee = $appt_data['consultation_fee'] ?? 200;
@@ -61,86 +62,178 @@ if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
     if(!$fee) $fee = 200;
 }
 
+$user_id = $_SESSION['user_id'] ?? 0;
+$username = $_SESSION['username'] ?? 'User';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Confirmed</title>
+    <title>Booking Confirmed - HealCare</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
     <style>
-        body { font-family: 'Poppins', sans-serif; background: #f0f4f8; text-align: center; padding: 50px; }
         .success-card {
-            background: white;
+            background: #0f172a;
             padding: 40px;
-            border-radius: 10px;
+            border-radius: 12px;
             max-width: 600px;
             margin: 0 auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            border-top: 5px solid #10b981;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            text-align: center;
         }
-        .success-icon { color: #10b981; font-size: 4rem; margin-bottom: 20px; }
+        .success-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+        .success-icon { 
+            color: #10b981; 
+            font-size: 3.5rem; 
+            margin-bottom: 20px; 
+            background: rgba(16, 185, 129, 0.1);
+            width: 80px; height: 80px;
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            border-radius: 50%;
+        }
+        h2 { color: white; margin-bottom: 10px; font-weight: 600; }
+        p { color: var(--text-gray); margin-bottom: 30px; }
+
         .details-grid {
             text-align: left;
             margin: 30px 0;
-            background: #f8fafc;
+            background: rgba(255,255,255,0.03);
             padding: 20px;
             border-radius: 8px;
+            border: 1px solid var(--border-color);
         }
-        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 0; 
+            border-bottom: 1px solid var(--border-color); 
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
         .row:last-child { border-bottom: none; }
+        .row strong { color: var(--text-gray); font-weight: 500; }
+        
         .btn-print {
-            background: #1e40af;
+            background: var(--primary-blue);
             color: white;
-            padding: 10px 30px;
+            padding: 12px 30px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
-            margin-top: 20px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: 0.3s;
         }
+        .btn-print:hover { background: #2563eb; }
+
+        .payment-box {
+            background: rgba(245, 158, 11, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+            margin-bottom: 25px;
+        }
+
         @media print {
-            body * { visibility: hidden; }
-            .success-card, .success-card * { visibility: visible; }
-            .success-card { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; }
-            .btn-print { display: none; }
+            body { background: white; color: black; }
+            .sidebar, .top-header, .secondary-header { display: none; }
+            .dashboard-layout { padding: 0; height: auto; }
+            .main-content { overflow: visible; }
+            .success-card { 
+                box-shadow: none; 
+                border: 1px solid #ddd; 
+                background: white; 
+                color: black;
+                width: 100%;
+                max-width: 100%;
+            }
+            .success-card::before { display: none; }
+            .details-grid { background: #fff; border: 1px solid #eee; color: black; }
+            .row { border-color: #eee; color: black; }
+            .row strong { color: #555; }
+            h2, p { color: black; }
+            .btn-print, .payment-box a { display: none; }
         }
     </style>
 </head>
 <body>
-    <div class="success-card">
-        <div class="success-icon">✓</div>
-        <h2>Appointment Booked Successfully!</h2>
-        <p>Your booking has been confirmed.</p>
-        
-        <div class="details-grid">
-            <div class="row"><strong>Booking ID:</strong> <span><?php echo $booking_id; ?></span></div>
-            <div class="row"><strong>Token Number:</strong> <span style="font-size:1.2rem; font-weight:bold; color:#f26522;"><?php echo $token; ?></span></div>
-            <div class="row"><strong>Doctor:</strong> <span><?php echo $doctor_name; ?></span></div>
-            <div class="row"><strong>Date:</strong> <span><?php echo $date; ?></span></div>
-            <div class="row"><strong>Time:</strong> <span><?php echo $time; ?></span></div>
-            <div class="row"><strong>Patient Name:</strong> <span><?php echo $patient_name; ?></span></div>
-            <div class="row"><strong>Consultation Fee:</strong> <span style="font-weight: bold; color: #0369a1;">₹<?php echo number_format($fee, 0); ?></span></div>
-            <?php if(isset($_GET['paid'])): ?>
-                <div class="row"><strong>Payment Status:</strong> <span style="color:#10b981; font-weight:bold;">PAID ✓</span></div>
-                <div class="row"><strong>Transaction ID:</strong> <span><?php echo $_GET['txn']; ?></span></div>
-            <?php else: ?>
-                <div class="row"><strong>Payment Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PENDING</span></div>
-            <?php endif; ?>
-        </div>
-
-        <?php if(!isset($_GET['paid']) && isset($_GET['bill_id'])): ?>
-            <div style="background: #fff9db; padding: 20px; border-radius: 8px; border: 1px dashed #fab005; margin-bottom: 25px;">
-                <p style="margin: 0 0 15px; color: #856404; font-weight: 500;">Please complete your payment of ₹<?php echo number_format($fee, 0); ?> to confirm your slot.</p>
-                <a href="payment_process.php?bill_id=<?php echo $_GET['bill_id']; ?>" class="btn-print" style="text-decoration: none; display: inline-block; background: #00aeef; color: white;">Proceed to Payment</a>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
             </div>
-        <?php else: ?>
-            <button class="btn-print" onclick="window.print()">Print Receipt</button>
-        <?php endif; ?>
-        
-        <br><br>
-        <a href="index.php" style="color: #666; text-decoration: none;">Return to Home</a>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+        <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <nav>
+                <a href="patient_dashboard.php" class="nav-link">Dashboard</a>
+                <a href="book_appointment.php" class="nav-link active">Book Appointment</a>
+                <a href="my_appointments.php" class="nav-link">My Appointments</a>
+                <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="display: flex; align-items: center; justify-content: center;">
+            <div class="success-card">
+                <div class="success-icon"><i class="fas fa-check"></i></div>
+                <h2>Appointment Confirmed!</h2>
+                <p>Your request has been successfully submitted.</p>
+                
+                <div class="details-grid">
+                    <div class="row"><strong>Booking ID:</strong> <span style="font-family:monospace;"><?php echo $booking_id; ?></span></div>
+                    <div class="row"><strong>Token Number:</strong> <span style="font-size:1.1rem; font-weight:700; color:#f59e0b;"><?php echo $token; ?></span></div>
+                    <div class="row"><strong>Doctor:</strong> <span><?php echo $doctor_name; ?></span></div>
+                    <div class="row"><strong>Date / Time:</strong> <span><?php echo date('M d, Y', strtotime($date)); ?> &bull; <?php echo $time; ?></span></div>
+                    <div class="row"><strong>Patient:</strong> <span><?php echo htmlspecialchars($patient_name); ?></span></div>
+                    <div class="row"><strong>Fee:</strong> <span>₹<?php echo number_format($fee, 0); ?></span></div>
+                    <?php if(isset($_GET['paid'])): ?>
+                        <div class="row"><strong>Status:</strong> <span style="color:#10b981; font-weight:bold;">PAID</span></div>
+                    <?php else: ?>
+                        <div class="row"><strong>Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PENDING</span></div>
+                    <?php endif; ?>
+                </div>
+
+                <?php if(!isset($_GET['paid']) && isset($_GET['bill_id'])): ?>
+                    <div class="payment-box">
+                        <p style="margin: 0 0 15px; color: #f59e0b; font-weight: 500; font-size:0.95rem;">Please complete your payment to finalize the slot.</p>
+                        <a href="payment_process.php?bill_id=<?php echo $_GET['bill_id']; ?>" class="btn-print">Proceed to Payment</a>
+                    </div>
+                <?php else: ?>
+                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Details</button>
+                    <div style="margin-top: 20px;">
+                        <a href="my_appointments.php" style="color: var(--text-gray); font-size: 0.9rem;">View My Appointments</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </main>
     </div>
 </body>
 </html>

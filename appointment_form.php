@@ -2,6 +2,19 @@
 session_start();
 include 'includes/db_connect.php';
 
+// Check auth
+if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
+    $redirect = urlencode(basename($_SERVER['PHP_SELF']));
+    if (!empty($_SERVER['QUERY_STRING'])) {
+        $redirect .= urlencode('?' . $_SERVER['QUERY_STRING']);
+    }
+    header("Location: login.php?redirect=$redirect");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$username = $_SESSION['username'];
+
 // Mock Doctors Data (Consistent with other pages)
 // Fetch Doctors from DB
 $doctors = [];
@@ -49,10 +62,9 @@ $token_number = rand(10, 50);
 
 // Fetch Logged-in User Data
 $user_data = [];
-$is_logged_in = false;
+$is_logged_in = true; // Always true here
 if(isset($_SESSION['user_id'])) {
     $uid = $_SESSION['user_id'];
-    $is_logged_in = true;
     // Fetch patient code and details
     $q = $conn->query("SELECT p.patient_code, r.phone, r.email, r.name 
                        FROM users u 
@@ -69,363 +81,340 @@ if(isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Make Appointment - HealCare</title>
-    <!-- Fonts & Icons -->
+    <title>Booking Details - HealCare</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+    <link rel="stylesheet" href="styles/dashboard.css">
     <style>
-        :root {
-            --primary-orange: #f26522;
-            --primary-cyan: #00aeef;
-            --bg-light: #f0f8ff;
-            --text-dark: #333;
-        }
-        
-        body { margin: 0; font-family: 'Poppins', sans-serif; background: #f9f9f9; }
-        
-        header { background: #fff; padding: 15px 0; border-bottom: 1px solid #eee; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
-
-        /* Token Alert */
+        /* Specific Styles for Form Elements matching Dashboard Theme */
         .token-alert {
-            background: #fff3cd;
-            border: 1px solid #ffeeba;
-            color: #856404;
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
             padding: 15px;
             border-radius: 8px;
-            margin: 20px auto;
-            max-width: 1000px;
+            margin: 20px 0;
             text-align: center;
-            font-size: 1.1rem;
-            display: none; /* Shown after slot selection */
+            font-size: 1rem;
+            display: none;
         }
-        .token-number { font-size: 1.5rem; font-weight: 700; color: #2c3e50; }
+        .token-number { font-size: 1.4rem; font-weight: 700; color: #fff; }
 
         .booking-wrapper {
-            background: #fff;
-            max-width: 1000px;
-            margin: 20px auto 50px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
             padding: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            border-radius: 8px;
+            border-radius: 12px;
         }
 
-        /* Top Filters */
         .top-filters {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
-            background: #f8f9fa;
+            background: rgba(0,0,0,0.2);
             padding: 20px;
             border-radius: 8px;
         }
-        .filter-group label { display: block; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; color: #555; }
+        .filter-group label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--text-gray); }
         .filter-control {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 0.95rem;
-            background: #fff;
+            border: 1px solid var(--border-color);
+            background: #0f172a;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.9rem;
         }
+        .filter-control:focus { outline: none; border-color: var(--primary-blue); }
 
-        /* Doctor Display */
         .doctor-display {
             display: flex;
             gap: 20px;
-            background: #fff;
-            border: 1px solid #eee;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 25px;
+            flex-wrap: wrap;
         }
-        .doc-profile-left { display: flex; align-items: center; gap: 20px; flex: 0 0 350px; }
-        .doc-img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; }
-        .doc-details h3 { margin: 0 0 5px; color: #2c3e50; font-size: 1.2rem; }
-        .doc-qual { color: #666; font-size: 0.9rem; margin-bottom: 5px; }
+        .doc-profile-left { display: flex; align-items: center; gap: 20px; flex: 1; min-width: 300px; }
+        .doc-img { width: 80px; height: 80px; object-fit: cover; border-radius: 12px; }
+        .doc-details h3 { margin: 0 0 5px; color: white; font-size: 1.1rem; }
+        .doc-qual { color: var(--text-gray); font-size: 0.85rem; margin-bottom: 5px; }
 
-        /* Consulting Table */
-        .consult-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .consult-table th { background: #f8f9fa; border: 1px solid #eee; padding: 8px; font-weight: 600; text-align: center; }
-        .consult-table td { border: 1px solid #eee; padding: 8px; text-align: center; color: #555; }
+        .consult-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-top: 10px; }
+        .consult-table th { background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 8px; font-weight: 600; text-align: center; color: var(--text-gray); }
+        .consult-table td { border: 1px solid var(--border-color); padding: 8px; text-align: center; color: white; }
 
-        /* Time Slots */
         .btn-time-slot {
-            background: var(--primary-orange);
+            background: var(--primary-blue);
             color: white;
             padding: 10px 25px;
             border: none;
-            border-radius: 20px;
+            border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
             margin-top: 20px;
+            display: block;
+            width: 100%;
+            max-width: 200px;
+            transition: 0.3s;
         }
-        .time-slots-panel { display: none; margin-top: 20px; padding: 20px; background: #fffbf8; border: 1px solid #ffeocb; border-radius: 8px; }
-        .session-title { font-weight: 600; color: #555; margin-bottom: 10px; display: block; font-size: 0.9rem; margin-top: 10px;}
+        .btn-time-slot:hover { background: #2563eb; }
+
+        .time-slots-panel { display: none; margin-top: 20px; padding: 20px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color); border-radius: 8px; }
+        .session-title { font-weight: 600; color: var(--text-gray); margin: 15px 0 10px; display: block; font-size: 0.9rem; }
+        
         .slot-chip {
             display: inline-block;
             padding: 8px 15px;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
             margin: 5px;
             cursor: pointer;
+            color: var(--text-light);
+            transition: 0.3s;
+            font-size: 0.85rem;
         }
-        .slot-chip.selected { background: var(--primary-orange); color: white; border-color: var(--primary-orange); }
+        .slot-chip:hover { border-color: var(--primary-blue); }
+        .slot-chip.selected { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
 
-        /* Patient Form */
-        .reg-toggle { margin-bottom: 25px; }
-        .reg-toggle label { margin-right: 20px; font-weight: 500; cursor: pointer; }
-        .reg-form-container { background: #e6f7ff; padding: 30px; border-radius: 10px; margin-top: 20px;}
-        .info-text { color: #00aeef; font-weight: 500; margin-bottom: 20px; }
-        
+        .reg-form-container { background: rgba(0,0,0,0.2); padding: 30px; border-radius: 12px; margin-top: 20px; border: 1px solid var(--border-color); }
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .form-control-input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; }
+        
+        .form-control-input { 
+            width: 100%; padding: 10px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            background: #0f172a; 
+            color: white; 
+        }
+        
+        .btn-continue {
+            background: #10b981;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            transition: 0.3s;
+        }
+        .btn-continue:hover { background: #059669; }
 
-        /* Captcha */
         .captcha-box {
-            background: white;
+            background: rgba(255,255,255,0.05);
             padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
             display: inline-block;
             margin-top: 20px;
         }
         .captcha-img {
-            font-family: 'Courier New', monospace;
+            font-family: monospace;
             font-weight: bold;
-            font-size: 1.5rem;
-            letter-spacing: 5px;
-            background: #eee;
-            padding: 10px 20px;
+            font-size: 1.2rem;
+            letter-spacing: 3px;
+            background: #fff;
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 4px;
             margin-right: 15px;
             text-decoration: line-through;
         }
-        
-        .btn-continue {
-            background: var(--primary-orange);
-            color: white;
-            padding: 15px 40px;
-            border: none;
-            border-radius: 30px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 30px;
-            box-shadow: 0 4px 10px rgba(242, 101, 34, 0.3);
-        }
 
         .hidden { display: none; }
-        .required { color: red; }
+        .required { color: #ef4444; }
     </style>
 </head>
 <body>
-
-    <header>
-        <div class="container" style="display:flex; justify-content:space-between; align-items:center;">
-            <a href="index.php" style="font-size:1.5rem; font-weight:800; color:#1e40af; text-decoration:none;">HEALCARE</a>
-            <a href="book_appointment.php" style="color:#666; text-decoration:none;"><i class="fas fa-times"></i> Cancel</a>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
         </div>
     </header>
 
-    <div id="tokenMsg" class="token-alert">
-        Your token number is <span class="token-number"><?php echo $token_number; ?></span><br>
-        Please fill in the details below to complete the booking.
-    </div>
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+        <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
+    </header>
 
-    <div class="booking-wrapper">
-        <form action="process_booking.php" method="POST" onsubmit="return validateCaptcha()">
-            <input type="hidden" name="token" value="<?php echo $token_number; ?>">
-            <input type="hidden" name="doctor_name" value="<?php echo $selected_doc ? htmlspecialchars($selected_doc['name']) : ''; ?>">
-            
-            <!-- Filters -->
-            <div class="top-filters">
-                <div class="filter-group">
-                    <label>Department</label>
-                    <select class="filter-control" name="dept" onchange="window.location.href='?dept='+this.value">
-                            <option value="">Select Department</option>
-                            <option value="General Medicine / Cardiovascular" <?php if($pre_dept == 'General Medicine / Cardiovascular') echo 'selected'; ?>>General Medicine / Cardiovascular</option>
-                            <option value="Gynecology" <?php if($pre_dept == 'Gynecology') echo 'selected'; ?>>Gynecology</option>
-                            <option value="Orthopedics (Bones)" <?php if($pre_dept == 'Orthopedics (Bones)') echo 'selected'; ?>>Orthopedics (Bones)</option>
-                            <option value="ENT" <?php if($pre_dept == 'ENT') echo 'selected'; ?>>ENT</option>
-                            <option value="Ophthalmology" <?php if($pre_dept == 'Ophthalmology') echo 'selected'; ?>>Ophthalmology</option>
-                            <option value="Dermatology" <?php if($pre_dept == 'Dermatology') echo 'selected'; ?>>Dermatology</option>
-                            <option value="Pediatrics" <?php if($pre_dept == 'Pediatrics') echo 'selected'; ?>>Pediatrics</option>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Doctor</label>
-                    <select class="filter-control" name="doctor_id" onchange="window.location.href='?doctor_id='+this.value+'&dept=<?php echo urlencode($dept_filter); ?>'">
-                        <option value="">Select Doctor</option>
-                        <?php if (!empty($doctors)): ?>
-                            <?php foreach($doctors as $d): ?>
-                                <option value="<?php echo $d['id']; ?>" <?php echo ($pre_doc_id == $d['id']) ? 'selected' : ''; ?>>
-                                    <?php echo $d['name']; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <option value="" disabled>No doctors found in this department</option>
-                        <?php endif; ?>
-                    </select>
-                </div>
-                <div class="filter-group">
-                    <label>Date</label>
-                    <input type="date" name="date" class="filter-control" value="<?php echo date('Y-m-d'); ?>" min="<?php echo date('Y-m-d'); ?>">
-                </div>
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <nav>
+                <a href="patient_dashboard.php" class="nav-link">Dashboard</a>
+                <a href="book_appointment.php" class="nav-link active">Book Appointment</a>
+                <a href="my_appointments.php" class="nav-link">My Appointments</a>
+                <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <div class="dashboard-header">
+                <h1>Appointment Form</h1>
+                <p>Select a doctor and schedule your visit</p>
             </div>
 
-            <?php if($selected_doc): ?>
-            <!-- Doctor Info -->
-            <div class="doctor-display">
-                <div class="doc-profile-left">
-                    <img src="<?php echo $selected_doc['img']; ?>" class="doc-img" onerror="this.src='images/doctor-1.jpg'">
-                    <div class="doc-details">
-                        <h3><?php echo $selected_doc['name']; ?></h3>
-                        <div class="doc-qual"><?php echo $selected_doc['qual']; ?></div>
-                        <div style="color:var(--primary-cyan); font-weight:600; text-transform:uppercase; margin-bottom: 5px;"><?php echo $selected_doc['dept']; ?></div>
-                        <div style="background: #e0f2fe; color: #0369a1; padding: 5px 12px; border-radius: 15px; display: inline-block; font-size: 0.9rem; font-weight: 700;">
-                            <i class="fas fa-money-bill-wave" style="margin-right: 5px;"></i> Consultation Fee: ₹<?php echo number_format($selected_doc['consultation_fee'], 0); ?>
-                        </div>
-                    </div>
-                </div>
-                <div style="flex:1;">
-                    <div style="font-weight:600; margin-bottom:10px; font-size:1rem; color:#2c3e50;">Consulting Days</div>
-                    <table class="consult-table">
-                        <thead>
-                            <tr>
-                                <th>MONDAY</th>
-                                <th>TUESDAY</th>
-                                <th>WEDNESDAY</th>
-                                <th>THURSDAY</th>
-                                <th>FRIDAY</th>
-                                <th>SATURDAY</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>10:00 TO 12:30</td>
-                                <td>10:00 TO 12:30</td>
-                                <td>10:00 TO 12:30</td>
-                                <td>10:00 TO 12:30</td>
-                                <td>10:00 TO 12:30</td>
-                                <td>16:00 TO 17:00</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div id="tokenMsg" class="token-alert">
+                <i class="fas fa-ticket-alt"></i> Your token number is <span class="token-number"><?php echo $token_number; ?></span><br>
+                Please fill in the details below to complete the booking.
             </div>
 
-            <button type="button" class="btn-time-slot" onclick="toggleSlots()">Select Time Slot</button>
-
-            <div class="time-slots-panel" id="slotsPanel">
-                <span class="session-title"><i class="fas fa-sun" style="color:#ffa500;"></i> Morning Session</span>
-                <div class="slots-container">
-                    <div class="slot-chip" onclick="selectSlot(this)">09:00 AM</div>
-                    <div class="slot-chip" onclick="selectSlot(this)">09:30 AM</div>
-                    <div class="slot-chip" onclick="selectSlot(this)">10:00 AM</div>
-                    <div class="slot-chip" onclick="selectSlot(this)">10:30 AM</div>
-                    <div class="slot-chip" onclick="selectSlot(this)">11:00 AM</div>
-                </div>
-                
-                <span class="session-title"><i class="fas fa-moon" style="color:#6d28d9;"></i> Evening Session</span>
-                <div class="slots-container">
-                    <div class="slot-chip" onclick="selectSlot(this)">04:00 PM</div>
-                    <div class="slot-chip" onclick="selectSlot(this)">04:30 PM</div>
-                    <div class="slot-chip" onclick="selectSlot(this)">05:00 PM</div>
-                    <div class="slot-chip" onclick="selectSlot(this)">05:30 PM</div>
-                </div>
-                <input type="hidden" name="time_slot" id="selectedTimeSlot" required>
-            </div>
-
-            <!-- Patient Details Area (Hidden until slot selected) -->
-            <div id="patientDetailsArea" style="display:none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin: 40px 0 20px;">
-                    <h3 style="margin: 0; color: #2c3e50;">Patient Details</h3>
-                    <button type="button" onclick="autofillDemo()" style="background:#f0f7ff; border:1px solid #00aeef; color:#00aeef; padding:8px 15px; border-radius:20px; font-size:0.85rem; font-weight:600; cursor:pointer; transition: all 0.3s;">
-                        <i class="fas fa-magic" style="margin-right: 5px;"></i> Autofill for Demo
-                    </button>
-                </div>
-
-                <div class="reg-toggle" <?php if($is_logged_in) echo 'style="display:none;"'; ?>>
-                    <label>Already registered patient<span class="required">*</span></label>
-                    <input type="radio" name="reg_status" value="yes" id="reg_yes" onchange="toggleRegForm()" checked>
-                    <label for="reg_yes">Yes</label>
-                    <input type="radio" name="reg_status" value="no" id="reg_no" onchange="toggleRegForm()">
-                    <label for="reg_no">No</label>
-                </div>
-
-                <div class="reg-form-container">
-                    <!-- Registered -->
-                    <div id="form-registered">
-                        <div class="info-text">
-                            <?php if($is_logged_in): ?>
-                                <b>Welcome back, <?php echo htmlspecialchars($user_data['name'] ?? 'Patient'); ?>!</b><br>
-                                Your details have been auto-filled.
-                            <?php else: ?>
-                                Enter your Registered Mobile Number. OP Number is optional.
-                            <?php endif; ?>
-                        </div>
-                        <div class="form-grid">
-                            <div>
-                                <label>OP Number (Optional)</label>
-                                <input type="text" name="op_number" class="form-control-input" value="<?php echo $user_data['patient_code'] ?? ''; ?>" <?php if($is_logged_in) echo 'readonly style="background:#f0f0f0;"'; ?>>
-                            </div>
-                            <div>
-                                <label>Mobile Number <span class="required">*</span></label>
-                                <input type="tel" name="reg_mobile" class="form-control-input" value="<?php echo $user_data['phone'] ?? ''; ?>" <?php if($is_logged_in) echo 'readonly style="background:#f0f0f0;"'; ?>>
-                            </div>
-                        </div>
-                        <div>
-                            <label>Email</label>
-                            <input type="email" name="reg_email" class="form-control-input" value="<?php echo $user_data['email'] ?? ''; ?>" <?php if($is_logged_in) echo 'readonly style="background:#f0f0f0;"'; ?>>
-                        </div>
-                    </div>
-
-                    <!-- New -->
-                    <div id="form-new" class="hidden">
-                        <div class="form-grid">
-                            <div><label>First Name <span class="required">*</span></label><input type="text" name="first_name" class="form-control-input"></div>
-                            <div><label>Last Name <span class="required">*</span></label><input type="text" name="last_name" class="form-control-input"></div>
-                        </div>
-                        <div class="form-grid">
-                            <div><label>Email Address <span class="required">*</span></label><input type="email" name="email" class="form-control-input"></div>
-                            <div><label>Phone Number <span class="required">*</span></label><input type="tel" name="phone" class="form-control-input"></div>
-                        </div>
-                        <div class="form-grid">
-                            <div><label>Address <span class="required">*</span></label><input type="text" name="address" class="form-control-input"></div>
-                            <div><label>Locality</label><input type="text" name="locality" class="form-control-input"></div>
-                        </div>
-                        <div class="form-grid">
-                            <div>
-                                <label>Gender <span class="required">*</span></label><br>
-                                <input type="radio" name="gender" value="Male"> Male
-                                <input type="radio" name="gender" value="Female"> Female
-                            </div>
-                            <div><label>Age <span class="required">*</span></label><input type="number" name="age" class="form-control-input"></div>
-                        </div>
-                    </div>
+            <div class="booking-wrapper">
+                <form action="process_booking.php" method="POST" onsubmit="return validateCaptcha()">
+                    <input type="hidden" name="token" value="<?php echo $token_number; ?>">
+                    <input type="hidden" name="doctor_name" value="<?php echo $selected_doc ? htmlspecialchars($selected_doc['name']) : ''; ?>">
                     
-                    <!-- Captcha -->
-                    <div class="captcha-box">
-                        <label style="display:block; margin-bottom:5px;">Security Check <span class="required">*</span></label>
-                        <span class="captcha-img">5692</span>
-                        <input type="text" id="captchaInput" placeholder="Enter code" style="padding:10px; width:100px; border:1px solid #ccc; border-radius:4px;">
-                        <small style="display:block; color:#666; margin-top:5px;">Please enter the numeric code above.</small>
+                    <!-- Filters -->
+                    <div class="top-filters">
+                        <div class="filter-group">
+                            <label>Department</label>
+                            <select class="filter-control" name="dept" onchange="window.location.href='?dept='+this.value">
+                                    <option value="">Select Department</option>
+                                    <option value="General Medicine / Cardiovascular" <?php if($pre_dept == 'General Medicine / Cardiovascular') echo 'selected'; ?>>General Medicine / Cardiovascular</option>
+                                    <option value="Gynecology" <?php if($pre_dept == 'Gynecology') echo 'selected'; ?>>Gynecology</option>
+                                    <option value="Orthopedics (Bones)" <?php if($pre_dept == 'Orthopedics (Bones)') echo 'selected'; ?>>Orthopedics (Bones)</option>
+                                    <option value="ENT" <?php if($pre_dept == 'ENT') echo 'selected'; ?>>ENT</option>
+                                    <option value="Ophthalmology" <?php if($pre_dept == 'Ophthalmology') echo 'selected'; ?>>Ophthalmology</option>
+                                    <option value="Dermatology" <?php if($pre_dept == 'Dermatology') echo 'selected'; ?>>Dermatology</option>
+                                    <option value="Pediatrics" <?php if($pre_dept == 'Pediatrics') echo 'selected'; ?>>Pediatrics</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Doctor</label>
+                            <select class="filter-control" name="doctor_id" onchange="window.location.href='?doctor_id='+this.value+'&dept=<?php echo urlencode($dept_filter); ?>'">
+                                <option value="">Select Doctor</option>
+                                <?php if (!empty($doctors)): ?>
+                                    <?php foreach($doctors as $d): ?>
+                                        <option value="<?php echo $d['id']; ?>" <?php echo ($pre_doc_id == $d['id']) ? 'selected' : ''; ?>>
+                                            <?php echo $d['name']; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <option value="" disabled>No doctors for this department</option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label>Date</label>
+                            <input type="date" name="date" class="filter-control" value="<?php echo date('Y-m-d'); ?>" min="<?php echo date('Y-m-d'); ?>">
+                        </div>
                     </div>
 
-                    <div style="margin-top:20px;">
-                        <input type="checkbox" required id="terms"> <label for="terms">I agree to the Terms and Conditions.</label>
+                    <?php if($selected_doc): ?>
+                    <!-- Doctor Info -->
+                    <div class="doctor-display">
+                        <div class="doc-profile-left">
+                            <img src="<?php echo $selected_doc['img']; ?>" class="doc-img" onerror="this.src='images/doctor-1.jpg'">
+                            <div class="doc-details">
+                                <h3><?php echo $selected_doc['name']; ?></h3>
+                                <div class="doc-qual"><?php echo $selected_doc['qual']; ?></div>
+                                <div style="color:var(--primary-blue); font-weight:600; text-transform:uppercase; margin-bottom: 5px;"><?php echo $selected_doc['dept']; ?></div>
+                                <div style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); padding: 5px 12px; border-radius: 15px; display: inline-block; font-size: 0.85rem; font-weight: 700;">
+                                    Fee: ₹<?php echo number_format($selected_doc['consultation_fee'], 0); ?>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:600; margin-bottom:10px; font-size:0.9rem; color:white;">Consulting Days</div>
+                            <table class="consult-table">
+                                <thead>
+                                    <tr>
+                                        <th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>16 - 17</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <button type="submit" class="btn-continue">Continue</button>
-                </div>
+                    <button type="button" class="btn-time-slot" onclick="toggleSlots()">Select Time Slot</button>
+
+                    <div class="time-slots-panel" id="slotsPanel">
+                        <span class="session-title"><i class="fas fa-sun" style="color:#f59e0b;"></i> Morning Session</span>
+                        <div class="slots-container">
+                            <div class="slot-chip" onclick="selectSlot(this)">09:00 AM</div>
+                            <div class="slot-chip" onclick="selectSlot(this)">09:30 AM</div>
+                            <div class="slot-chip" onclick="selectSlot(this)">10:00 AM</div>
+                            <div class="slot-chip" onclick="selectSlot(this)">10:30 AM</div>
+                            <div class="slot-chip" onclick="selectSlot(this)">11:00 AM</div>
+                        </div>
+                        
+                        <span class="session-title"><i class="fas fa-moon" style="color:#8b5cf6;"></i> Evening Session</span>
+                        <div class="slots-container">
+                            <div class="slot-chip" onclick="selectSlot(this)">04:00 PM</div>
+                            <div class="slot-chip" onclick="selectSlot(this)">04:30 PM</div>
+                            <div class="slot-chip" onclick="selectSlot(this)">05:00 PM</div>
+                            <div class="slot-chip" onclick="selectSlot(this)">05:30 PM</div>
+                        </div>
+                        <input type="hidden" name="time_slot" id="selectedTimeSlot" required>
+                    </div>
+
+                    <!-- Patient Details Area -->
+                    <div id="patientDetailsArea" style="display:none;">
+                        <input type="hidden" name="reg_status" value="yes" id="reg_yes">
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin: 40px 0 20px;">
+                            <h3 style="margin: 0; color: white; font-size: 1.2rem;">Patient Details</h3>
+                        </div>
+
+                        <div class="reg-form-container">
+                            <div class="info-text" style="color:var(--primary-blue); margin-bottom:15px;">
+                                <i class="fas fa-user-check"></i> <b>Verified Patient: <?php echo htmlspecialchars($user_data['name'] ?? ''); ?></b>
+                            </div>
+                            
+                            <div class="form-grid">
+                                <div>
+                                    <label>OP Number (Verified)</label>
+                                    <input type="text" name="op_number" class="form-control-input" value="<?php echo $user_data['patient_code'] ?? ''; ?>" readonly style="opacity:0.6;">
+                                </div>
+                                <div>
+                                    <label>Mobile Number (Verified)</label>
+                                    <input type="tel" name="reg_mobile" class="form-control-input" value="<?php echo $user_data['phone'] ?? ''; ?>" readonly style="opacity:0.6;">
+                                </div>
+                            </div>
+                            <div>
+                                <label>Email (Verified)</label>
+                                <input type="email" name="reg_email" class="form-control-input" value="<?php echo $user_data['email'] ?? ''; ?>" readonly style="opacity:0.6;">
+                            </div>
+                            
+                            <!-- Captcha -->
+                            <div class="captcha-box">
+                                <label style="display:block; margin-bottom:5px; color:var(--text-gray); font-size:0.85rem;">Security Check <span class="required">*</span></label>
+                                <span class="captcha-img">5692</span>
+                                <input type="text" id="captchaInput" placeholder="Code" style="padding:10px; width:100px; border:1px solid var(--border-color); background:#0f172a; color:white; border-radius:4px;">
+                            </div>
+
+                            <div style="margin-top:20px; color:var(--text-gray); font-size:0.9rem;">
+                                <input type="checkbox" required id="terms" checked> <label for="terms">I agree to the Hospital Terms & Conditions.</label>
+                            </div>
+
+                            <button type="submit" class="btn-continue">Confirm Booking</button>
+                        </div>
+                    </div>
+                    <?php else: ?>
+                        <div style="text-align:center; padding:50px; color:var(--text-gray); font-style:italic;">Please select a doctor to proceed with booking.</div>
+                    <?php endif; ?>
+                </form>
             </div>
-            <?php else: ?>
-                <div style="text-align:center; padding:50px; color:#aaa;">Please select a doctor to proceed.</div>
-            <?php endif; ?>
-        </form>
+        </main>
     </div>
 
     <script>
@@ -433,9 +422,18 @@ if(isset($_SESSION['user_id'])) {
             document.getElementById('slotsPanel').style.display = 'block';
         }
         function selectSlot(el) {
-            document.querySelectorAll('.slot-chip').forEach(c => c.classList.remove('selected'));
+            let slots = document.querySelectorAll('.slot-chip');
+            slots.forEach(c => c.classList.remove('selected'));
             el.classList.add('selected');
             document.getElementById('selectedTimeSlot').value = el.innerText;
+            
+            // Generate a random token number to satisfy non-chronological requirement
+            // Range 10 to 150 to simulate a busy queue
+            let token = Math.floor(Math.random() * 140) + 10;
+
+            // Update UI
+            document.querySelector('.token-number').innerText = token;
+            document.querySelector('input[name="token"]').value = token;
             
             // Show Token and Details
             document.getElementById('tokenMsg').style.display = 'block';
@@ -444,55 +442,6 @@ if(isset($_SESSION['user_id'])) {
             // Smooth Scroll
             document.getElementById('tokenMsg').scrollIntoView({behavior: 'smooth'});
         }
-        function toggleRegForm() {
-            if(document.getElementById('reg_yes').checked) {
-                document.getElementById('form-registered').classList.remove('hidden');
-                document.getElementById('form-new').classList.add('hidden');
-            } else {
-                document.getElementById('form-registered').classList.add('hidden');
-                document.getElementById('form-new').classList.remove('hidden');
-            }
-        }
-        function autofillDemo() {
-            // Switch to 'No' (New Patient)
-            document.getElementById('reg_no').click();
-            
-            // Fill Fields
-            const data = {
-                'first_name': 'John',
-                'last_name': 'Doe',
-                'email': 'john.doe@example.com',
-                'phone': '9876543210',
-                'address': '123 Health Ave',
-                'locality': 'HealCare Heights',
-                'age': '30',
-                'captchaInput': '5692'
-            };
-            
-            for (let name in data) {
-                let el = document.getElementsByName(name)[0] || document.getElementById(name);
-                if (el) el.value = data[name];
-            }
-            
-            // Gender & Terms
-            document.querySelector('input[name="gender"][value="Male"]').checked = true;
-            document.getElementById('terms').checked = true;
-            
-            // Visual feedback
-            const btn = event.currentTarget;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i> Filled!';
-            btn.style.background = '#e6fffa';
-            btn.style.borderColor = '#38b2ac';
-            btn.style.color = '#38b2ac';
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.style.background = '#f0f7ff';
-                btn.style.borderColor = '#00aeef';
-                btn.style.color = '#00aeef';
-            }, 2000);
-        }
-
         function validateCaptcha() {
             var val = document.getElementById('captchaInput').value;
             if(val !== '5692') {
