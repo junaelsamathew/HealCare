@@ -15,399 +15,506 @@ if (isset($_GET['redirect'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <!-- Styles -->
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/login.css">
     <style>
-        /* Specific overrides for the Login layout from the image */
-        .login-visual {
-            flex: 1.2;
-            position: relative;
-            padding: 80px;
+        :root {
+            --primary-blue: #3b82f6;
+            --navy-dark: #0f172a; /* Dark blue/navy */
+            --text-light: #f8fafc;
+            --error-red: #ef4444;
+            --input-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar Header */
+        .login-header {
+            height: 80px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .logo-main {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--navy-dark);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-info-group {
+            display: flex;
+            gap: 40px;
+        }
+
+        .header-info-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-icon-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--navy-dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            background: #fff;
-            border-right: 4px solid #3b82f6; /* Blue divider line */
+            color: var(--navy-dark);
         }
-        .login-visual .visual-bg {
+
+        .info-details {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .info-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--navy-dark);
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            font-size: 12px;
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* Main Split Layout */
+        .login-container {
+            flex: 1;
+            display: flex;
+            width: 100%;
+        }
+
+        /* Left Section (50%) */
+        .left-section {
+            flex: 1;
+            position: relative;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px;
+            overflow: hidden;
+        }
+
+        .bg-image {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('images/bgimg.jpg');
+            background-image: url('images/bgimg.jpg'); /* Fallback image */
             background-size: cover;
             background-position: center;
-            filter: blur(5px);
-            opacity: 0.4;
-            z-index: 1;
+            filter: blur(8px);
+            opacity: 0.6;
+            z-index: 0;
         }
-        .login-visual .visual-content {
+
+        .left-content {
             position: relative;
             z-index: 2;
-            text-align: left;
-            max-width: 550px;
+            max-width: 500px;
         }
-        .message-group {
-            display: none;
-        }
-        .message-group.active {
-            display: block !important;
-        }
-        .login-visual h1 {
-            font-size: 5rem;
+
+        .left-content h1 {
+            font-size: 4rem;
             font-weight: 800;
-            color: #0a192f;
+            color: var(--navy-dark);
             margin-bottom: 10px;
+            line-height: 1.1;
         }
-        .login-visual h2 {
+
+        .left-content h2 {
             font-size: 2.5rem;
             font-weight: 700;
-            color: #0a192f;
+            color: var(--navy-dark);
             margin-bottom: 20px;
-            display: block !important; /* Ensure visibility */
-        }
-        .login-visual p {
-            font-size: 1.35rem;
-            font-weight: 600;
-            line-height: 1.4;
-            color: #000;
         }
 
-        .login-form-area {
-            flex: 0.8;
-            background-color: #051631; /* Darker navy from image */
+        .left-content p {
+            font-size: 1.1rem;
+            color: #334155;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        /* Right Section (50%) */
+        .right-section {
+            flex: 1;
+            background: var(--navy-dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 60px;
+            position: relative;
         }
-        .form-container {
+
+        .login-card {
             width: 100%;
-            max-width: 480px;
+            max-width: 420px;
+            padding: 20px;
             text-align: center;
-        }
-        .auth-form h3 {
-            font-size: 3.5rem;
-            margin-bottom: 10px;
-            font-weight: 800;
             color: #fff;
         }
-        .auth-form .subtitle {
-            text-align: center;
-            opacity: 0.9;
-            margin-bottom: 40px;
-            font-size: 1rem;
-            color: #fff;
-        }
-        .auth-form .subtitle span {
+
+        .login-card h3 {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
             font-weight: 700;
         }
 
-        .input-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            gap: 20px;
-        }
-        .input-row label {
-            flex: 0.4;
-            font-size: 1.2rem;
-            font-weight: 500;
-            color: #fff;
-            text-align: right;
-        }
-        .input-light {
-            flex: 0.6;
-            padding: 12px 15px;
-            border-radius: 4px;
-            border: none;
-            font-size: 1rem;
-            background: #fff;
-            color: #000;
-        }
-
-        .btn-submit-new {
-            width: 70%;
-            margin: 30px auto 20px;
-            display: block;
-            background-color: #2b50c0;
-            font-size: 1.8rem;
-            padding: 12px;
-            font-weight: 800;
-            border-radius: 6px;
-        }
-        
-        .login-footer-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-            margin-top: 15px;
-            padding: 0 10px;
-            color: #fff;
+        .login-card .subtitle {
+            color: #94a3b8;
             font-size: 0.95rem;
-        }
-        .login-footer-links a {
-            color: #fff;
-            text-decoration: underline;
-            font-weight: 500;
-        }
-        .login-footer-links span.or-text {
-            text-decoration: none;
-            font-weight: 700;
+            margin-bottom: 35px;
         }
 
-        .google-login-container {
-            margin-top: 30px;
-            display: flex;
-            justify-content: center;
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
         }
 
-        /* Styling the Google button wrapper to look like the dark one in image */
-        .google-btn-wrapper {
-            background: #1a1a1a;
-            padding: 10px 40px;
-            border-radius: 4px;
-            border: 1px solid #444;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-            width: fit-content;
-            margin: 0 auto;
-        }
-        .google-btn-wrapper:hover {
-            background: #222;
-        }
-
-        .back-home-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 30px;
-            color: #fff;
-            text-decoration: none;
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
             font-size: 0.9rem;
-            margin-top: 25px;
-            opacity: 0.8;
+            margin-left: 10px; /* Align with rounded input start */
+            color: #cbd5e1;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 30px; /* Fully rounded */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
             transition: all 0.3s;
         }
-        .back-home-pill:hover {
+
+        .form-input:focus {
             background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.5);
-            opacity: 1;
+            border-color: var(--primary-blue);
+        }
+        
+        .form-input.invalid {
+            border-color: var(--error-red);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 5px;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            border-radius: 30px;
+            background: var(--primary-blue);
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .btn-login:hover {
+            background: #2563eb;
+        }
+
+        .form-links {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            padding: 0 10px;
+        }
+
+        .form-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .form-links a:hover {
+            color: #fff;
+        }
+
+        .divider {
+            margin: 25px 0;
+            position: relative;
+            text-align: center;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .divider span {
+            background: var(--navy-dark);
+            padding: 0 15px;
+            position: relative;
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* Google Button Custom Styling Wrap */
+        .google-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8; /* Muted text */
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .error-msg {
+            color: var(--error-red);
+            font-size: 0.85rem;
+            margin-top: 5px;
+            margin-left: 15px;
+            display: none;
+            text-align: left;
+        }
+        .error-msg.visible {
+            display: block;
+        }
+        
+        /* Message Group Toggle Logic */
+        .message-group { display: none; }
+        .message-group.active { display: block; }
+
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        
+        @media (max-width: 900px) {
+            .left-section { display: none; }
         }
     </style>
-
-    <!-- Google Identity Services SDK -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-    <!-- Google Auth Configuration -->
-    <div id="g_id_onload"
-         data-client_id="717092890700-fa055v1u37lthk6q6ao7jodl7c1jfrc9.apps.googleusercontent.com"
-         data-context="signin"
-         data-ux_mode="popup"
-         data-callback="handleCredentialResponse"
-         data-auto_prompt="false">
-    </div>
 
-    <!-- Header Section -->
+    <!-- Header -->
     <header class="login-header">
-        <div class="header-container">
-            <div class="logo">
-                <a href="index.php">HEALCARE</a>
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <!-- Hidden on mobile usually, but requirement says "Header Requirements" -->
+             <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
             </div>
-            <div class="header-info">
-                <div class="info-item">
-                    <div class="info-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    </div>
-                    <div class="info-text">
-                        <span class="label">EMERGENCY</span>
-                        <span class="value">(+254) 717 783 146</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    </div>
-                    <div class="info-text">
-                        <span class="label">WORK HOUR</span>
-                        <span class="value">09:00 - 20:00 Everyday</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    </div>
-                    <div class="info-text">
-                        <span class="label">LOCATION</span>
-                        <span class="value">Kanjirapally,Kottayam</span>
-                    </div>
-                </div>
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-clock"></i></div>
+                <div class="info-details"><span class="info-label">WORK HOUR</span><span class="info-value">09:00 - 20:00 Everyday</span></div>
+            </div>
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="info-details"><span class="info-label">LOCATION</span><span class="info-value">Kanjirapally, Kottayam</span></div>
             </div>
         </div>
     </header>
 
-    <main class="login-main">
+    <div class="login-container">
         <!-- Left Section -->
-        <section class="login-visual">
-            <div class="visual-content">
+        <div class="left-section">
+            <div class="bg-image"></div>
+            <div class="left-content">
                 <h1>Heal Care</h1>
                 <div id="loginMessage" class="message-group active">
                     <h2>Welcome Back!</h2>
-                    <p>Your health, our mission. Log in to access appointments, medical records, prescriptions, and personalized care services at Heal Care.</p>
+                    <p>Log in to access appointments, medical records, prescriptions, and personalize your healthcare experience.</p>
                 </div>
                 <div id="forgotMessage" class="message-group">
                     <h2>Reset Password</h2>
-                    <p>Don't worry! Enter your registered email address to verify your account and set a new password.</p>
+                    <p>Enter your verified email address to receive a secure code and reset your account password.</p>
                 </div>
             </div>
-            <div class="visual-bg"></div>
-        </section>
+        </div>
 
         <!-- Right Section -->
-        <section class="login-form-area">
-            <div class="form-container">
+        <div class="right-section">
+            <div class="login-card">
+                
+                <!-- LOGIN FORM -->
                 <form id="loginForm" class="auth-form active" action="auth_handler.php" method="POST">
                     <input type="hidden" name="action" value="login">
-                    
                     <h3>Login</h3>
-                    <p class="subtitle">Welcome! Please login to <span>your account</span></p>
+                    <p class="subtitle">Welcome! Please login to your account</p>
 
-
-                    <div class="input-row-group">
-                        <div class="input-row">
-                            <label>Username / Email</label>
-                            <input type="text" name="identity" id="loginIdentity" class="input-light" placeholder="Username or Email" required autofocus>
+                    <div class="form-group">
+                        <!-- Label removed as placeholder serves well for modern UI, but request said "Input fields..." 
+                             Usually labels are good for a11y. I'll include them small above. -->
+                        <div class="input-wrapper">
+                            <input type="text" name="identity" id="loginIdentity" class="form-input" placeholder="Username / Email" required>
                         </div>
                         <div class="error-msg" id="identityError"></div>
                     </div>
 
-                    <div class="input-row-group">
-                        <div class="input-row">
-                            <label>Password</label>
-                            <div class="password-relative-group" style="flex: 0.6;">
-                                <input type="password" name="password" id="loginPassword" class="input-light" style="width: 100%; flex: 1;" placeholder="••••••••••••" required>
-                                <button type="button" class="toggle-eye-icon" onclick="togglePasswordVisibility(this)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </button>
-                            </div>
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <input type="password" name="password" id="loginPassword" class="form-input" placeholder="Password" required>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility(this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
                         <div class="error-msg" id="passwordError"></div>
                     </div>
 
-                    <button type="submit" class="btn-submit-new">Login</button>
+                    <button type="submit" class="btn-login">Login</button>
 
-                    <div class="login-footer-links">
+                    <div class="form-links">
                         <a href="javascript:void(0)" class="toggle-auth" data-target="forgot">Forgot Password?</a>
-                        <div class="or-divider">Or</div>
-                        <a href="signup.php<?php echo isset($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : ''; ?>">Sign Up</a>
+                        <a href="signup.php">Sign Up</a>
                     </div>
                     
-                    <div class="google-login-container">
-                         <div class="g_id_signin" 
+                    <div class="divider"><span>OR</span></div>
+
+                    <div class="google-btn-container">
+                        <div id="g_id_onload"
+                             data-client_id="717092890700-fa055v1u37lthk6q6ao7jodl7c1jfrc9.apps.googleusercontent.com"
+                             data-context="signin"
+                             data-ux_mode="popup"
+                             data-callback="handleCredentialResponse"
+                             data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin" 
                              data-type="standard" 
-                             data-shape="rectangular" 
-                             data-theme="outline" 
+                             data-shape="pill" 
+                             data-theme="filled_blue" 
                              data-text="signin_with" 
                              data-size="large" 
-                             data-logo_alignment="center" 
-                             data-width="320">
+                             data-logo_alignment="left"
+                             data-width="380">
                         </div>
                     </div>
 
-                    <div style="text-align: center; margin-top: 30px;">
-                        <a href="index.php" class="back-home-pill">← Back to Home</a>
-                    </div>
+                    <a href="index.php" class="back-link">← Back to Home</a>
                 </form>
 
-                <!-- Forgot Password Step 1 (Hidden by default but uses same visual style) -->
+                <!-- FORGOT PASSWORD FORM (Hidden) -->
                 <form id="forgotForm" class="auth-form" action="auth_handler.php" method="POST">
                     <input type="hidden" name="action" value="request_otp">
                     <h3>Reset</h3>
-                    <p class="subtitle">Enter your <span>email</span> to reset</p>
-                    <div class="input-row-group">
-                        <div class="input-row">
-                            <label>Email</label>
-                            <input type="email" name="email" id="forgotEmail" class="input-light" placeholder="Email" required>
+                    <p class="subtitle">Enter your email to receive code</p>
+
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <input type="email" name="email" id="forgotEmail" class="form-input" placeholder="Registered Email" required>
                         </div>
                         <div class="error-msg" id="forgotEmailError"></div>
                     </div>
-                    <button type="submit" class="btn-submit-new" style="font-size: 1.2rem;">Send Code</button>
-                    <div class="login-footer-links">
+
+                    <button type="submit" class="btn-login">Send Code</button>
+
+                    <div class="form-links" style="justify-content: center;">
                         <a href="javascript:void(0)" class="toggle-auth" data-target="login">Back to Login</a>
                     </div>
                 </form>
 
-                <!-- Forgot Password Step 2: Verify and Reset (Hidden by default) -->
+                <!-- RESET FORM (Hidden) -->
                 <form id="resetForm" class="auth-form" action="auth_handler.php" method="POST">
                     <input type="hidden" name="action" value="verify_and_reset">
                     <input type="hidden" name="email" id="resetEmailHidden">
                     
                     <h3>New Password</h3>
-                    <p class="subtitle">Enter code & set <span>new password</span></p>
+                    <p class="subtitle">Set your new secure password</p>
 
-                    <div class="input-row-group">
-                        <div class="input-row">
-                            <label>Code</label>
-                            <input type="text" name="otp" id="resetOtp" class="input-light" placeholder="6-digit code" required maxlength="6">
+                    <div class="form-group">
+                        <div class="input-wrapper">
+                            <input type="text" name="otp" id="resetOtp" class="form-input" placeholder="6-digit Code" required maxlength="6">
                         </div>
                         <div class="error-msg" id="otpError"></div>
                     </div>
 
-                    <div class="input-row-group">
-                        <div class="input-row">
-                            <label>New Pass</label>
-                             <div class="password-relative-group" style="flex: 0.6;">
-                                <input type="password" name="new_password" id="resetNewPassword" class="input-light" style="width: 100%; flex: 1;" placeholder="New Password" required>
-                                 <button type="button" class="toggle-eye-icon" onclick="togglePasswordVisibility(this)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </button>
-                            </div>
+                    <div class="form-group">
+                         <div class="input-wrapper">
+                            <input type="password" name="new_password" id="resetNewPassword" class="form-input" placeholder="New Password" required>
+                             <button type="button" class="toggle-password" onclick="togglePasswordVisibility(this)"><i class="fas fa-eye"></i></button>
                         </div>
                         <div class="error-msg" id="newPasswordError"></div>
                     </div>
-
-                    <div class="input-row-group">
-                        <div class="input-row">
-                            <label>Confirm</label>
-                            <div class="password-relative-group" style="flex: 0.6;">
-                                <input type="password" name="confirm_password" id="resetConfirmPassword" class="input-light" style="width: 100%; flex: 1;" placeholder="Confirm Password" required>
-                                 <button type="button" class="toggle-eye-icon" onclick="togglePasswordVisibility(this)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </button>
-                            </div>
+                    
+                    <div class="form-group">
+                         <div class="input-wrapper">
+                            <input type="password" name="confirm_password" id="resetConfirmPassword" class="form-input" placeholder="Confirm Password" required>
                         </div>
                         <div class="error-msg" id="confirmPasswordError"></div>
                     </div>
 
-                    <button type="submit" class="btn-submit-new" style="font-size: 1.2rem;">Reset Password</button>
-
-                    <div class="login-footer-links">
-                        <a href="javascript:void(0)" class="toggle-auth" data-target="forgot">Back to Step 1</a>
-                    </div>
+                    <button type="submit" class="btn-login">Change Password</button>
                 </form>
-            </div>
-        </section>
-    </main>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Logic Script -->
     <script src="js/login.js"></script>
 </body>
 </html>

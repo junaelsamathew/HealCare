@@ -234,6 +234,7 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
         .badge-status-Approved, .badge-status-Scheduled, .badge-status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-status-Lab { background: rgba(168, 85, 247, 0.1); color: #a855f7; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
 </head>
 <body>
@@ -401,8 +402,12 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                                                             <input type="hidden" name="new_status" value="Approved">
                                                             <button type="submit" class="btn-consult" style="background:#10b981;"><i class="fas fa-check"></i> Approve</button>
                                                           </form>';
-                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed') {
-                                                    echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult"><i class="fas fa-user-md"></i> Consult</a>';
+                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed' || $status == 'Pending Lab' || $status == 'Lab Completed') {
+                                                    $is_lab = ($status == 'Pending Lab' || $status == 'Lab Completed');
+                                                    $btn_text = $is_lab ? 'Review Lab' : 'Consult';
+                                                    $btn_icon = $is_lab ? 'fa-flask' : 'fa-user-md';
+                                                    $btn_style = $is_lab ? 'background:#a855f7;' : '';
+                                                    echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult" style="'.$btn_style.'"><i class="fas '.$btn_icon.'"></i> '.$btn_text.'</a>';
                                                 }
                                     echo '  </div>
                                         </div>
@@ -492,46 +497,156 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                     </div>
 
                     <!-- Recent Lab Reports (To Review) -->
+                    <!-- Recent Lab Orders -->
                     <div class="content-section">
-                        <div class="section-head"><h3>Reports to Review</h3></div>
+                        <div class="section-head">
+                            <h3>Recent Lab Orders</h3>
+                            <a href="doctor_lab_orders.php" style="color: #4fc3f7; font-size: 13px;">View All</a>
+                        </div>
                         <div style="display: flex; flex-direction: column; gap: 12px;">
                             <?php
-                            $stmt_reports = $conn->prepare("
-                                SELECT l.labtest_id, l.test_name, l.result, l.report_path, r.name as patient_name 
+                            // Fetch both Pending and Completed orders
+                            // Using labtest_id DESC as proxy for time if created_at is missing, but prefer created_at if available.
+                            
+                            $query = "
+                                SELECT l.labtest_id, l.test_name, l.status, l.priority, l.report_path, l.result, l.created_at, r.name as patient_name 
                                 FROM lab_tests l 
                                 JOIN users u ON l.patient_id = u.user_id 
                                 JOIN registrations r ON u.registration_id = r.registration_id 
-                                WHERE l.doctor_id = ? AND l.status = 'Completed' 
-                                ORDER BY l.updated_at DESC LIMIT 5
-                            ");
-                            $stmt_reports->bind_param("i", $user_id);
-                            $stmt_reports->execute();
-                            $res_reports = $stmt_reports->get_result();
+                                WHERE l.doctor_id = ? 
+                                ORDER BY l.labtest_id DESC LIMIT 5
+                            ";
+                            
+                            $stmt_reports = $conn->prepare($query);
+                            if ($stmt_reports) {
+                                $stmt_reports->bind_param("i", $user_id);
+                                $stmt_reports->execute();
+                                $res_reports = $stmt_reports->get_result();
 
-                            if ($res_reports->num_rows > 0) {
-                                while ($rep = $res_reports->fetch_assoc()) {
-                                    $has_pdf = !empty($rep['report_path']);
-                                    $link = $has_pdf ? htmlspecialchars($rep['report_path']) : '#';
-                                    $target = $has_pdf ? 'target="_blank"' : '';
-                                    echo '
-                                    <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                                        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">
-                                            <span style="font-size: 13px; font-weight: 600; display: block;">' . htmlspecialchars($rep['patient_name']) . '</span>
-                                            <span style="font-size: 11px; color: #94a3b8;">' . htmlspecialchars($rep['test_name']) . '</span>
-                                        </div>
-                                        <a href="' . $link . '" ' . $target . ' style="color: #4fc3f7; font-size: 12px; display: flex; align-items: center; gap: 5px; text-decoration: none;">
-                                            <i class="fas fa-file-pdf"></i> View
-                                        </a>
-                                    </div>';
+                                if ($res_reports->num_rows > 0) {
+                                    while ($rep = $res_reports->fetch_assoc()) {
+                                        $has_pdf = !empty($rep['report_path']);
+                                        $pdf_link = $has_pdf ? htmlspecialchars($rep['report_path']) : '';
+                                        $status = $rep['status'];
+                                        $priority = $rep['priority'] ?? 'Normal';
+                                        $result_text = htmlspecialchars($rep['result'] ?? '');
+                                        
+                                        // Status Colors
+                                        $status_color = '#94a3b8'; 
+                                        if ($status == 'Completed') $status_color = '#10b981';
+                                        elseif ($status == 'Pending' || $status == 'Requested') $status_color = '#fbbf24';
+                                        elseif ($status == 'Processing') $status_color = '#f59e0b';
+
+                                        // Priority Colors
+                                        $p_bg = 'rgba(59, 130, 246, 0.1)';
+                                        $p_color = '#3b82f6';
+                                        if (strtolower($priority) === 'urgent') {
+                                            $p_bg = 'rgba(239, 68, 68, 0.1)';
+                                            $p_color = '#ef4444';
+                                        }
+
+                                        // Time Formatting
+                                        $created_val = $rep['created_at'] ?? null;
+                                        $time_display = 'Recently';
+                                        if($created_val) {
+                                            $ts = strtotime($created_val);
+                                            if(date('Y-m-d') == date('Y-m-d', $ts)) {
+                                                $time_display = 'Today, ' . date('h:i A', $ts);
+                                            } elseif(date('Y-m-d', strtotime('-1 day')) == date('Y-m-d', $ts)) {
+                                                $time_display = 'Yesterday';
+                                            } else {
+                                                $time_display = date('d M, h:i A', $ts);
+                                            }
+                                        }
+                                        
+                                        $has_result = !empty($result_text) || $has_pdf;
+
+                                        $js_test = htmlspecialchars(json_encode($rep['test_name']), ENT_QUOTES, 'UTF-8');
+                                        $js_pat = htmlspecialchars(json_encode($rep['patient_name']), ENT_QUOTES, 'UTF-8');
+                                        $js_res = htmlspecialchars(json_encode($result_text), ENT_QUOTES, 'UTF-8');
+                                        $js_pdf = htmlspecialchars(json_encode($pdf_link), ENT_QUOTES, 'UTF-8');
+
+                                        echo '
+                                        <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                                            <div>
+                                                <h4 style="font-size: 14px; margin-bottom: 4px; color: #f8fafc; font-weight: 600;">' . htmlspecialchars($rep['test_name']) . '</h4>
+                                                <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                                                    <span style="color: #cbd5e1;">' . htmlspecialchars($rep['patient_name']) . '</span> • 
+                                                    Requested: ' . $time_display . '
+                                                </p>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <div style="margin-bottom: 6px;">
+                                                    <span style="font-size: 10px; font-weight: 700; background: '.$p_bg.'; color: '.$p_color.'; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                        ' . htmlspecialchars(strtoupper($priority)) . '
+                                                    </span>
+                                                </div>
+                                                <div style="font-size: 11px; font-weight: 600; color: ' . $status_color . ';">
+                                                    Status: ' . ucfirst($status) . '
+                                                </div>
+                                                ' . ($has_result ? '
+                                                <div style="margin-top: 6px;">
+                                                    <button onclick="viewLabResult(' . $js_test . ', ' . $js_pat . ', ' . $js_res . ', ' . $js_pdf . ')" style="background:transparent; border:none; color: #a855f7; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                                                        <i class="fas fa-eye"></i> View Results
+                                                    </button>
+                                                </div>' : '') . '
+                                            </div>
+                                        </div>';
+                                    }
+                                } else {
+                                    echo '<p style="font-size: 12px; color: #64748b; text-align: center; padding: 10px; background: rgba(255,255,255,0.01); border-radius: 8px;">No recent lab orders found.</p>';
                                 }
                             } else {
-                                echo '<p style="font-size: 12px; color: #64748b; text-align: center;">No new reports.</p>';
+                                echo '<p style="color:red; font-size:12px;">Query Error</p>';
                             }
                             ?>
                         </div>
                     </div>
                 </div>
             </div>
+        </main>
+    </div>
+
+    <!-- Lab Result View Modal -->
+    <div id="labResultModal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center;">
+        <div style="background:#1e293b; padding:30px; border-radius:16px; width:500px; max-width:90%; position:relative; border:1px solid rgba(255,255,255,0.1);">
+            <button onclick="document.getElementById('labResultModal').style.display='none'" style="position:absolute; top:20px; right:20px; background:none; border:none; color:#94a3b8; cursor:pointer; font-size:20px;">&times;</button>
+            
+            <h3 id="labResTestName" style="color:#fff; margin-bottom:5px;">Test Results</h3>
+            <p id="labResPatName" style="color:#94a3b8; font-size:13px; margin-bottom:20px;">Patient Name</p>
+            
+            <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:8px; margin-bottom:20px;">
+                <label style="color:#4fc3f7; font-size:11px; text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">Technician Notes / Findings</label>
+                <p id="labResText" style="color:#e2e8f0; font-size:14px; line-height:1.5; white-space: pre-wrap;">No text result available.</p>
+            </div>
+
+            <div id="labResPdfArea" style="display:none;">
+                <a id="labResPdfLink" href="#" target="_blank" style="display:block; background:#3b82f6; color:#fff; text-align:center; padding:12px; border-radius:8px; text-decoration:none; font-weight:600;">
+                    <i class="fas fa-file-pdf"></i> Download Official Report (PDF)
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function viewLabResult(test, patient, text, pdf) {
+            document.getElementById('labResTestName').innerText = test;
+            document.getElementById('labResPatName').innerText = "Patient: " + patient;
+            document.getElementById('labResText').innerText = text ? text : "No textual findings provided.";
+            
+            const pdfArea = document.getElementById('labResPdfArea');
+            const pdfLink = document.getElementById('labResPdfLink');
+            
+            if (pdf && pdf !== '') {
+                pdfArea.style.display = 'block';
+                pdfLink.href = pdf;
+            } else {
+                pdfArea.style.display = 'none';
+            }
+            
+            document.getElementById('labResultModal').style.display = 'flex';
+        }
+    </script>
         </main>
     </div>
 

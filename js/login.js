@@ -349,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
 // Initialize password toggles
 window.togglePasswordVisibility = function (btn) {
     const wrapper = btn.closest('.password-relative-group');
@@ -379,3 +380,20 @@ window.togglePasswordVisibility = function (btn) {
         `;
     }
 }
+
+// Fix: Remove annoying "Minimize" tooltip if present (e.g. from extensions or browser features)
+document.addEventListener('DOMContentLoaded', function () {
+    const removeMinimizeTooltip = () => {
+        document.querySelectorAll('[title="Minimize"]').forEach(el => {
+            el.removeAttribute('title');
+        });
+    };
+    removeMinimizeTooltip();
+    // Observe for dynamic additions
+    new MutationObserver(removeMinimizeTooltip).observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['title']
+    });
+});

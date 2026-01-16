@@ -238,32 +238,128 @@ sort($available_tests);
 
             <div class="content-section">
                 <h2 style="color: white; margin-bottom: 20px;">Recent Lab Orders</h2>
-                <div class="order-card">
-                    <div>
-                        <h4 style="color: white; margin-bottom: 5px;">CBC & Liver Profile</h4>
-                        <p style="font-size: 13px; color: #94a3b8;">Patient: Rahul Kumar • Requested: Today, 10:15 AM</p>
-                    </div>
-                    <div style="text-align: right;">
-                        <span class="priority-badge normal">Normal</span><br>
-                        <span style="font-size: 11px; color: #fbbf24; font-weight: 600;">Status: Pending</span>
-                    </div>
-                </div>
+                <?php
+                // Fetch Recent Lab Orders
+                $query_orders = "
+                    SELECT l.labtest_id, l.test_name, l.status, l.priority, l.report_path, l.result, l.created_at, r.name as patient_name 
+                    FROM lab_tests l 
+                    JOIN users u ON l.patient_id = u.user_id 
+                    JOIN registrations r ON u.registration_id = r.registration_id 
+                    WHERE l.doctor_id = ? 
+                    ORDER BY l.labtest_id DESC LIMIT 10
+                ";
+                
+                $stmt_ord = $conn->prepare($query_orders);
+                $stmt_ord->bind_param("i", $user_id);
+                $stmt_ord->execute();
+                $res_ord = $stmt_ord->get_result();
 
-                <div class="order-card">
-                    <div>
-                        <h4 style="color: white; margin-bottom: 5px;">Chest X-Ray (AP/Lateral)</h4>
-                        <p style="font-size: 13px; color: #94a3b8;">Patient: Anjali Sharma • Requested: Yesterday</p>
-                    </div>
-                    <div style="text-align: right; display: flex; align-items: center; gap: 20px;">
-                        <div style="text-align: right;">
-                            <span class="priority-badge urgent">Urgent</span><br>
-                            <span style="font-size: 11px; color: #10b981; font-weight: 600;">Status: Completed</span>
-                        </div>
-                        <a href="#" class="btn-view"><i class="fas fa-eye"></i> View Results</a>
-                    </div>
-                </div>
+                if ($res_ord->num_rows > 0) {
+                    while ($ord = $res_ord->fetch_assoc()) {
+                        $test_name = htmlspecialchars($ord['test_name']);
+                        $pat_name = htmlspecialchars($ord['patient_name']);
+                        $status = ucfirst($ord['status']);
+                        $priority = ucfirst($ord['priority'] ?? 'Normal');
+                        $result_text = htmlspecialchars($ord['result'] ?? '');
+                        
+                        // Time Formatting
+                        $created_val = $ord['created_at'] ?? null;
+                        $time_display = 'Recently';
+                        if($created_val) {
+                            $ts = strtotime($created_val);
+                            if(date('Y-m-d') == date('Y-m-d', $ts)) {
+                                $time_display = 'Today, ' . date('h:i A', $ts);
+                            } elseif(date('Y-m-d', strtotime('-1 day')) == date('Y-m-d', $ts)) {
+                                $time_display = 'Yesterday';
+                            } else {
+                                $time_display = date('d M Y, h:i A', $ts);
+                            }
+                        }
+
+                        // Styling Logic
+                        $p_class = (strtolower($priority) == 'urgent' || strtolower($priority) == 'stat') ? 'urgent' : 'normal';
+                        
+                        $s_color = '#fbbf24'; // Pending default (Yellow)
+                        if ($status == 'Completed') $s_color = '#10b981'; // Green
+                        elseif ($status == 'Processing') $s_color = '#f59e0b'; // Orange
+                        elseif ($status == 'Cancelled') $s_color = '#ef4444'; // Red
+
+                        $has_pdf = !empty($ord['report_path']);
+                        $pdf_link = $has_pdf ? htmlspecialchars($ord['report_path']) : '';
+                        
+                        $has_result = !empty($result_text) || $has_pdf;
+
+                        // Safe JS Variables
+                        $js_test = htmlspecialchars(json_encode($test_name), ENT_QUOTES, 'UTF-8');
+                        $js_pat = htmlspecialchars(json_encode($pat_name), ENT_QUOTES, 'UTF-8');
+                        $js_res = htmlspecialchars(json_encode($result_text), ENT_QUOTES, 'UTF-8');
+                        $js_pdf = htmlspecialchars(json_encode($pdf_link), ENT_QUOTES, 'UTF-8');
+
+                        echo '
+                        <div class="order-card">
+                            <div>
+                                <h4 style="color: white; margin-bottom: 5px;">' . $test_name . '</h4>
+                                <p style="font-size: 13px; color: #94a3b8;">Patient: ' . $pat_name . ' • Requested: ' . $time_display . '</p>
+                            </div>
+                            <div style="text-align: right; display: flex; align-items: center; gap: 20px;">
+                                <div style="text-align: right;">
+                                    <span class="priority-badge ' . $p_class . '">' . $priority . '</span><br>
+                                    <span style="font-size: 11px; color: ' . $s_color . '; font-weight: 600;">Status: ' . $status . '</span>
+                                </div>
+                                ' . ($has_result ? '
+                                <button onclick="viewResult(' . $js_test . ', ' . $js_pat . ', ' . $js_res . ', ' . $js_pdf . ')" class="btn-view" style="background:transparent; color:#4fc3f7; border:1px solid rgba(79,195,247,0.3); padding:6px 12px; border-radius:6px; cursor:pointer; transition:0.3s; display:flex; align-items:center; gap:5px;">
+                                    <i class="fas fa-eye"></i> View
+                                </button>' : '') . '
+                            </div>
+                        </div>';
+                    }
+                } else {
+                    echo '<p style="color: #94a3b8; text-align: center; padding: 20px;">No lab orders found.</p>';
+                }
+                ?>
             </div>
         </main>
     </div>
+
+    <!-- Result View Modal -->
+    <div id="resultModal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+        <div style="background:#1e293b; padding:30px; border-radius:16px; width:500px; max-width:90%; position:relative; border:1px solid rgba(255,255,255,0.1);">
+            <button onclick="document.getElementById('resultModal').style.display='none'" style="position:absolute; top:20px; right:20px; background:none; border:none; color:#94a3b8; cursor:pointer; font-size:20px;">&times;</button>
+            
+            <h3 id="resTestName" style="color:#fff; margin-bottom:5px;">Test Results</h3>
+            <p id="resPatName" style="color:#94a3b8; font-size:13px; margin-bottom:20px;">Patient Name</p>
+            
+            <div style="background:rgba(0,0,0,0.3); padding:15px; border-radius:8px; margin-bottom:20px;">
+                <label style="color:#4fc3f7; font-size:11px; text-transform:uppercase; font-weight:bold; display:block; margin-bottom:5px;">Technician Notes / Findings</label>
+                <p id="resText" style="color:#e2e8f0; font-size:14px; line-height:1.5; white-space: pre-wrap;">No text result available.</p>
+            </div>
+
+            <div id="resPdfArea" style="display:none;">
+                <a id="resPdfLink" href="#" target="_blank" style="display:block; background:#3b82f6; color:#fff; text-align:center; padding:12px; border-radius:8px; text-decoration:none; font-weight:600;">
+                    <i class="fas fa-file-pdf"></i> Download Official Report (PDF)
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function viewResult(test, patient, text, pdf) {
+            document.getElementById('resTestName').innerText = test;
+            document.getElementById('resPatName').innerText = "Patient: " + patient;
+            document.getElementById('resText').innerText = text ? text : "No textual findings provided.";
+            
+            const pdfArea = document.getElementById('resPdfArea');
+            const pdfLink = document.getElementById('resPdfLink');
+            
+            if (pdf && pdf !== '') {
+                pdfArea.style.display = 'block';
+                pdfLink.href = pdf;
+            } else {
+                pdfArea.style.display = 'none';
+            }
+            
+            document.getElementById('resultModal').style.display = 'flex';
+        }
+    </script>
 </body>
 </html>

@@ -62,6 +62,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = "Error updating stock: " . $conn->error;
             $msg_type = "error";
         }
+    } elseif (isset($_POST['action']) && $_POST['action'] === 'dispense') {
+        $id = (int)$_POST['prescription_id'];
+        if ($conn->query("UPDATE prescriptions SET status = 'Dispensed' WHERE prescription_id = $id")) {
+             $msg = "Prescription marked as dispensed!";
+             $msg_type = "success";
+        } else {
+             $msg = "Error updating prescription: " . $conn->error;
+             $msg_type = "error";
+        }
     }
 }
 ?>
@@ -93,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .medicine-card {
             background: #0f172a; border: 1px solid var(--border-soft); border-radius: 12px; padding: 25px;
             display: flex; flex-direction: column; gap: 15px; border-left: 4px solid #4fc3f7;
+            margin-bottom: 20px;
         }
         .stock-alert { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid #ef4444; padding: 15px; border-radius: 12px; margin-bottom: 30px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
         
@@ -191,38 +201,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- Prescription Queue -->
                     <div>
                         <h3 style="color:#fff; margin-bottom: 20px;">Prescription Processing Queue</h3>
+                        
+                        <?php
+                        // Fetch Pending Prescriptions
+                        $presc_sql = "
+                            SELECT p.*, 
+                                   rp.name as patient_name, 
+                                   rd.name as doctor_name, 
+                                   d.specialization
+                            FROM prescriptions p
+                            JOIN users up ON p.patient_id = up.user_id
+                            JOIN registrations rp ON up.registration_id = rp.registration_id
+                            JOIN users ud ON p.doctor_id = ud.user_id
+                            JOIN registrations rd ON ud.registration_id = rd.registration_id
+                            LEFT JOIN doctors d ON ud.user_id = d.user_id
+                            WHERE p.status = 'Pending' OR p.status IS NULL
+                            ORDER BY p.prescription_date DESC
+                        ";
+                        $presc_res = $conn->query($presc_sql);
+                        
+                        if ($presc_res && $presc_res->num_rows > 0):
+                            while ($presc = $presc_res->fetch_assoc()):
+                        ?>
                         <div class="medicine-card">
                             <div style="display: flex; justify-content: space-between;">
                                 <div>
-                                    <span style="font-size: 11px; color: #4fc3f7; font-weight: 800; text-transform: uppercase;">ID: #RX-2026-0042</span>
-                                    <h4 style="color:#fff; margin: 5px 0; font-size: 18px;">Ravi Sharma</h4>
-                                    <p style="font-size: 13px; color: #94a3b8;">Requested by: Dr. Sathish (ENT)</p>
+                                    <span style="font-size: 11px; color: #4fc3f7; font-weight: 800; text-transform: uppercase;">ID: #RX-<?php echo $presc['prescription_id']; ?></span>
+                                    <h4 style="color:#fff; margin: 5px 0; font-size: 18px;"><?php echo htmlspecialchars($presc['patient_name']); ?></h4>
+                                    <p style="font-size: 13px; color: #94a3b8;">Requested by: Dr. <?php echo htmlspecialchars($presc['doctor_name']); ?> (<?php echo htmlspecialchars($presc['specialization'] ?? 'General'); ?>)</p>
                                 </div>
-                                <span style="color: #4fc3f7; font-size: 11px; font-weight: bold;">TIME: 10:45 AM</span>
+                                <span style="color: #4fc3f7; font-size: 11px; font-weight: bold;"><?php echo date('M d, Y', strtotime($presc['prescription_date'])); ?></span>
                             </div>
                             <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px;">
-                                <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #cbd5e1;">
-                                    <thead>
-                                        <tr style="text-align: left; border-bottom: 1px solid var(--border-soft);">
-                                            <th style="padding-bottom: 10px;">Medicine Name</th>
-                                            <th style="padding-bottom: 10px;">Dosage</th>
-                                            <th style="padding-bottom: 10px;">Qty</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr><td style="padding: 10px 0;">Paracetamol 500mg</td><td>1-0-1</td><td>10</td></tr>
-                                        <tr><td style="padding: 10px 0;">Amoxicillin 250mg</td><td>1-1-1</td><td>15</td></tr>
-                                    </tbody>
-                                </table>
+                                <p style="font-size: 13px; color: #cbd5e1; white-space: pre-wrap; margin: 0;"><?php echo htmlspecialchars($presc['medicine_details']); ?></p>
+                                <?php if(!empty($presc['instructions'])): ?>
+                                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+                                        <small style="color: #94a3b8;">Instructions:</small>
+                                        <p style="font-size: 12px; color: #e2e8f0; margin-top: 2px;"><?php echo htmlspecialchars($presc['instructions']); ?></p>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                                <span style="color: #94a3b8; font-size: 13px;">Estimated Bill: <strong>₹450.00</strong></span>
-                                <div style="display: flex; gap: 10px;">
-                                    <button style="background: transparent; border: 1px solid var(--border-soft); color: #fff; padding: 10px 20px; border-radius: 10px; cursor: pointer;">Print Rx</button>
-                                    <button style="background: #4fc3f7; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer;">Dispense & Bill</button>
-                                </div>
+                                <span style="color: #94a3b8; font-size: 13px;">Status: <strong style="color: #f59e0b;">Pending Dispense</strong></span>
+                                <form method="POST" style="display:flex; gap:10px;">
+                                    <input type="hidden" name="action" value="dispense">
+                                    <input type="hidden" name="prescription_id" value="<?php echo $presc['prescription_id']; ?>">
+                                    <button type="button" class="btn-print" onclick="window.open('print_prescription.php?id=<?php echo $presc['prescription_id']; ?>', '_blank', 'width=900,height=800')" style="background: transparent; border: 1px solid var(--border-soft); color: #fff; padding: 10px 20px; border-radius: 10px; cursor: pointer;">Print Rx</button>
+                                    <button type="submit" style="background: #4fc3f7; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer;">Dispense</button>
+                                </form>
                             </div>
                         </div>
+                        <?php endwhile; ?>
+                        <?php else: ?>
+                            <div style="text-align: center; padding: 40px; color: #64748b; background: #0f172a; border-radius: 12px; border: 1px dashed var(--border-soft);">
+                                <i class="fas fa-check-circle" style="font-size: 30px; margin-bottom: 10px;"></i>
+                                <p>No pending prescriptions.</p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
                     <!-- Stock Alerts & Expiry -->

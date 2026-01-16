@@ -1,8 +1,5 @@
 <?php
 session_start();
-if (isset($_GET['redirect'])) {
-    $_SESSION['redirect_after_login'] = $_GET['redirect'];
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -15,559 +12,666 @@ if (isset($_GET['redirect'])) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <!-- Styles -->
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/login.css">
     <style>
-        /* Specific overrides for the Signup layout from the image */
-        .signup-visual {
-            flex: 1.2;
-            position: relative;
-            padding: 80px;
+        :root {
+            --primary-blue: #3b82f6;
+            --navy-dark: #0f172a; /* Dark blue/navy */
+            --text-light: #f8fafc;
+            --error-red: #ef4444;
+            --input-bg: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            overflow-x: hidden; /* Prevent horizontal scroll */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Bar Header */
+        .login-header {
+            height: 80px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 5%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            z-index: 10;
+        }
+
+        .logo-main {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--navy-dark);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-info-group {
+            display: flex;
+            gap: 40px;
+        }
+
+        .header-info-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-icon-circle {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid var(--navy-dark);
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
-            background: #fff;
-            border-right: 4px solid #3b82f6; /* Blue divider line from image */
+            color: var(--navy-dark);
         }
-        .signup-visual .visual-bg {
+
+        .info-details {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .info-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--navy-dark);
+            text-transform: uppercase;
+        }
+
+        .info-value {
+            font-size: 12px;
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        /* Main Split Layout */
+        .login-container {
+            flex: 1;
+            display: flex;
+            width: 100%;
+        }
+
+        /* Left Section (50%) */
+        .left-section {
+            flex: 1;
+            position: relative;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px;
+            overflow: hidden;
+        }
+
+        .bg-image {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: url('images/bgimg.jpg');
+            background-image: url('images/bgimg.jpg'); /* Fallback image */
             background-size: cover;
             background-position: center;
-            filter: blur(5px); /* Blurred background from image */
-            opacity: 0.4;
-            z-index: 1;
+            filter: blur(8px);
+            opacity: 0.6;
+            z-index: 0;
         }
-        .signup-visual .visual-content {
+
+        .left-content {
             position: relative;
             z-index: 2;
-            text-align: left;
-            max-width: 550px;
+            max-width: 500px;
         }
-        .signup-visual h1 {
-            font-size: 5rem;
+
+        .left-content h1 {
+            font-size: 4rem;
             font-weight: 800;
-            color: #0a192f;
+            color: var(--navy-dark);
+            margin-bottom: 10px;
+            line-height: 1.1;
+        }
+
+        .left-content h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--navy-dark);
+            margin-bottom: 20px;
+        }
+
+        .left-content p {
+            font-size: 1.1rem;
+            color: #334155;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+
+        /* Right Section (50%) */
+        .right-section {
+            flex: 1;
+            background: var(--navy-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 40px 0; /* Add vertical padding for scrolling clearance */
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 440px; /* Slightly wider for signup fields if needed */
+            padding: 20px;
+            text-align: center;
+            color: #fff;
+        }
+
+        .login-card h3 {
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .login-card .subtitle {
+            color: #94a3b8;
+            font-size: 0.95rem;
             margin-bottom: 25px;
         }
-        .signup-visual p {
-            font-size: 1.35rem;
-            font-weight: 600;
-            line-height: 1.4;
-            color: #000;
+
+        .form-group {
+            margin-bottom: 15px; /* Tighter spacing for more fields */
+            text-align: left;
         }
 
-        .signup-form-area {
-            flex: 0.8;
-            background-color: #0a192f; /* Deep dark blue from image */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 60px;
-        }
-        .form-container {
-            width: 100%;
-            max-width: 480px;
-        }
-        .auth-form h3 {
-            font-size: 3.5rem;
-            margin-bottom: 10px;
-            text-align: center;
-            font-weight: 800;
-        }
-        .auth-form .subtitle {
-            text-align: center;
-            opacity: 0.9;
-            margin-bottom: 40px;
-            font-size: 1rem;
-        }
-        .auth-form .subtitle span {
-            font-weight: 700;
-        }
-
-        .input-row {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            gap: 20px;
-        }
-        .input-row label {
-            flex: 0.4;
-            font-size: 1.2rem;
-            font-weight: 500;
-            color: #fff;
-            text-align: right; /* Right align labels like in image */
-        }
-        .input-light {
-            flex: 0.6;
-            padding: 12px 15px;
-            border-radius: 4px;
-            border: none;
-            font-size: 1rem;
-        }
-
-        .btn-submit-new {
-            width: 80%; /* Smaller width like in image */
-            margin: 20px auto 0;
+        .form-group label {
             display: block;
-            background-color: #1e40af;
-            font-size: 1.8rem;
-            padding: 15px;
-        }
-        
-        .form-footer-custom {
-            text-align: center;
-            margin-top: 25px;
-            color: #fff;
-        }
-        .form-footer-custom a {
-            color: #fff;
-            text-decoration: none;
-            font-weight: 700;
-        }
-        .form-footer-custom a:hover {
-            text-decoration: underline;
-        }
-        
-        .or-divider {
-            text-align: center;
-            margin: 15px 0;
-            font-weight: 700;
-            font-size: 1.2rem;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            margin-left: 10px;
+            color: #cbd5e1;
+            font-weight: 500;
         }
 
-        .google-signup-center {
-            display: flex;
-            justify-content: center;
-            margin-top: 10px;
+        .input-wrapper {
+            position: relative;
         }
 
-        .back-home-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 30px;
+        .form-input {
+            width: 100%;
+            padding: 14px 20px;
+            border-radius: 30px; /* Pillow shape like Login */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             color: #fff;
-            text-decoration: none;
-            font-size: 0.9rem;
-            margin-top: 25px;
-            opacity: 0.8;
+            font-size: 0.95rem;
+            outline: none;
             transition: all 0.3s;
         }
-        .back-home-pill:hover {
+
+        .form-input:focus {
             background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.5);
-            opacity: 1;
+            border-color: var(--primary-blue);
+        }
+        
+        .form-input.invalid {
+            border-color: var(--error-red);
         }
 
-        /* Validation Styles */
-        .input-wrapper {
-            flex: 0.6;
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 5px;
+            z-index: 2;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            border-radius: 30px;
+            background: var(--primary-blue);
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+
+        .btn-login:disabled {
+            background: #64748b;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .btn-login:hover:not(:disabled) {
+            background: #2563eb;
+        }
+
+        .form-links {
             display: flex;
             flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            padding: 0 10px;
         }
-        .input-wrapper .input-light {
-            width: 100%;
-            flex: unset; /* Remove flex from input since wrapper handles it */
-        }
-        .error-msg {
-            color: #ff4444;
-            font-size: 0.85rem;
-            margin-top: 6px;
-            display: none;
-            text-align: right;
-            font-weight: 600;
-        }
-        .input-light.error-border {
-            border: 2px solid #ff4444;
-            background-color: #ffe6e6 !important;
-            color: #c00;
-        }
-        .input-light.success-border {
-            border: 2px solid #00c851;
-            background-color: #e8f5e9 !important;
-            color: #007E33;
+
+        .form-links a {
+            color: #94a3b8;
+            text-decoration: none;
+            transition: color 0.2s;
         }
         
-        /* Suggest Password Link */
-        .suggest-pass-link {
-            font-size: 0.85rem;
-            color: #4fc3f7;
-            cursor: pointer;
-            text-decoration: underline;
-            display: block;
-            text-align: center;
-            margin-top: 10px;
-            font-weight: 500;
+        .form-links strong {
+            color: var(--primary-blue);
         }
-        .suggest-pass-link:hover {
+
+        .form-links a:hover {
             color: #fff;
         }
-        .pass-strength-meter {
-            height: 4px;
-            background: #eee;
-            margin-top: 5px;
-            border-radius: 2px;
+        
+        .divider {
+            margin: 20px 0;
+            position: relative;
+            text-align: center;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .divider span {
+            background: var(--navy-dark);
+            padding: 0 15px;
+            position: relative;
+            color: #64748b;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Google Button Custom Styling Wrap */
+        .google-btn-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .apply-btn {
+            color: #10b981 !important; /* Green color for staff apply */
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #94a3b8; /* Muted text */
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             transition: all 0.3s;
-            width: 0%;
+            margin-top: 10px;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .error-msg {
+            color: var(--error-red);
+            font-size: 0.75rem;
+            margin-top: 4px;
+            margin-left: 15px;
+            display: none;
+            text-align: left;
+        }
+        .error-msg.visible {
+            display: block;
+        }
+
+
+        @media (max-width: 900px) {
+            .left-section { display: none; }
+            .login-card { padding: 15px; }
         }
     </style>
-
-    <!-- Google Identity Services SDK -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-    <!-- Google Auth Configuration -->
-    <div id="g_id_onload"
-         data-client_id="717092890700-fa055v1u37lthk6q6ao7jodl7c1jfrc9.apps.googleusercontent.com"
-         data-context="signup"
-         data-ux_mode="popup"
-         data-callback="handleCredentialResponse"
-         data-auto_prompt="false">
-    </div>
 
-    <!-- Header Section (Matches image top bar) -->
+    <!-- Header -->
     <header class="login-header">
-        <div class="header-container">
-            <div class="logo">
-                <a href="index.php">HEALCARE</a>
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
             </div>
-            <div class="header-info">
-                <div class="info-item">
-                    <div class="info-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    </div>
-                    <div class="info-text">
-                        <span class="label">EMERGENCY</span>
-                        <span class="value">(+254) 717 783 146</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    </div>
-                    <div class="info-text">
-                        <span class="label">WORK HOUR</span>
-                        <span class="value">09:00 - 20:00 Everyday</span>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <div class="info-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                    </div>
-                    <div class="info-text">
-                        <span class="label">LOCATION</span>
-                        <span class="value">Kanjirapally,Kottayam</span>
-                    </div>
-                </div>
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-clock"></i></div>
+                <div class="info-details"><span class="info-label">WORK HOUR</span><span class="info-value">09:00 - 20:00 Everyday</span></div>
+            </div>
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="info-details"><span class="info-label">LOCATION</span><span class="info-value">Kanjirapally, Kottayam</span></div>
             </div>
         </div>
     </header>
 
-    <main class="login-main">
+    <div class="login-container">
         <!-- Left Section -->
-        <section class="signup-visual">
-            <div class="visual-content">
+        <div class="left-section">
+            <div class="bg-image"></div>
+            <div class="left-content">
                 <h1>Heal Care</h1>
                 <p>Create your Heal Care account to manage appointments, view medical records, and receive personalized healthcare services.</p>
             </div>
-            <div class="visual-bg"></div>
-        </section>
+        </div>
 
         <!-- Right Section -->
-        <section class="signup-form-area">
-            <div class="form-container">
-                <form id="signupForm" class="auth-form active" action="auth_handler.php" method="POST">
-                    <input type="hidden" name="action" value="signup">
-                    
-                    <h3>Sign Up</h3>
-                    <p class="subtitle">Welcome! Please Sign Up to <span>your account</span></p>
+        <div class="right-section">
+            <div class="login-card">
+                
+                <h3>Sign Up</h3>
+                <p class="subtitle">Welcome! Please Sign Up to <strong>your account</strong></p>
 
-                    <div class="input-row">
+                <form id="signupForm" action="auth_handler.php" method="POST">
+                    <input type="hidden" name="action" value="signup">
+                    <input type="hidden" name="role" value="patient">
+
+                    <div class="form-group">
                         <label>Full Name</label>
                         <div class="input-wrapper">
-                            <input type="text" name="fullname" class="input-light" placeholder="Full Name" required>
-                            <small class="error-msg">Name should not contain spaces</small>
+                            <input type="text" name="fullname" id="fullname" class="form-input" placeholder="Enter Full Name" required>
                         </div>
+                        <div class="error-msg" id="nameError">Name is required</div>
                     </div>
 
-                    <div class="input-row">
+                    <div class="form-group">
                         <label>Email</label>
                         <div class="input-wrapper">
-                            <input type="email" name="email" class="input-light" placeholder="Email" required>
-                            <small class="error-msg">Please enter a valid email</small>
+                            <input type="email" name="email" id="email" class="form-input" placeholder="Enter Email Address" required>
                         </div>
+                        <div class="error-msg" id="emailError">Invalid email format</div>
                     </div>
 
-                    <div class="input-row">
-                        <label>Phone</label>
+                    <div class="form-group">
+                        <label>Phone Number</label>
                         <div class="input-wrapper">
-                            <input type="tel" name="phone" class="input-light" placeholder="Phone Number" maxlength="10" pattern="\d{10}" required>
-                            <small class="error-msg">Phone must be 10 digits</small>
+                            <input type="tel" name="phone_number" id="phone" class="form-input" placeholder="Enter 10-digit Phone" required pattern="[0-9]{10}" maxlength="10">
                         </div>
+                        <div class="error-msg" id="phoneError">Must be exactly 10 digits</div>
                     </div>
 
-
-                    <div class="input-row">
+                    <div class="form-group">
                         <label>Password</label>
                         <div class="input-wrapper">
-                            <div class="password-relative-group">
-                                <input type="password" name="password" id="passwordInput" class="input-light" placeholder="Password" required minlength="8">
-                                <button type="button" class="toggle-eye-icon" onclick="togglePasswordVisibility(this)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <span class="suggest-pass-link" id="suggestPassBtn">Suggest Strong Password</span>
-                            <div class="pass-strength-meter" id="strengthMeter"></div>
-                            <small class="error-msg">Weak password</small>
+                            <input type="password" name="password" id="password" class="form-input" placeholder="Create Password" required minlength="6">
+                            <button type="button" class="toggle-password" onclick="togglePass(this)"><i class="fas fa-eye"></i></button>
                         </div>
+                        <div class="password-tools" style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px; padding: 0 10px;">
+                            <div class="strength-meter" style="flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; margin-right: 10px;">
+                                <div id="strengthBar" style="width: 0%; height: 100%; background: #ef4444; transition: all 0.3s;"></div>
+                            </div>
+                            <span id="strengthText" style="font-size: 10px; color: #94a3b8; min-width: 50px;">Weak</span>
+                            <a href="javascript:void(0)" onclick="suggestPassword()" style="font-size: 11px; color: #3b82f6; text-decoration: none; margin-left: 10px; font-weight: 600;">Suggest Strong Password</a>
+                        </div>
+                        <div class="error-msg" id="passError">Minimum 6 characters</div>
                     </div>
 
-                    <div class="input-row">
+                    <div class="form-group">
                         <label>Confirm Password</label>
                         <div class="input-wrapper">
-                            <div class="password-relative-group">
-                                <input type="password" name="confirm_password" class="input-light" placeholder="Confirm Password" required>
-                                <button type="button" class="toggle-eye-icon" onclick="togglePasswordVisibility(this)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </button>
-                            </div>
-                            <small class="error-msg">Passwords do not match</small>
+                            <input type="password" name="confirm_password" id="cpassword" class="form-input" placeholder="Confirm Password" required>
+                            <button type="button" class="toggle-password" onclick="togglePass(this)"><i class="fas fa-eye"></i></button>
                         </div>
+                        <div class="error-msg" id="cpassError">Passwords do not match</div>
                     </div>
 
-                    <button type="submit" class="btn-submit-new">Create Account</button>
+                    <button type="submit" id="submitBtn" class="btn-login" disabled>Create Account</button>
 
-                    <div class="or-divider">Or</div>
+                     <div class="divider"><span>OR</span></div>
 
-                    <div class="google-signup-center">
+                    <div class="google-btn-container">
+                        <div id="g_id_onload"
+                             data-client_id="717092890700-fa055v1u37lthk6q6ao7jodl7c1jfrc9.apps.googleusercontent.com"
+                             data-context="signup"
+                             data-ux_mode="popup"
+                             data-callback="handleCredentialResponse"
+                             data-auto_prompt="false">
+                        </div>
                         <div class="g_id_signin" 
                              data-type="standard" 
-                             data-shape="rectangular" 
-                             data-theme="outline" 
+                             data-shape="pill" 
+                             data-theme="filled_blue" 
                              data-text="signup_with" 
                              data-size="large" 
-                             data-logo_alignment="center" 
-                             data-width="320">
+                             data-logo_alignment="left"
+                             data-width="380">
                         </div>
                     </div>
 
-                    <div class="form-footer-custom">
-                        Already have an account? <a href="login.php">Login</a>
-                    </div>
-
-                    <div style="text-align: center; margin-top: 15px; margin-bottom: 20px;">
-                        <span style="color: #fff; opacity: 0.8; font-size: 0.9rem;">Are you a doctor or staff?</span>
-                        <a href="apply.php" style="color: #4fc3f7; font-weight: 700; text-decoration: underline; margin-left: 5px;">Apply here</a>
+                    <div class="form-links">
+                        <a href="login.php">Already have an account? <strong>Login</strong></a>
+                        <a href="apply.php" class="apply-btn">Are you a Doctor or Staff? Apply Now</a>
                     </div>
                     
-                    <div style="text-align: center;">
-                        <a href="index.php" class="back-home-pill">← Back to Home</a>
-                    </div>
+                    <a href="index.php" class="back-link">← Back to Home</a>
                 </form>
+
             </div>
-        </section>
-    </main>
+        </div>
+    </div>
 
-    <script src="js/login.js"></script>
+    <!-- Reusing existing script logic but custom inline validation below -->
+    <script src="js/login.js"></script> 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('signupForm');
-            if(!form) return;
+        function togglePass(btn) {
+            const input = btn.previousElementSibling;
+            if (input.type === "password") {
+                input.type = "text";
+                btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                input.type = "password";
+                btn.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        }
+
+        // Live Inline Validation
+        const inputs = {
+            fullname: document.getElementById('fullname'),
+            email: document.getElementById('email'),
+            phone: document.getElementById('phone'),
+            pass: document.getElementById('password'),
+            cpass: document.getElementById('cpassword')
+        };
+        const errors = {
+            name: document.getElementById('nameError'),
+            email: document.getElementById('emailError'),
+            phone: document.getElementById('phoneError'),
+            pass: document.getElementById('passError'),
+            cpass: document.getElementById('cpassError')
+        };
+        const submitBtn = document.getElementById('submitBtn');
+
+        function validateForm() {
+            let valid = true;
+
+            // 1. Full Name: Min 3 chars, Alphabets only
+            const nameRegex = /^[a-zA-Z\s]{3,}$/;
+            if(nameRegex.test(inputs.fullname.value.trim())) {
+                errors.name.classList.remove('visible');
+                inputs.fullname.classList.remove('invalid');
+                errors.name.textContent = "";
+            } else {
+                if(inputs.fullname.value.length > 0) {
+                     errors.name.textContent = "Please enter a valid full name (min 3 chars)";
+                     errors.name.classList.add('visible');
+                     inputs.fullname.classList.add('invalid');
+                }
+                valid = false;
+            }
+
+            // 2. Email Verification
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if(emailRegex.test(inputs.email.value.trim())) {
+                 errors.email.classList.remove('visible');
+                 inputs.email.classList.remove('invalid');
+            } else {
+                 if(inputs.email.value.length > 0) {
+                    errors.email.textContent = "Please enter a valid email address";
+                    errors.email.classList.add('visible');
+                    inputs.email.classList.add('invalid');
+                 }
+                 valid = false;
+            }
+
+            // 3. Phone: Exactly 10 digits, numeric
+            const phoneRegex = /^[0-9]{10}$/;
+            if(phoneRegex.test(inputs.phone.value.trim())) {
+                errors.phone.classList.remove('visible');
+                inputs.phone.classList.remove('invalid');
+            } else {
+                 if(inputs.phone.value.length > 0) {
+                    errors.phone.textContent = "Enter a valid 10-digit phone number";
+                    errors.phone.classList.add('visible');
+                    inputs.phone.classList.add('invalid');
+                 }
+                 valid = false;
+            }
+
+            // 4. Password Strict: Min 8, AZ, az, 09, special
+            const passVal = inputs.pass.value;
+            // Relaxed Regex: Allows any special character (non-alphanumeric)
+            const strictPassRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
             
-            // Inputs
-            const nameInput = form.querySelector('input[name="fullname"]');
-            const emailInput = form.querySelector('input[name="email"]');
-            const phoneInput = form.querySelector('input[name="phone"]');
-            const pwdInput = form.querySelector('input[name="password"]');
-            const cpwdInput = form.querySelector('input[name="confirm_password"]');
-
-            // Strong Password: min 8, max 32, 1 upper, 1 lower, 1 num, 1 special char
-            const strongPasswordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z0-9]).{8,32}$/;
-
-            // Helper to show/hide error
-            function showError(input, message) {
-                const wrapper = input.closest('.input-wrapper');
-                const errorMsg = wrapper.querySelector('.error-msg');
-                input.classList.add('error-border');
-                input.classList.remove('success-border');
-                errorMsg.textContent = message;
-                errorMsg.style.display = 'block';
-                return false;
+            if(strictPassRegex.test(passVal)) {
+                errors.pass.classList.remove('visible');
+                inputs.pass.classList.remove('invalid');
+            } else {
+                 if(passVal.length > 0) {
+                     // Descriptive error message
+                     errors.pass.textContent = "Must be 8+ chars with Upper, Lower, Number & Symbol";
+                     errors.pass.classList.add('visible');
+                     inputs.pass.classList.add('invalid');
+                 }
+                 valid = false;
             }
 
-            function showSuccess(input) {
-                const wrapper = input.closest('.input-wrapper');
-                const errorMsg = wrapper.querySelector('.error-msg');
-                input.classList.remove('error-border');
-                input.classList.add('success-border');
-                errorMsg.style.display = 'none';
-                return true;
+            // 5. Confirm Password
+            if(inputs.cpass.value === inputs.pass.value && inputs.cpass.value !== '') {
+                errors.cpass.classList.remove('visible');
+                inputs.cpass.classList.remove('invalid');
+            } else {
+                if(inputs.cpass.value.length > 0) {
+                    errors.cpass.textContent = "Passwords do not match";
+                    errors.cpass.classList.add('visible');
+                    inputs.cpass.classList.add('invalid');
+                }
+                valid = false;
             }
+            
+            // Final check to enable button
+             if(valid && nameRegex.test(inputs.fullname.value) && emailRegex.test(inputs.email.value) && phoneRegex.test(inputs.phone.value) && strictPassRegex.test(inputs.pass.value) && inputs.pass.value === inputs.cpass.value) {
+                 submitBtn.disabled = false;
+             } else {
+                 submitBtn.disabled = true;
+             }
+        }
 
-            // --- Enforce Must Not Start With Space ---
-            function sanitizeLeadingSpace() {
-                if (this.value.startsWith(' ')) {
-                    this.value = this.value.trimStart();
-                }
-            }
-
-            // Apply to all inputs
-            const inputs = [nameInput, emailInput, phoneInput, pwdInput, cpwdInput];
-            inputs.forEach(input => {
-                if(input) {
-                    input.addEventListener('input', sanitizeLeadingSpace);
-                }
-            });
-
-            // --- Suggest Password Logic ---
-            const suggestBtn = document.getElementById('suggestPassBtn');
-            if(suggestBtn) {
-                suggestBtn.addEventListener('click', function() {
-                    const length = 12;
-                    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*#_";
-                    let retVal = "";
-                    retVal += "A";
-                    retVal += "a";
-                    retVal += "1";
-                    retVal += "!";
-                    
-                    for (let i = 0, n = charset.length; i < length - 4; ++i) {
-                        retVal += charset.charAt(Math.floor(Math.random() * n));
-                    }
-                    retVal = retVal.split('').sort(() => 0.5 - Math.random()).join('');
-
-                    pwdInput.value = retVal;
-                    cpwdInput.value = retVal;
-                    
-                    // Visual feedback
-                    validateField(pwdInput);
-                    validateField(cpwdInput);
-                    updateStrengthMeter(retVal);
-                });
-            }
-
-            function updateStrengthMeter(val) {
-                const meter = document.getElementById('strengthMeter');
-                if(!meter) return;
-                
-                if(!val) { meter.style.width = '0%'; return; }
-                
-                let strength = 0;
-                if (val.length >= 8) strength++;
-                if (val.match(/[A-Z]/)) strength++;
-                if (val.match(/[a-z]/)) strength++;
-                if (val.match(/[0-9]/)) strength++;
-                if (val.match(/[^a-zA-Z0-9]/)) strength++;
-
-                if (strength <= 2) {
-                    meter.style.width = '30%'; 
-                    meter.style.backgroundColor = '#ff4444';
-                } else if (strength <= 4) {
-                    meter.style.width = '60%'; 
-                    meter.style.backgroundColor = '#ffbb33';
-                } else {
-                    meter.style.width = '100%'; 
-                    meter.style.backgroundColor = '#00c851';
-                }
-            }
-
-            // Unified validation function
-            function validateField(input) {
-                if(!input) return true;
-                const val = input.value.trim(); // Trim for checking but keep input value for password
-                const rawVal = input.value;
-                const name = input.name;
-
-                // Basic Required Check (skip empty check if focused? No, live feedback wants aggressive check)
-                if (!val && input.required) {
-                    // Only show 'required' error if the user has interacted with it (dirty) or on blur
-                    // But user asked for LIVE text feedback. Let's show it if length is 0?
-                    // Usually annoying if it shows up before typing. 
-                    // Let's rely on standard logic: if value is empty assign error but maybe handled by UI?
-                    // We'll return 'false' but only show Error if it is 'touched'?
-                    // For simplicity, we show error if empty on blur, but valid/invalid status on input might be too noisy.
-                    // Lets compromise:
-                    return showError(input, 'This field is required.');
-                }
-
-                if (val && !/^[a-zA-Z0-9]/.test(val) && name !== 'password' && name !== 'confirm_password') { // Passwords can start with anything? usually yes
-                    return showError(input, 'Must start with a letter or number.');
-                }
-
-                switch(name) {
-                    case 'fullname':
-                        if (val.length < 3) return showError(input, 'Minimum 3 characters required.');
-                        if (/\d/.test(val)) return showError(input, 'Name should not contain numbers.');
-                        break;
-                    case 'email':
-                        const robustEmailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-                        if (!robustEmailPattern.test(val)) return showError(input, 'Enter a valid email address (e.g. user@example.com).');
-                        break;
-                    case 'phone':
-                        if (!/^\d+$/.test(val)) return showError(input, 'Phone currently contains non-digits.');
-                        if (val.length !== 10) return showError(input, `Phone must be exactly 10 digits (Current: ${val.length}).`);
-                        break;
-                    case 'password':
-                        updateStrengthMeter(rawVal);
-                        if (rawVal.length < 8) return showError(input, 'Password must be at least 8 characters.');
-                        if (!strongPasswordPattern.test(rawVal)) return showError(input, 'Must contain Upper, Lower, Number & Special Character.');
-                        break;
-                    case 'confirm_password':
-                        if (rawVal !== pwdInput.value) return showError(input, 'Passwords do not match.');
-                        break;
-                }
-
-                return showSuccess(input);
-            }
-
-            // Attach Live Listeners
-            inputs.forEach(input => {
-                if(!input) return;
-                
-                // On Input (Live)
-                input.addEventListener('input', function() {
-                    // For 'required' fields, don't show error immediately if empty (user just cleared it), 
-                    // unless they already blurred? 
-                    // Let's just validate. User asked for live feedback.
-                    validateField(input);
-                });
-
-                // On Blur (Lost focus) - Ensure validation message persists
-                input.addEventListener('blur', () => validateField(input));
-            });
-
-            // --- Form Submit ---
-            form.addEventListener('submit', function(e) {
-                let isFormValid = true;
-                inputs.forEach(input => {
-                    if (!validateField(input)) isFormValid = false;
-                });
-
-                if (!isFormValid) {
-                    e.preventDefault();
-                    // Scroll to first error
-                    const firstError = form.querySelector('.error-border');
-                    if (firstError) firstError.focus();
-                }
-            });
-
+        // Attach listeners
+        Object.values(inputs).forEach(input => {
+            input.addEventListener('input', validateForm);
+            input.addEventListener('blur', validateForm);
         });
+
+        // Password Strength Logic
+        const passInput = inputs.pass;
+        const strengthBar = document.getElementById('strengthBar');
+        const strengthText = document.getElementById('strengthText');
+
+        passInput.addEventListener('input', function() {
+            const val = this.value;
+            let strength = 0;
+            if(val.length > 5) strength += 20;
+            if(val.length > 8) strength += 20;
+            if(/[A-Z]/.test(val)) strength += 20;
+            if(/[0-9]/.test(val)) strength += 20;
+            if(/[^A-Za-z0-9]/.test(val)) strength += 20;
+
+            strengthBar.style.width = strength + '%';
+            
+            if(strength < 40) {
+                strengthBar.style.background = '#ef4444'; // Red
+                strengthText.textContent = 'Weak';
+                strengthText.style.color = '#ef4444';
+            } else if(strength < 80) {
+                strengthBar.style.background = '#f59e0b'; // Orange
+                strengthText.textContent = 'Medium';
+                strengthText.style.color = '#f59e0b';
+            } else {
+                strengthBar.style.background = '#10b981'; // Green
+                strengthText.textContent = 'Strong';
+                strengthText.style.color = '#10b981';
+            }
+        });
+
+        // Password Suggestion logic
+        function suggestPassword() {
+            const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+            let password = "";
+            for (let i = 0; i < 12; i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            inputs.pass.value = password;
+            inputs.cpass.value = password;
+            
+            // Trigger events to update UI
+            inputs.pass.dispatchEvent(new Event('input'));
+            inputs.cpass.dispatchEvent(new Event('input'));
+            
+            // Toggle visibility to show the user
+            const btn = inputs.pass.nextElementSibling;
+            if(inputs.pass.type === 'password') {
+                togglePass(btn);
+            }
+        }
     </script>
 </body>
 </html>

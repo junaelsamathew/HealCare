@@ -411,8 +411,8 @@ include 'includes/header.php';
                     </div>
                     <h3>EMERGENCY</h3>
                     <p class="contact-details">
-                        (+254) 717 783 146<br>
-                        (+254) 717 783 147
+                        +91 7177831464<br>
+                       
                     </p>
                 </div>
                 <div class="contact-card dark">

@@ -17,9 +17,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->begin_transaction();
 
     try {
-        // 1. Update Appointment Status to COMPLETED
-        $stmt_appt = $conn->prepare("UPDATE appointments SET status = 'Completed' WHERE appointment_id = ?");
-        $stmt_appt->bind_param("i", $appt_id);
+        // 1. Update Appointment Status
+        $new_status = $lab_required ? 'Pending Lab' : 'Completed';
+        $stmt_appt = $conn->prepare("UPDATE appointments SET status = ? WHERE appointment_id = ?");
+        $stmt_appt->bind_param("si", $new_status, $appt_id);
         $stmt_appt->execute();
 
         // 1.5 Generate Billing for Consultation (IF NOT EXISTS)

@@ -103,6 +103,7 @@ $username = $_SESSION['username'];
         }
         .flow-step.completed .step-label { color: #10b981; }
         .step-line.completed { background: #10b981; }
+        .step-line.active { background: var(--primary-blue); opacity: 0.7; }
         
         /* Cancelled State */
         .flow-step.cancelled .step-circle { background: #ef4444; border-color: #ef4444; color: white; }
@@ -135,7 +136,7 @@ $username = $_SESSION['username'];
                                     LEFT JOIN users u ON a.doctor_id = u.user_id 
                                     LEFT JOIN doctors d ON u.user_id = d.user_id 
                                     LEFT JOIN registrations r ON u.registration_id = r.registration_id
-                                    WHERE a.patient_id = $user_id AND a.status IN ('Requested', 'Approved', 'Scheduled', 'Pending', 'Confirmed')
+                                    WHERE a.patient_id = $user_id AND a.status IN ('Requested', 'Approved', 'Scheduled', 'Pending', 'Confirmed', 'Pending Lab')
                                     ORDER BY a.appointment_date ASC";
                     $upcoming_res = $conn->query($upcoming_sql);
 
@@ -157,6 +158,8 @@ $username = $_SESSION['username'];
                                 $s1 = 'active'; 
                             } elseif ($status == 'Approved' || $status == 'Scheduled' || $status == 'Confirmed') {
                                 $s1 = 'completed'; $l1 = 'completed'; $s2 = 'active';
+                            } elseif ($status == 'Pending Lab') {
+                                $s1 = 'completed'; $l1 = 'completed'; $s2 = 'completed'; $l2 = 'active';
                             } elseif ($status == 'Completed') {
                                 $s1 = 'completed'; $l1 = 'completed'; $s2 = 'completed'; $l2 = 'completed'; $s3 = 'completed';
                             }

@@ -215,7 +215,7 @@ if ($profile_exists) {
             <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
                 <?php
                 // 1. Upcoming Appointments
-                $upcoming_sql = "SELECT COUNT(*) as count FROM appointments WHERE patient_id = $user_id AND status IN ('Scheduled', 'Approved', 'Confirmed', 'Pending', 'Requested') AND appointment_date >= CURDATE()";
+                $upcoming_sql = "SELECT COUNT(*) as count FROM appointments WHERE patient_id = $user_id AND status IN ('Scheduled', 'Approved', 'Confirmed', 'Pending', 'Requested', 'Pending Lab') AND appointment_date >= CURDATE()";
                 $upcoming_count = $conn->query($upcoming_sql)->fetch_assoc()['count'];
 
                 // 2. Past Visits
@@ -283,7 +283,7 @@ if ($profile_exists) {
                                      LEFT JOIN users u ON a.doctor_id = u.user_id 
                                      LEFT JOIN doctors d ON u.user_id = d.user_id 
                                      LEFT JOIN registrations r ON u.registration_id = r.registration_id
-                                     WHERE a.patient_id = $user_id AND a.status IN ('Scheduled', 'Approved', 'Pending', 'Requested', 'Confirmed') AND a.appointment_date >= '$today_dt'
+                                     WHERE a.patient_id = $user_id AND a.status IN ('Scheduled', 'Approved', 'Pending', 'Requested', 'Confirmed', 'Pending Lab') AND a.appointment_date >= '$today_dt'
                                      ORDER BY a.appointment_date ASC LIMIT 1";
                         
                         $appt_res = $conn->query($appt_sql);

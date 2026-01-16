@@ -128,6 +128,8 @@ $res_appts = $conn->query($sql_appts);
         .status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
         .status-Requested { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .status-PendingLab { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+        .status-LabCompleted { background: rgba(16, 185, 129, 0.1); color: #10b981; } /* Green like Completed */
         
         .btn-action {
             background: none;
@@ -230,9 +232,19 @@ $res_appts = $conn->query($sql_appts);
                                 </form>
                             <?php endif; ?>
 
-                            <?php if ($appt['status'] == 'Approved' || $appt['status'] == 'Checked-In' || $appt['status'] == 'Scheduled' || $appt['status'] == 'Confirmed'): ?>
-                                <a href="doctor_dashboard.php?patient_id=<?php echo $appt['patient_id']; ?>&appt_id=<?php echo $appt['appointment_id']; ?>" class="btn-action" style="color:#3b82f6; border-color:#3b82f6; text-decoration:none;"><i class="fas fa-stethoscope"></i> Consult</a>
-                                <?php if($appt['status'] != 'Scheduled' && $appt['status'] != 'Approved' && $appt['status'] != 'Confirmed'): ?>
+                            <?php 
+                            $active_statuses = ['Approved', 'Checked-In', 'Scheduled', 'Confirmed', 'Pending Lab', 'Lab Completed'];
+                            if (in_array($appt['status'], $active_statuses)): 
+                            ?>
+                                <?php
+                                $is_lab = ($appt['status'] == 'Pending Lab' || $appt['status'] == 'Lab Completed');
+                                $btn_text = $is_lab ? 'Review Lab' : 'Consult';
+                                $btn_icon = $is_lab ? 'fa-flask' : 'fa-user-md';
+                                $btn_style = $is_lab ? 'color:#a855f7; border-color:#a855f7;' : 'color:#3b82f6; border-color:#3b82f6;';
+                                ?>
+                                <a href="doctor_dashboard.php?patient_id=<?php echo $appt['patient_id']; ?>&appt_id=<?php echo $appt['appointment_id']; ?>" class="btn-action" style="<?php echo $btn_style; ?> text-decoration:none;"><i class="fas <?php echo $btn_icon; ?>"></i> <?php echo $btn_text; ?></a>
+                                
+                                <?php if($appt['status'] != 'Scheduled' && $appt['status'] != 'Approved' && $appt['status'] != 'Confirmed' && !$is_lab): ?>
                                     <form method="POST" style="display:inline;">
                                         <input type="hidden" name="action" value="update">
                                         <input type="hidden" name="appt_id" value="<?php echo $appt['appointment_id']; ?>">

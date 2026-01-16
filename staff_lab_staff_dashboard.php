@@ -13,6 +13,19 @@ $res = $conn->query("SELECT * FROM lab_staff WHERE user_id = $user_id");
 $lab = $res->fetch_assoc();
 $lab_type = $lab['lab_type'] ?? 'Blood / Pathology Lab';
 
+// Derive search pattern for loose matching
+$search_pattern = "%" . $lab_type . "%";
+if (stripos($lab_type, 'Pathology') !== false) {
+    $search_pattern = '%Pathology%';
+} elseif (stripos($lab_type, 'X-Ray') !== false || stripos($lab_type, 'Imaging') !== false) {
+    $search_pattern = '%Imaging%'; // Matches 'X-Ray / Imaging Lab'
+    if (stripos($lab_type, 'X-Ray') !== false) $search_pattern = '%X-Ray%';
+} elseif (stripos($lab_type, 'Diagnostic') !== false) {
+    $search_pattern = '%Diagnostic%';
+} elseif (stripos($lab_type, 'Ultrasound') !== false) {
+    $search_pattern = '%Ultrasound%';
+}
+
 // Fetch current name dynamically
 $name_q = $conn->query("SELECT r.name FROM users u JOIN registrations r ON u.registration_id = r.registration_id WHERE u.user_id = $user_id");
 $name_row = $name_q->fetch_assoc();
@@ -124,13 +137,13 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
 
                 <?php
                 // Fetch Counts
-                $q_pending = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type = '$lab_type' AND status = 'Pending'");
+                $q_pending = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Pending'");
                 $pending_count = $q_pending->fetch_assoc()['count'];
 
-                $q_processing = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type = '$lab_type' AND status = 'Processing'");
+                $q_processing = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Processing'");
                 $proc_count = $q_processing->fetch_assoc()['count'];
 
-                $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type = '$lab_type' AND status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
+                $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
                 $completed_today = $q_completed->fetch_assoc()['count'];
                 ?>
 
@@ -165,7 +178,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     JOIN registrations rp ON up.registration_id = rp.registration_id
                     JOIN users ud ON lo.doctor_id = ud.user_id
                     JOIN registrations rd ON ud.registration_id = rd.registration_id
-                    WHERE lo.test_type = '$lab_type' AND lo.status = 'Pending'
+                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Pending'
                     ORDER BY lo.created_at ASC
                 ";
                 $res_orders = $conn->query($sql_orders);
@@ -221,7 +234,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     FROM lab_tests lo
                     JOIN users up ON lo.patient_id = up.user_id JOIN registrations rp ON up.registration_id = rp.registration_id
                     JOIN users ud ON lo.doctor_id = ud.user_id JOIN registrations rd ON ud.registration_id = rd.registration_id
-                    WHERE lo.test_type = '$lab_type' AND lo.status = 'Processing'
+                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Processing'
                     ORDER BY lo.updated_at ASC
                 ";
                 $res_proc = $conn->query($sql_proc);
@@ -275,7 +288,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     SELECT lo.*, rp.name as patient_name
                     FROM lab_tests lo
                     JOIN users up ON lo.patient_id = up.user_id JOIN registrations rp ON up.registration_id = rp.registration_id
-                    WHERE lo.test_type = '$lab_type' AND lo.status = 'Completed'
+                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Completed'
                     ORDER BY lo.updated_at DESC LIMIT 50
                 ";
                 $res_comp = $conn->query($sql_comp);
