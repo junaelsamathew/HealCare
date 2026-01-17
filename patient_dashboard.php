@@ -234,10 +234,20 @@ if ($profile_exists) {
                 // 4. Bed Status
                 $bed_display = 'Not Admitted';
                 $bed_color = '#94a3b8'; // gray
-                $admit_sql = "SELECT appointment_id FROM appointments WHERE patient_id = $user_id AND status = 'Admitted' LIMIT 1";
-                if ($conn->query($admit_sql)->num_rows > 0) {
-                    $bed_display = 'Admitted'; // Placeholder as we don't have bed numbers in DB yet
-                    $bed_color = '#10b981'; // green
+                
+                // Check admissions table instead of appointments
+                $admit_sql = "SELECT status FROM admissions WHERE patient_id = $user_id AND status IN ('Admitted', 'Pending') ORDER BY request_date DESC LIMIT 1";
+                $adm_chk = $conn->query($admit_sql);
+                
+                if ($adm_chk && $adm_chk->num_rows > 0) {
+                    $adm_status = $adm_chk->fetch_assoc()['status'];
+                    if ($adm_status == 'Admitted') {
+                        $bed_display = 'Admitted';
+                        $bed_color = '#10b981'; // green
+                    } elseif ($adm_status == 'Pending') {
+                        $bed_display = 'Pending';
+                        $bed_color = '#f59e0b'; // orange
+                    }
                 }
                 ?>
                 <div class="stat-card">
@@ -267,6 +277,88 @@ if ($profile_exists) {
             </div>
 
             <!-- Two Column Layout: Main Ops & Side Info -->
+            
+            <?php
+            // Check Admission Status
+            $adm_sql = "SELECT a.*, r.room_number, w.ward_name, w.ward_type, d.username as doctor_name 
+                        FROM admissions a 
+                        JOIN rooms r ON a.room_id = r.room_id 
+                        JOIN wards w ON r.ward_id = w.ward_id
+                        JOIN users d ON a.doctor_id = d.user_id 
+                        WHERE a.patient_id = $user_id AND a.status = 'Admitted'";
+            $adm_res = $conn->query($adm_sql);
+            if ($adm_res && $adm_res->num_rows > 0) {
+                $adm = $adm_res->fetch_assoc();
+                $adm_days = (new DateTime())->diff(new DateTime($adm['admission_date']))->days ?: 1;
+                // Approx rate
+                $w_rate = 1000; 
+                if($adm['ward_type'] == 'General') $w_rate = 500;
+                if($adm['ward_type'] == 'Semi-Private') $w_rate = 1500;
+                if($adm['ward_type'] == 'Private') $w_rate = 3000;
+                if($adm['ward_type'] == 'ICU') $w_rate = 5000;
+                
+                $est_bill = $adm_days * $w_rate; 
+            ?>
+            <div class="content-section" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(16, 185, 129, 0.2);">
+                <div class="section-head" style="margin-bottom: 15px;">
+                    <h3 style="color: #10b981;"><i class="fas fa-bed"></i> Current Admission Status</h3>
+                    <span class="badge status-check" style="background:#10b981; color:white; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Inpatient</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div>
+                        <small style="color: #94a3b8;">Ward / Room</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;"><?php echo htmlspecialchars($adm['ward_name'] . ' - ' . $adm['room_number']); ?></h4>
+                        <small style="color: #64748b;"><?php echo htmlspecialchars($adm['ward_type']); ?></small>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Treating Doctor</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;">Dr. <?php echo htmlspecialchars($adm['doctor_name']); ?></h4>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Admitted Since</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;"><?php echo date('d M, Y', strtotime($adm['admission_date'])); ?></h4>
+                        <small style="color: #64748b;"><?php echo $adm_days; ?> Days</small>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Est. Room Charges</small>
+                        <h4 style="margin: 0; font-size: 16px; color: #f59e0b;">₹<?php echo number_format($est_bill); ?></h4>
+                        <small style="color: #64748b;">(Excl. medicines/procedures)</small>
+                    </div>
+                </div>
+            </div>
+            <?php } elseif ($adm_res && $adm_chk->num_rows > 0 && isset($adm_status) && $adm_status == 'Pending') { 
+                // Fetch details for Pending Request
+                 $pend_sql = "SELECT a.*, d.username as doctor_name 
+                 FROM admissions a 
+                 JOIN users d ON a.doctor_id = d.user_id 
+                 WHERE a.patient_id = $user_id AND a.status = 'Pending'";
+                 $pend_res = $conn->query($pend_sql);
+                 if($pend_res && $pend_res->num_rows > 0) {
+                     $pend = $pend_res->fetch_assoc();
+            ?>
+            <div class="content-section" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div class="section-head" style="margin-bottom: 15px;">
+                    <h3 style="color: #f59e0b;"><i class="fas fa-procedures"></i> Admission Request Pending</h3>
+                    <span class="badge status-check" style="background:#f59e0b; color:white; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Processing</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                    <div>
+                        <small style="color: #94a3b8;">Requested Ward</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;"><?php echo htmlspecialchars($pend['ward_type_req']); ?></h4>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Recommending Doctor</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;">Dr. <?php echo htmlspecialchars($pend['doctor_name']); ?></h4>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Request Date</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;"><?php echo date('d M, h:i A', strtotime($pend['request_date'])); ?></h4>
+                    </div>
+                </div>
+                <p style="margin-top: 15px; font-size: 13px; color: #cbd5e1;"><i class="fas fa-info-circle"></i> Administrators are currently assigning you a room. You will be notified once a bed is confirmed.</p>
+            </div>
+            <?php } } ?>
+
             <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; margin-top: 30px;">
                 
                 <!-- Appointments & Medical History -->

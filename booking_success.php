@@ -224,7 +224,7 @@ $username = $_SESSION['username'] ?? 'User';
                 <?php if(!isset($_GET['paid']) && isset($_GET['bill_id'])): ?>
                     <div class="payment-box">
                         <p style="margin: 0 0 15px; color: #f59e0b; font-weight: 500; font-size:0.95rem;">Please complete your payment to finalize the slot.</p>
-                        <a href="payment_process.php?bill_id=<?php echo $_GET['bill_id']; ?>" class="btn-print">Proceed to Payment</a>
+                        <a href="payment_gateway.php?bill_id=<?php echo $_GET['bill_id']; ?>" class="btn-print">Proceed to Payment</a>
                     </div>
                 <?php else: ?>
                     <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Details</button>

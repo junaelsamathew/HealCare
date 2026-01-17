@@ -396,6 +396,12 @@ if(isset($_SESSION['user_id'])) {
                             </div>
                             
                             <!-- Captcha -->
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block; margin-bottom:8px; font-weight:600; color:var(--text-light);">Symptoms / Reason for Visit <span class="required">*</span></label>
+                                <textarea name="reason" rows="3" class="form-control-input" placeholder="Describe your symptoms briefly (e.g., fever for 3 days, chest pain, headache)" required minlength="10" style="resize:vertical;"></textarea>
+                                <div style="font-size:0.8rem; color:var(--text-gray); margin-top:5px;">Minimum 10 characters required.</div>
+                            </div>
+
                             <div class="captcha-box">
                                 <label style="display:block; margin-bottom:5px; color:var(--text-gray); font-size:0.85rem;">Security Check <span class="required">*</span></label>
                                 <span class="captcha-img">5692</span>

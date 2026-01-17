@@ -235,6 +235,33 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
         .badge-status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-status-Lab { background: rgba(168, 85, 247, 0.1); color: #a855f7; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        
+        /* Table Styles for Inpatient Rounds */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th {
+            text-align: left;
+            padding: 15px;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        td {
+            padding: 15px;
+            color: #f1f5f9;
+            font-size: 13px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
     </style>
 </head>
 <body>
@@ -338,6 +365,84 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                     <span class="stat-value"><?php echo $stats_total; ?></span>
                     <span class="stat-label">Total Dept Consults</span>
                 </div>
+            </div>
+
+            <!-- Inpatient Rounds Section -->
+            <div class="content-section" style="margin-bottom: 30px; border: 1px solid rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05);">
+                <div class="section-head">
+                    <h3 style="color: #10b981;"><i class="fas fa-procedures"></i> Inpatient Rounds</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Patient Name</th>
+                            <th>Room / Ward</th>
+                            <th>Admitted Date</th>
+                            <th>Status.</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        // Updated query to include Pending admissions and use LEFT JOIN for rooms/wards
+                        $inpatients = $conn->query("SELECT a.admission_id, a.admission_date, a.status, a.request_date, a.ward_type_req, 
+                                                    p.name, pp.gender, 
+                                                    r.room_number, w.ward_name, w.ward_type 
+                                                    FROM admissions a 
+                                                    JOIN users u ON a.patient_id = u.user_id 
+                                                    JOIN registrations p ON u.registration_id = p.registration_id
+                                                    LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
+                                                    LEFT JOIN rooms r ON a.room_id = r.room_id 
+                                                    LEFT JOIN wards w ON r.ward_id = w.ward_id
+                                                    WHERE a.doctor_id = $user_id AND a.status IN ('Admitted', 'Pending')
+                                                    ORDER BY a.status ASC, a.request_date DESC");
+
+                        if($inpatients && $inpatients->num_rows > 0):
+                            while($ip = $inpatients->fetch_assoc()):
+                                $is_pending = ($ip['status'] == 'Pending');
+                        ?>
+                        <tr>
+                            <td>
+                                <strong><?php echo htmlspecialchars($ip['name']); ?></strong><br>
+                                <span style="font-size: 11px; color:#94a3b8;"><?php echo $ip['gender'] ?? 'N/A'; ?></span>
+                            </td>
+                            <td>
+                                <?php if($is_pending): ?>
+                                    <span style="color: #f59e0b; font-size: 12px; font-style: italic;">
+                                        Requested: <?php echo htmlspecialchars($ip['ward_type_req']); ?>
+                                    </span>
+                                <?php else: ?>
+                                    <?php echo htmlspecialchars($ip['room_number']); ?><br>
+                                    <span style="font-size: 11px; color:#94a3b8;"><?php echo htmlspecialchars($ip['ward_name'] . ' (' . $ip['ward_type'] . ')'); ?></span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php 
+                                    if($is_pending) echo date('d M, h:i A', strtotime($ip['request_date'])); 
+                                    else echo date('d M, h:i A', strtotime($ip['admission_date'])); 
+                                ?>
+                            </td>
+                            <td>
+                                <?php if($is_pending): ?>
+                                    <span class="badge" style="background:rgba(245, 158, 11, 0.1); color:#f59e0b;">Pending Room</span>
+                                <?php else: ?>
+                                    <span class="badge" style="background:rgba(16, 185, 129, 0.1); color:#10b981;">Admitted</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if(!$is_pending): ?>
+                                    <a href="doctor_inpatient_chart.php?admission_id=<?php echo $ip['admission_id']; ?>" class="btn btn-primary" style="padding: 6px 12px; font-size: 11px;">View Chart</a>
+                                    <a href="doctor_discharge.php?admission_id=<?php echo $ip['admission_id']; ?>" class="btn btn-warning" style="padding: 6px 12px; font-size: 11px; background:#f59e0b; border:none; color:white;">Discharge</a>
+                                <?php else: ?>
+                                    <span style="font-size: 11px; color: #94a3b8;">Waiting for Admin</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endwhile; else: ?>
+                        <tr><td colspan="5" style="text-align:center; padding:15px; color:#94a3b8;">No inpatients currently admitted under your care.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
             </div>
 
             <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; margin-top: 30px;">
@@ -677,7 +782,34 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                     <div style="font-size: 13.5px; line-height: 1.6; color: #cbd5e1; background: rgba(59, 130, 246, 0.05); padding: 18px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.1); margin-bottom: 20px;">
                         <span style="font-size: 11px; color: #3b82f6; font-weight: 700; text-transform: uppercase;">Medical History</span>
                         <p style="margin-top: 5px;">
-                            <?php echo !empty($active_patient['medical_history']) ? htmlspecialchars($active_patient['medical_history']) : "No previous medical history found for this patient."; ?>
+                            <?php 
+                            $has_static = !empty($active_patient['medical_history']);
+                            $has_dynamic = !empty($history_records);
+                            
+                            if ($has_static) {
+                                echo '<div style="margin-bottom:10px;">'.htmlspecialchars($active_patient['medical_history']).'</div>';
+                            }
+
+                            if ($has_dynamic) {
+                                echo ($has_static ? '<div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:10px; margin-top:10px;">' : '');
+                                echo '<strong style="font-size:10px; color:#94a3b8; text-transform:uppercase; display:block; margin-bottom:5px;">Recent Diagnoses:</strong>';
+                                echo '<ul style="padding-left:15px; margin:0; color:#e2e8f0; font-size:12px;">';
+                                $shown = 0;
+                                foreach($history_records as $rec) {
+                                    if ($shown >= 3) break;
+                                    if (!empty($rec['diagnosis'])) {
+                                        echo '<li style="margin-bottom:4px;">' . htmlspecialchars($rec['diagnosis']) . ' <span style="color:#64748b; font-size:10px;">(' . date('M Y', strtotime($rec['created_at'])) . ')</span></li>';
+                                        $shown++;
+                                    }
+                                }
+                                echo '</ul>';
+                                echo ($has_static ? '</div>' : '');
+                            }
+
+                            if (!$has_static && !$has_dynamic) {
+                                echo "No previous medical history found for this patient.";
+                            }
+                            ?>
                         </p>
                     </div>
 
@@ -785,6 +917,28 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                                 }
                             }
                         </script>
+
+                        <!-- Admission Recommendation -->
+                        <div style="margin-top: 20px; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; padding: 15px;">
+                            <label style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #f87171; font-weight: 700; cursor: pointer; margin-bottom: 0;">
+                                <input type="checkbox" name="admit_patient" value="1" onchange="document.getElementById('admissionFields').style.display = this.checked ? 'block' : 'none'"> 
+                                <i class="fas fa-bed"></i> Recommend Inpatient Admission
+                            </label>
+                            
+                            <div id="admissionFields" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px dashed rgba(239, 68, 68, 0.2);">
+                                <label style="font-size: 12px; color: #cbd5e1; display: block; margin-bottom: 5px;">Required Ward Type</label>
+                                <select name="ward_type_req" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; color: white; font-size: 12px; margin-bottom: 10px;">
+                                    <option value="General">General Ward</option>
+                                    <option value="Semi-Private">Semi-Private Room</option>
+                                    <option value="Private">Private Room</option>
+                                    <option value="ICU">ICU</option>
+                                    <option value="Emergency">Emergency</option>
+                                </select>
+                                
+                                <label style="font-size: 12px; color: #cbd5e1; display: block; margin-bottom: 5px;">Reason for Admission</label>
+                                <textarea name="admission_reason" rows="2" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; color: white; font-size: 12px;" placeholder="Clinical reason for admission..."></textarea>
+                            </div>
+                        </div>
 
                         <div style="margin-top: 20px; display: flex; gap: 15px; border-top: 1px solid var(--border-color); padding-top: 20px;">
                             <button type="submit" style="flex: 1; padding: 12px; background: #10b981; border: none; border-radius: 8px; color: white; font-weight: 700; cursor: pointer;"><i class="fas fa-save"></i> Finalize & Close Appointment</button>

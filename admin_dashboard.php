@@ -552,6 +552,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $error_msg = "Error rejecting leave.";
         }
+    } elseif ($action == 'add_ward') {
+        $name = mysqli_real_escape_string($conn, $_POST['ward_name']);
+        $type = mysqli_real_escape_string($conn, $_POST['ward_type']);
+        $cap = (int)$_POST['capacity'];
+        if ($conn->query("INSERT INTO wards (ward_name, ward_type, capacity) VALUES ('$name', '$type', $cap)")) {
+            $success_msg = "Ward added successfully!";
+        } else {
+            $error_msg = "Error adding ward: " . $conn->error;
+        }
+    } elseif ($action == 'add_room') {
+        $number = mysqli_real_escape_string($conn, $_POST['room_number']);
+        $wid = (int)$_POST['ward_id'];
+        if ($conn->query("INSERT INTO rooms (room_number, ward_id, status) VALUES ('$number', $wid, 'Available')")) {
+            $success_msg = "Room added successfully!";
+        } else {
+            $error_msg = "Error adding room: " . $conn->error;
+        }
+    } elseif ($action == 'delete_ward') {
+        $wid = (int)$_POST['ward_id'];
+        if ($conn->query("DELETE FROM wards WHERE ward_id = $wid")) {
+            $success_msg = "Ward deleted.";
+        } else {
+            $error_msg = "Error deleting ward.";
+        }
+    } elseif ($action == 'delete_room') {
+        $rid = (int)$_POST['room_id'];
+        if ($conn->query("DELETE FROM rooms WHERE room_id = $rid")) {
+            $success_msg = "Room deleted.";
+        } else {
+            $error_msg = "Error deleting room.";
+        }
+    } elseif ($action == 'rename_ward') {
+        $wid = (int)$_POST['ward_id'];
+        $name = mysqli_real_escape_string($conn, $_POST['ward_name']);
+        if ($conn->query("UPDATE wards SET ward_name = '$name' WHERE ward_id = $wid")) {
+            $success_msg = "Ward renamed successfully!";
+        } else {
+            $error_msg = "Error renaming ward.";
+        }
+    } elseif ($action == 'rename_room') {
+        $rid = (int)$_POST['room_id'];
+        $number = mysqli_real_escape_string($conn, $_POST['room_number']);
+        if ($conn->query("UPDATE rooms SET room_number = '$number' WHERE room_id = $rid")) {
+            $success_msg = "Room renamed successfully!";
+        } else {
+            $error_msg = "Error renaming room.";
+        }
+    } elseif ($action == 'assign_room') {
+        $admission_id = (int)$_POST['admission_id'];
+        $room_id = (int)$_POST['room_id'];
+        
+        $chk = $conn->query("SELECT status FROM rooms WHERE room_id = $room_id");
+        $r_status = ($chk && $chk->num_rows > 0) ? $chk->fetch_assoc()['status'] : 'Unknown';
+        
+        if($r_status != 'Available') {
+            $error_msg = "Selected room is not available.";
+        } else {
+            $conn->begin_transaction();
+            try {
+                $stmt = $conn->prepare("UPDATE admissions SET room_id = ?, status = 'Admitted', admission_date = NOW() WHERE admission_id = ?");
+                $stmt->bind_param("ii", $room_id, $admission_id);
+                $stmt->execute();
+                $conn->query("UPDATE rooms SET status = 'Occupied' WHERE room_id = $room_id");
+                $conn->commit();
+                $success_msg = "Patient successfully admitted to room.";
+            } catch (Exception $e) {
+                $conn->rollback();
+                $error_msg = "Error: " . $e->getMessage();
+            }
+        }
     }
 }
 
@@ -579,6 +649,25 @@ try {
     $todays_patients = $result ? $result->fetch_assoc()['count'] : 0;
 } catch (Exception $e) {
     $todays_patients = 0;
+    $todays_patients = 0;
+}
+
+// Bed Occupancy Stats
+try {
+    // Total Capacity from Wards
+    $cap_res = $conn->query("SELECT SUM(capacity) as total_cap FROM wards");
+    $total_beds = ($cap_res && $cap_res->num_rows > 0) ? (int)$cap_res->fetch_assoc()['total_cap'] : 0;
+    
+    // Occupied from Rooms (Status = Occupied)
+    // Note: This relies on rooms being marked 'Occupied' when a patient is admitted
+    $occ_res = $conn->query("SELECT COUNT(*) as occupied FROM rooms WHERE status='Occupied'");
+    $occupied_beds = ($occ_res && $occ_res->num_rows > 0) ? (int)$occ_res->fetch_assoc()['occupied'] : 0;
+    
+    $occupancy_rate = ($total_beds > 0) ? round(($occupied_beds / $total_beds) * 100) : 0;
+} catch (Exception $e) {
+    $total_beds = 0;
+    $occupied_beds = 0;
+    $occupancy_rate = 0;
 }
 
 // Chart Data: Consultation Traffic (Last 7 Days)
@@ -1245,6 +1334,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <a href="?section=pharmacy-alerts" class="nav-link <?php echo $section == 'pharmacy-alerts' ? 'active' : ''; ?>">
                 <i class="fas fa-pills"></i> Pharmacy Alerts
             </a>
+            <a href="?section=room-management" class="nav-link <?php echo $section == 'room-management' ? 'active' : ''; ?>">
+                <i class="fas fa-bed"></i> Room Management
+            </a>
         </div>
 
         <div class="nav-section">
@@ -1412,8 +1504,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         </div>
                     </div>
                     <div class="stat-card-title">Bed Occupancy</div>
-                    <div class="stat-card-value" style="color: var(--accent-green);">85%</div>
-                    <div class="stat-card-subtitle">170/200 beds occupied</div>
+                    <div class="stat-card-value" style="color: var(--accent-green);"><?php echo $occupancy_rate; ?>%</div>
+                    <div class="stat-card-subtitle"><?php echo $occupied_beds; ?>/<?php echo $total_beds; ?> beds occupied</div>
                 </div>
 
                 <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='?section=pharmacy-alerts'">
@@ -1497,6 +1589,305 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
             </div>
 
+        <?php elseif ($section == 'room-management'): ?>
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Room Management</h1>
+                    <p>Manage wards, rooms, and view occupancy status.</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="document.getElementById('addWardModal').style.display='block'" class="btn btn-primary"><i class="fas fa-plus"></i> Add Ward</button>
+                    <button onclick="document.getElementById('addRoomModal').style.display='block'" class="btn btn-success"><i class="fas fa-plus"></i> Add Room</button>
+                </div>
+            </div>
+
+            <!-- Pending Admissions Section -->
+            <div class="content-section" style="margin-bottom: 30px; border: 1px solid rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05);">
+                <div class="section-header">
+                    <h3 class="section-title" style="color: #f59e0b;"><i class="fas fa-user-clock"></i> Pending Admissions</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Doctor</th>
+                            <th>Requested Ward</th>
+                            <th>Reason</th>
+                            <th>Requested At</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $pending_adm = $conn->query("SELECT a.*, p.name as patient_name, d.username as doctor_name 
+                                                     FROM admissions a 
+                                                     JOIN users u ON a.patient_id = u.user_id 
+                                                     JOIN registrations p ON u.registration_id = p.registration_id
+                                                     JOIN users d ON a.doctor_id = d.user_id 
+                                                     WHERE a.status = 'Pending' 
+                                                     ORDER BY a.request_date ASC");
+                        if ($pending_adm && $pending_adm->num_rows > 0):
+                            while($req = $pending_adm->fetch_assoc()):
+                        ?>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($req['patient_name']); ?></strong></td>
+                            <td>Dr. <?php echo htmlspecialchars($req['doctor_name']); ?></td>
+                            <td><span class="badge" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><?php echo htmlspecialchars($req['ward_type_req']); ?></span></td>
+                            <td><small><?php echo htmlspecialchars($req['reason']); ?></small></td>
+                            <td><?php echo date('M d, H:i', strtotime($req['request_date'])); ?></td>
+                            <td>
+                                <button onclick="openAssignRoomModal(<?php echo $req['admission_id']; ?>, '<?php echo htmlspecialchars($req['patient_name']); ?>', '<?php echo $req['ward_type_req']; ?>')" class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">Assign Room</button>
+                            </td>
+                        </tr>
+                        <?php endwhile; else: ?>
+                        <tr><td colspan="6" style="text-align:center; padding: 20px; color:#94a3b8;">No pending admission requests.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Wards Section -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Wards</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ward Name</th>
+                            <th>Type</th>
+                            <th>Capacity</th>
+                            <th>Occupancy</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $wards = $conn->query("SELECT w.*, (SELECT COUNT(*) FROM rooms r WHERE r.ward_id = w.ward_id) as room_count, (SELECT COUNT(DISTINCT r.room_id) FROM rooms r JOIN admissions a ON r.room_id = a.room_id WHERE r.ward_id = w.ward_id AND a.status='Admitted') as occupied_count FROM wards w");
+                        if ($wards && $wards->num_rows > 0):
+                            while($ward = $wards->fetch_assoc()):
+                        ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($ward['ward_name']); ?></td>
+                            <td><?php echo htmlspecialchars($ward['ward_type']); ?></td>
+                            <td><?php echo $ward['capacity']; ?></td>
+                            <td><?php echo $ward['occupied_count']; ?> / <?php echo $ward['capacity']; ?> (Rooms: <?php echo $ward['room_count']; ?>)</td>
+                            <td>
+                                <button onclick="openRenameWard(<?php echo $ward['ward_id']; ?>, '<?php echo htmlspecialchars($ward['ward_name']); ?>')" class="btn btn-warning" style="padding: 5px 10px; font-size: 12px;">Rename</button>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Are you sure? This will delete all rooms in this ward.');">
+                                    <input type="hidden" name="action" value="delete_ward">
+                                    <input type="hidden" name="ward_id" value="<?php echo $ward['ward_id']; ?>">
+                                    <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endwhile; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Rooms Section -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Rooms & Occupancy</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Room Number</th>
+                            <th>Ward</th>
+                            <th>Status</th>
+                            <th>Occupant Details</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $rooms_sql = "SELECT r.*, w.ward_name, 
+                                      a.patient_id, a.doctor_id, a.status as adm_status,
+                                      u_pat.username as patient_name, u_pat.user_id as pat_user_id,
+                                      u_doc.username as doctor_name, r_pat.name as patient_real_name
+                                      FROM rooms r 
+                                      JOIN wards w ON r.ward_id = w.ward_id 
+                                      LEFT JOIN admissions a ON r.room_id = a.room_id AND a.status = 'Admitted'
+                                      LEFT JOIN users u_pat ON a.patient_id = u_pat.user_id
+                                      LEFT JOIN users u_doc ON a.doctor_id = u_doc.user_id
+                                      LEFT JOIN registrations r_pat ON u_pat.registration_id = r_pat.registration_id
+                                      ORDER BY w.ward_name, r.room_number";
+                        $rooms = $conn->query($rooms_sql);
+                        if ($rooms && $rooms->num_rows > 0):
+                            while($room = $rooms->fetch_assoc()):
+                                $status_color = $room['adm_status'] == 'Admitted' ? 'badge-rejected' : 'badge-active';
+                                $status_text = $room['adm_status'] == 'Admitted' ? 'Occupied' : 'Vacant';
+                        ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($room['room_number']); ?></td>
+                            <td><?php echo htmlspecialchars($room['ward_name']); ?></td>
+                            <td><span class="badge <?php echo $status_color; ?>"><?php echo $status_text; ?></span></td>
+                            <td>
+                                <?php if($room['adm_status'] == 'Admitted'): ?>
+                                    <div><strong>Patient:</strong> <?php echo htmlspecialchars($room['patient_real_name'] ?? $room['patient_name']); ?> (ID: <?php echo htmlspecialchars($room['patient_name']); ?>)</div>
+                                    <div><strong>Doctor:</strong> <?php echo htmlspecialchars($room['doctor_name']); ?></div>
+                                <?php else: ?>
+                                    <span style="color: var(--text-gray);">Empty</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <button onclick="openRenameRoom(<?php echo $room['room_id']; ?>, '<?php echo htmlspecialchars($room['room_number']); ?>')" class="btn btn-warning" style="padding: 5px 10px; font-size: 12px;">Rename</button>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this room?');">
+                                    <input type="hidden" name="action" value="delete_room">
+                                    <input type="hidden" name="room_id" value="<?php echo $room['room_id']; ?>">
+                                    <button type="submit" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <?php endwhile; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Modals -->
+            <div id="addWardModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="document.getElementById('addWardModal').style.display='none'">&times;</span>
+                    <h2>Add New Ward</h2>
+                    <form method="POST" class="form-grid" style="grid-template-columns: 1fr; margin-top: 20px;">
+                        <input type="hidden" name="action" value="add_ward">
+                        <div class="form-group">
+                            <label>Ward Name</label>
+                            <input type="text" name="ward_name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Ward Type</label>
+                            <select name="ward_type" required>
+                                <option value="General">General</option>
+                                <option value="ICU">ICU</option>
+                                <option value="Private">Private</option>
+                                <option value="Emergency">Emergency</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Capacity</label>
+                            <input type="number" name="capacity" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Ward</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="addRoomModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="document.getElementById('addRoomModal').style.display='none'">&times;</span>
+                    <h2>Add New Room</h2>
+                    <form method="POST" class="form-grid" style="grid-template-columns: 1fr; margin-top: 20px;">
+                        <input type="hidden" name="action" value="add_room">
+                        <div class="form-group">
+                            <label>Room Number/Name</label>
+                            <input type="text" name="room_number" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Ward</label>
+                            <select name="ward_id" required>
+                                <?php 
+                                $w_list = $conn->query("SELECT * FROM wards");
+                                if ($w_list) {
+                                    while($w = $w_list->fetch_assoc()):
+                                    ?>
+                                    <option value="<?php echo $w['ward_id']; ?>"><?php echo htmlspecialchars($w['ward_name']); ?></option>
+                                    <?php endwhile; 
+                                }
+                                ?>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Room</button>
+                    </form>
+                </div>
+            </div>
+            
+            <div id="renameWardModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="document.getElementById('renameWardModal').style.display='none'">&times;</span>
+                    <h2>Rename Ward</h2>
+                    <form method="POST" class="form-grid" style="grid-template-columns: 1fr; margin-top: 20px;">
+                        <input type="hidden" name="action" value="rename_ward">
+                        <input type="hidden" name="ward_id" id="rename_ward_id">
+                        <div class="form-group">
+                            <label>New Ward Name</label>
+                            <input type="text" name="ward_name" id="rename_ward_name" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="renameRoomModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="document.getElementById('renameRoomModal').style.display='none'">&times;</span>
+                    <h2>Rename Room</h2>
+                    <form method="POST" class="form-grid" style="grid-template-columns: 1fr; margin-top: 20px;">
+                        <input type="hidden" name="action" value="rename_room">
+                        <input type="hidden" name="room_id" id="rename_room_id">
+                        <div class="form-group">
+                            <label>New Room Number</label>
+                            <input type="text" name="room_number" id="rename_room_number" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="assignRoomModal" class="modal">
+                <div class="modal-content">
+                    <span class="close-modal" onclick="document.getElementById('assignRoomModal').style.display='none'">&times;</span>
+                    <h2>Assign Room</h2>
+                    <p style="color:#94a3b8; font-size:13px; margin-bottom:20px;">Admitting: <strong id="assign_patient_name" style="color:white;"></strong></p>
+                    
+                    <form method="POST" class="form-grid" style="grid-template-columns: 1fr;">
+                        <input type="hidden" name="action" value="assign_room">
+                        <input type="hidden" name="admission_id" id="assign_admission_id">
+                        
+                        <div class="form-group">
+                            <label>Requested Ward Type: <span id="assign_ward_req" style="color:#f59e0b;"></span></label>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Select Available Room</label>
+                            <select name="room_id" required style="width:100%; padding:10px; background:#0f172a; color:white; border:1px solid #334155; border-radius:6px;">
+                                <option value="">-- Choose Room --</option>
+                                <?php
+                                $avail_rooms = $conn->query("SELECT r.room_id, r.room_number, w.ward_name, w.ward_type FROM rooms r JOIN wards w ON r.ward_id = w.ward_id WHERE r.status = 'Available' ORDER BY w.ward_name, r.room_number");
+                                while($ar = $avail_rooms->fetch_assoc()):
+                                ?>
+                                <option value="<?php echo $ar['room_id']; ?>" data-type="<?php echo $ar['ward_type']; ?>">
+                                    <?php echo htmlspecialchars($ar['ward_name'] . " - " . $ar['room_number'] . " (" . $ar['ward_type'] . ")"); ?>
+                                </option>
+                                <?php endwhile; ?>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success" style="width:100%; margin-top:15px;">Confirm Admission</button>
+                    </form>
+                </div>
+            </div>
+
+            <script>
+                function openAssignRoomModal(adm_id, name, type) {
+                    document.getElementById('assign_admission_id').value = adm_id;
+                    document.getElementById('assign_patient_name').innerText = name;
+                    document.getElementById('assign_ward_req').innerText = type;
+                    document.getElementById('assignRoomModal').style.display = 'block';
+                }
+                function openRenameWard(id, name) {
+                    document.getElementById('rename_ward_id').value = id;
+                    document.getElementById('rename_ward_name').value = name;
+                    document.getElementById('renameWardModal').style.display = 'block';
+                }
+                function openRenameRoom(id, number) {
+                    document.getElementById('rename_room_id').value = id;
+                    document.getElementById('rename_room_number').value = number;
+                    document.getElementById('renameRoomModal').style.display = 'block';
+                }
+            </script>
         <?php elseif ($section == 'pharmacy-alerts'): ?>
             <!-- Pharmacy Alerts Detailed View -->
             <div class="top-bar">

@@ -70,6 +70,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt_rec->bind_param("iiisssi", $patient_id, $doctor_id, $appt_id, $diagnosis, $treatment, $prescription_id, $lab_required);
         $stmt_rec->execute();
 
+        // 5. Create Admission Request if recommended
+        if (isset($_POST['admit_patient']) && $_POST['admit_patient'] == '1') {
+            $ward_type = $_POST['ward_type_req'];
+            $reason = $_POST['admission_reason'];
+            $req_date = date('Y-m-d H:i:s');
+            
+            // Insert with Pending status. admission_date is NULL until room assigned.
+            // If admission_date is NOT NULL in DB, we might face error. 
+            // We will attempt NULL, if it fails, we might need to fix schema on fly or use NOW().
+            // Ideally Pending admission has no start date yet.
+            
+            $stmt_adm = $conn->prepare("INSERT INTO admissions (patient_id, doctor_id, status, ward_type_req, reason, request_date) VALUES (?, ?, 'Pending', ?, ?, ?)");
+            $stmt_adm->bind_param("iisss", $patient_id, $doctor_id, $ward_type, $reason, $req_date);
+            if (!$stmt_adm->execute()) {
+                 // Fallback if admission_date is required
+                 // $stmt_adm = $conn->prepare("INSERT INTO admissions (patient_id, doctor_id, admission_date, status, ward_type_req, reason, request_date) VALUES (?, ?, NOW(), 'Pending', ?, ?, ?)");
+                 // $stmt_adm->bind_param("iisss", $patient_id, $doctor_id, $ward_type, $reason, $req_date);
+                 // $stmt_adm->execute();
+                 // But strictly speaking, pending shouldn't have date.
+                 throw new Exception("Error creating admission request: " . $conn->error);
+            }
+        }
+
         $conn->commit();
         header("Location: doctor_dashboard.php?msg=Consultation finalized successfully!");
         exit();

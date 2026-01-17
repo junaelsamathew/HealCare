@@ -101,7 +101,7 @@ $username = $_SESSION['username'];
                             <td><span class="status-<?php echo $status_class; ?>"><?php echo $bill['payment_status']; ?></span></td>
                             <td>
                                 <?php if($bill['payment_status'] == 'Pending'): ?>
-                                    <a href="payment_process.php?bill_id=<?php echo $bill['bill_id']; ?>" style="display:inline-block; background: #00aeef; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">Pay Now</a>
+                                    <a href="payment_gateway.php?bill_id=<?php echo $bill['bill_id']; ?>" style="display:inline-block; background: #00aeef; color: white; padding: 6px 12px; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 600;">Pay Now</a>
                                 <?php else: ?>
                                     <a href="generate_receipt_pdf.php?bill_id=<?php echo $bill['bill_id']; ?>" style="color: #4fc3f7; text-decoration: none; font-size: 13px;"><i class="fas fa-file-invoice"></i> Receipt</a>
                                 <?php endif; ?>

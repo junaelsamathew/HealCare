@@ -219,6 +219,11 @@ $res_appts = $conn->query($sql_appts);
                                     <i class="fas fa-hashtag"></i> Token: <?php echo htmlspecialchars($appt['queue_number'] ?? 'N/A'); ?> • 
                                     ID: <?php echo $appt['patient_id'] ?? 'Walk-in'; ?>
                                 </p>
+                                <?php if(!empty($appt['reason'])): ?>
+                                    <div style="margin-top: 8px; font-size: 13px; color: #cbd5e1; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #3b82f6;">
+                                        <i class="fas fa-notes-medical" style="color: #64748b; margin-right: 5px;"></i> <?php echo htmlspecialchars($appt['reason']); ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 20px;">

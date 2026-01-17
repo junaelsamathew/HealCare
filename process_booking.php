@@ -11,6 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $date = $_POST['date'];
     $time_slot = $_POST['time_slot'];
     $token = $_POST['token'];
+    $reason = $_POST['reason'] ?? ''; // Capture reason
     
     $reg_status = $_POST['reg_status'];
     $patient_id = null;
@@ -113,8 +114,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Convert to 24h format for safety
         $appt_time = date("H:i", strtotime($time_slot));
         
-        $stmt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, appointment_time, appointment_type, status, queue_number, consultation_fee) VALUES (?, ?, ?, ?, ?, 'Walk-in', 'Pending', ?, ?)");
-        $stmt->bind_param("iisssid", $patient_id, $doctor_id, $department, $date, $appt_time, $token, $doc_fee);
+        $stmt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, appointment_time, appointment_type, status, queue_number, consultation_fee, reason) VALUES (?, ?, ?, ?, ?, 'Walk-in', 'Pending', ?, ?, ?)");
+        $stmt->bind_param("iisssids", $patient_id, $doctor_id, $department, $date, $appt_time, $token, $doc_fee, $reason);
         $stmt->execute();
         
         $appt_id = $conn->insert_id;
@@ -132,7 +133,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $conn->commit();
         
         // Redirect to Success with Bill ID
-        header("Location: booking_success.php?booking_id=$booking_id&token=$token&doctor=$doctor_id&date=$date&time=$time_slot&patient=" . urlencode($patient_name) . "&fee=$doc_fee&bill_id=$bill_id");
+        // Redirect to Payment Gateway
+        header("Location: payment_gateway.php?bill_id=$bill_id");
         exit();
 
     } catch (Exception $e) {
