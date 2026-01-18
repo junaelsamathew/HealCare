@@ -25,20 +25,31 @@ if (!$item) {
     exit();
 }
 
+// Fetch wards for dropdown
+$wards_res = $conn->query("SELECT * FROM wards ORDER BY ward_name ASC");
+
 $message = "";
 $msg_type = "success";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
     $quantity = (int)$_POST['quantity'];
-    $location = $_POST['location'];
+    
+    // Combine Ward and Bed
+    $ward_name = $_POST['ward_name'];
+    $bed_no = $_POST['bed_no'];
+    $location = $ward_name . " / " . $bed_no;
+    
     $price = $item['price'];
     $total_amount = $price * $quantity;
     
-    $stmt = $conn->prepare("INSERT INTO canteen_orders (patient_id, menu_id, quantity, order_date, order_time, order_status, total_amount, delivery_location) VALUES (?, ?, ?, CURDATE(), CURTIME(), 'Placed', ?, ?)");
+    // Status: Pending Payment
+    $stmt = $conn->prepare("INSERT INTO canteen_orders (patient_id, menu_id, quantity, order_date, order_time, order_status, total_amount, delivery_location) VALUES (?, ?, ?, CURDATE(), CURTIME(), 'Pending Payment', ?, ?)");
     $stmt->bind_param("iiids", $user_id, $menu_id, $quantity, $total_amount, $location);
     
     if ($stmt->execute()) {
-        header("Location: canteen.php?msg=Order+placed+successfully!");
+        $order_id = $stmt->insert_id;
+        // Redirect to Payment Gateway
+        header("Location: canteen_payment.php?order_id=" . $order_id);
         exit();
     } else {
         $message = "Error: " . $conn->error;
@@ -78,6 +89,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
         .form-group label { display: block; font-size: 14px; font-weight: 600; color: var(--text-gray); margin-bottom: 10px; }
         .form-control { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 15px; color: #fff; font-size: 16px; outline: none; box-sizing: border-box; }
         .form-control:focus { border-color: var(--primary-blue); }
+        
+        select.form-control { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1em; }
 
         .price-summary { margin: 30px 0; padding-top: 20px; border-top: 1px solid var(--border-color); }
         .price-row { display: flex; justify-content: space-between; font-size: 18px; margin-bottom: 10px; }
@@ -88,6 +101,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
 
         .back-link { display: block; text-align: center; margin-top: 20px; color: var(--text-gray); text-decoration: none; font-size: 14px; }
         .back-link:hover { color: #fff; }
+        
+        .row-group { display: flex; gap: 15px; }
+        .col-half { flex: 1; }
+
+        /* Dropdown Fix for Visibility */
+        select option {
+            background-color: #0f172a;
+            color: white;
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
@@ -110,15 +133,35 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
             </div>
         </div>
 
-        <form method="POST" id="orderForm" onsubmit="handleOrderSubmit(event)">
+        <form method="POST">
             <div class="form-group">
                 <label>Quantity</label>
                 <input type="number" name="quantity" class="form-control" value="1" min="1" max="20" id="qty-input" onchange="updateTotal()">
             </div>
 
             <div class="form-group">
-                <label>Delivery Location (Ward / Bed Number)</label>
-                <input type="text" name="location" class="form-control" value="Ward B / Bed 15" required placeholder="e.g. Ward A, Room 102">
+                <label>Delivery Location</label>
+                <div class="row-group">
+                    <div class="col-half">
+                        <select name="ward_name" class="form-control" required>
+                            <option value="" disabled selected>Select Ward</option>
+                            <?php 
+                            if($wards_res->num_rows > 0) {
+                                while($row = $wards_res->fetch_assoc()) {
+                                    echo '<option value="'.htmlspecialchars($row['ward_name']).'">'.htmlspecialchars($row['ward_name']).'</option>';
+                                }
+                            } else {
+                                // Fallback if no wards
+                                echo '<option value="General Ward A">General Ward A</option>';
+                                echo '<option value="Private Ward B">Private Ward B</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="col-half">
+                        <input type="text" name="bed_no" class="form-control" placeholder="Bed Number (e.g. 12)" required>
+                    </div>
+                </div>
             </div>
 
             <div class="price-summary">
@@ -132,7 +175,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
                 </div>
             </div>
 
-            <button type="submit" name="confirm_order" id="buyBtn" class="btn-confirm">Buy Now</button>
+            <button type="submit" name="confirm_order" class="btn-confirm">Proceed to Payment <i class="fas fa-arrow-right"></i></button>
             <a href="canteen.php" class="back-link">Cancel and Go Back</a>
         </form>
     </div>
@@ -143,42 +186,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
             const price = <?php echo $item['price']; ?>;
             const total = qty * price;
             document.getElementById('total-amount').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
-        }
-
-        function handleOrderSubmit(e) {
-            e.preventDefault(); // Prevent immediate submission
-            const btn = document.getElementById('buyBtn');
-            const form = document.getElementById('orderForm');
-            
-            // Step 1: Processing Order
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing Order...';
-            btn.style.opacity = '0.8';
-            btn.style.cursor = 'not-allowed';
-            btn.disabled = true;
-
-            // Step 2: Confirming Payment (after 1.5s)
-            setTimeout(() => {
-                btn.innerHTML = '<i class="fas fa-credit-card"></i> Confirming Payment...';
-                
-                // Step 3: Final Success (after another 1.5s)
-                setTimeout(() => {
-                    btn.innerHTML = '<i class="fas fa-check-circle"></i> Order Placed Successfully!';
-                    btn.style.background = '#10b981'; // Green color
-                    btn.style.borderColor = '#10b981';
-                    
-                    // Submit the form programmatically
-                    const hiddenInput = document.createElement('input');
-                    hiddenInput.type = 'hidden';
-                    hiddenInput.name = 'confirm_order';
-                    hiddenInput.value = '1';
-                    form.appendChild(hiddenInput);
-                    
-                    setTimeout(() => {
-                        form.submit();
-                    }, 1000); // Short delay to read success message
-                }, 1500);
-
-            }, 1500);
         }
     </script>
 </body>

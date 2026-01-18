@@ -14,7 +14,35 @@ $username = $_SESSION['username'];
 $res = $conn->query("SELECT * FROM nurses WHERE user_id = $user_id");
 $nurse = $res->fetch_assoc();
 $department = $nurse['department'] ?? 'General';
+
+// Handle Vitals Submission
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_vitals'])) {
+    $patient_id = intval($_POST['patient_id']);
+    $heart_rate = $_POST['heart_rate'];
+    $bp = explode('/', $_POST['blood_pressure']);
+    $sys = $bp[0] ?? '0';
+    $dia = $bp[1] ?? '0';
+    $temp = $_POST['temperature'];
+    $spo2 = $_POST['oxygen_saturation'];
+    $notes = $_POST['nursing_notes'];
+    $request_id = isset($_POST['request_id']) ? intval($_POST['request_id']) : null;
+
+    $stmt = $conn->prepare("INSERT INTO patient_vitals (patient_id, heart_rate, blood_pressure_systolic, blood_pressure_diastolic, temperature, spo2, notes) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("issssss", $patient_id, $heart_rate, $sys, $dia, $temp, $spo2, $notes);
+
+    
+    if ($stmt->execute()) {
+        if ($request_id) {
+            $conn->query("UPDATE nurse_vitals_requests SET status = 'Completed' WHERE request_id = $request_id");
+        }
+        header("Location: staff_nurse_dashboard.php?msg=Vitals+Updated");
+        exit();
+    } else {
+        $error = "Update failed: " . $conn->error;
+    }
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -190,7 +218,67 @@ $department = $nurse['department'] ?? 'General';
                     </button>
                 </div>
 
+                <!-- Nurse Vitals Requests Section -->
+                <div style="margin-bottom: 40px;">
+                    <h3 style="color:#f59e0b; margin-bottom: 20px;"><i class="fas fa-bell"></i> Urgent Nurse Check Requests</h3>
+                    <div class="patient-list-container">
+                        <?php
+                        $sql_requests = "SELECT nvr.*, r.name as patient_name, u.user_id as patient_id, 
+                                                dr.name as doctor_name, w.ward_name, rm.room_number
+                                         FROM nurse_vitals_requests nvr
+                                         JOIN users u ON nvr.patient_id = u.user_id
+                                         JOIN registrations r ON u.registration_id = r.registration_id
+                                         JOIN users du ON nvr.doctor_id = du.user_id
+                                         JOIN registrations dr ON du.registration_id = dr.registration_id
+                                         LEFT JOIN admissions adm ON nvr.admission_id = adm.admission_id
+                                         LEFT JOIN rooms rm ON adm.room_id = rm.room_id
+                                         LEFT JOIN wards w ON rm.ward_id = w.ward_id
+                                         WHERE nvr.status = 'Pending'
+                                         ORDER BY nvr.request_date ASC";
+                        $res_requests = $conn->query($sql_requests);
+
+                        if ($res_requests && $res_requests->num_rows > 0):
+                            while($req = $res_requests->fetch_assoc()):
+                        ?>
+                            <div class="patient-card" style="border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.05);">
+                                <div class="token-badge" style="background:#f59e0b; color:#000;">REQUESTED</div>
+                                <div style="border-right: 1px solid var(--border-soft); padding-right: 30px;">
+                                    <span style="font-size:11px; color:#f59e0b; font-weight:800; text-transform:uppercase;">Nurse Check Requested</span>
+                                    <h4 style="color:#fff; margin: 10px 0; font-size: 18px;"><?php echo htmlspecialchars($req['patient_name']); ?></h4>
+                                    <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">ID: HC-P-<?php echo $req['patient_id']; ?></p>
+                                    
+                                    <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; font-size: 13px; color: #cbd5e1;">
+                                        <p style="margin-bottom: 5px;"><i class="fas fa-bed" style="width:20px;"></i> <?php echo htmlspecialchars($req['ward_name'] ?? 'Ward') . ' - ' . htmlspecialchars($req['room_number'] ?? 'N/A'); ?></p>
+                                        <p><i class="fas fa-user-md" style="width:20px;"></i> Req. by: Dr. <?php echo htmlspecialchars($req['doctor_name']); ?></p>
+                                        <p style="font-size:11px; color:#94a3b8; margin-top:5px;"><i class="fas fa-clock"></i> Requested: <?php echo date('h:i A', strtotime($req['request_date'])); ?></p>
+                                    </div>
+                                </div>
+                                <form method="POST">
+                                    <input type="hidden" name="patient_id" value="<?php echo $req['patient_id']; ?>">
+                                    <input type="hidden" name="request_id" value="<?php echo $req['request_id']; ?>">
+                                    <div class="vital-inputs">
+                                        <div class="form-group-staff"><label>Heart Rate</label><input type="text" name="heart_rate" placeholder="BPM" required></div>
+                                        <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" name="blood_pressure" placeholder="120/80" required></div>
+                                        <div class="form-group-staff"><label>Temp (°C)</label><input type="text" name="temperature" placeholder="37.0" required></div>
+                                        <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" name="oxygen_saturation" placeholder="98" required></div>
+                                    </div>
+                                    <div class="form-group-staff" style="margin-top: 15px;">
+                                        <label>Nurse Notes</label>
+                                        <textarea name="nursing_notes" rows="2" placeholder="Patient condition..."></textarea>
+                                    </div>
+                                    <button type="submit" name="update_vitals" style="width: 100%; margin-top: 15px; padding: 12px; background: #f59e0b; border: none; border-radius: 10px; color: #000; font-weight: 700; cursor: pointer;">Complete Request & Save Vitals</button>
+                                </form>
+                            </div>
+                        <?php endwhile; else: ?>
+                            <div style="text-align: center; padding: 30px; background: rgba(16, 185, 129, 0.05); border-radius: 12px; border: 1px dashed rgba(16, 185, 129, 0.3);">
+                                <p style="color: #10b981; font-size: 14px;"><i class="fas fa-check-circle"></i> No pending nurse check requests at the moment.</p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
                 <h3 style="color:#fff; margin-bottom: 25px;">Live Department Queue - Assigned Patients</h3>
+
 
                 <div class="patient-list-container">
                     <?php
@@ -233,25 +321,38 @@ $department = $nurse['department'] ?? 'General';
                         </div>
                         <div>
                             <?php if ($pt['appt_status'] == 'Approved'): ?>
-                                <p style="color: #64748b; font-size: 14px; font-style: italic;">Patient is currently waiting for initial vital check. Please call the patient to the nursing station.</p>
-                                <button style="margin-top: 20px; padding: 10px 25px; background: #fbbf24; border: none; border-radius: 10px; color: #000; font-weight: 700; cursor: pointer;">Call Patient</button>
+                                <p style="color: #64748b; font-size: 14px; font-style: italic;">Patient is waiting for initial vital check.</p>
+                                <form method="POST" style="margin-top: 15px;">
+                                    <input type="hidden" name="patient_id" value="<?php echo $pt['patient_id']; ?>">
+                                    <div class="vital-inputs">
+                                        <div class="form-group-staff"><label>Heart Rate</label><input type="text" name="heart_rate" placeholder="BPM" required></div>
+                                        <div class="form-group-staff"><label>BP</label><input type="text" name="blood_pressure" placeholder="120/80" required></div>
+                                        <div class="form-group-staff"><label>Temp</label><input type="text" name="temperature" placeholder="37.0" required></div>
+                                        <div class="form-group-staff"><label>SPO2</label><input type="text" name="oxygen_saturation" placeholder="98" required></div>
+                                    </div>
+                                    <button type="submit" name="update_vitals" style="width: 100%; margin-top: 10px; padding: 10px; background: #fbbf24; border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer;">Complete Initial Vitals</button>
+                                </form>
                             <?php else: ?>
-                                <div class="vital-inputs">
-                                    <div class="form-group-staff"><label>Heart Rate (BPM)</label><input type="text" placeholder="--"></div>
-                                    <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" placeholder="--/--"></div>
-                                    <div class="form-group-staff"><label>Temp (°F)</label><input type="text" placeholder="--"></div>
-                                    <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" placeholder="--"></div>
-                                </div>
-                                <div class="form-group-staff" style="margin-top: 20px;">
-                                    <label>Nursing Care Notes</label>
-                                    <textarea rows="3" placeholder="Enter patient observation, pain levels, or medication response..."></textarea>
-                                </div>
-                                <div style="display: flex; gap: 15px; margin-top: 20px;">
-                                    <button style="flex: 1; padding: 12px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Update Vitals</button>
-                                    <button style="padding: 12px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); border-radius: 10px; color: #fff; cursor: pointer;"><i class="fas fa-history"></i> History</button>
-                                </div>
+                                <form method="POST">
+                                    <input type="hidden" name="patient_id" value="<?php echo $pt['patient_id']; ?>">
+                                    <div class="vital-inputs">
+                                        <div class="form-group-staff"><label>Heart Rate</label><input type="text" name="heart_rate" placeholder="BPM" required></div>
+                                        <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" name="blood_pressure" placeholder="120/80" required></div>
+                                        <div class="form-group-staff"><label>Temp (°C)</label><input type="text" name="temperature" placeholder="37.0" required></div>
+                                        <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" name="oxygen_saturation" placeholder="98" required></div>
+                                    </div>
+                                    <div class="form-group-staff" style="margin-top: 20px;">
+                                        <label>Nursing Care Notes</label>
+                                        <textarea name="nursing_notes" rows="3" placeholder="Enter patient observation..."></textarea>
+                                    </div>
+                                    <div style="display: flex; gap: 15px; margin-top: 20px;">
+                                        <button type="submit" name="update_vitals" style="flex: 1; padding: 12px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Update Vitals</button>
+                                        <button type="button" onclick="location.href='doctor_patient_history.php?patient_id=<?php echo $pt['patient_id']; ?>'" style="padding: 12px 20px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); border-radius: 10px; color: #fff; cursor: pointer;"><i class="fas fa-history"></i> History</button>
+                                    </div>
+                                </form>
                             <?php endif; ?>
                         </div>
+
                     </div>
                     <?php 
                         endwhile;

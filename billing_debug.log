@@ -1,0 +1,14 @@
+2026-01-18 13:12:34 - Attempting Insert: Patient: 40, Ref: 22, Type: Medical Services, Amt: 650, Appt: 37
+Success! Bill ID: 32
+2026-01-18 13:13:19 - Attempting Insert: Patient: 40, Ref: 3, Type: Pharmacy, Amt: 150, Appt: 17
+Success! Bill ID: 33
+2026-01-18 13:18:14 - Attempting Insert: Patient: 40, Ref: 21, Type: Medical Services, Amt: 650, Appt: 37
+Success! Bill ID: 34
+2026-01-18 14:07:22 - Attempting Insert: Patient: 37, Ref: 20, Type: Medical Services, Amt: 650, Appt: 36
+Success! Bill ID: 35
+2026-01-18 14:08:25 - Attempting Insert: Patient: 37, Ref: 20, Type: Medical Services, Amt: 650, Appt: 36
+Success! Bill ID: 36
+2026-01-18 14:23:53 - Attempting Insert: Patient: 41, Ref: 7, Type: Medical Services, Amt: 650, Appt: 24
+Success! Bill ID: 37
+2026-01-18 17:38:47 - Attempting Insert: Patient: 37, Ref: 23, Type: Pharmacy, Amt: 150, Appt: 38
+Success! Bill ID: 40

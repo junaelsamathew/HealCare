@@ -97,7 +97,7 @@ $username = $_SESSION['username'];
                                 <strong><?php echo htmlspecialchars($service_desc); ?></strong><br>
                                 <small style="color: #94a3b8;">Dr. <?php echo htmlspecialchars($bill['doctor_name'] ?? 'Hospital Staff'); ?></small>
                             </td>
-                            <td>$<?php echo number_format($bill['total_amount'], 2); ?></td>
+                            <td>₹<?php echo number_format($bill['total_amount'], 2); ?></td>
                             <td><span class="status-<?php echo $status_class; ?>"><?php echo $bill['payment_status']; ?></span></td>
                             <td>
                                 <?php if($bill['payment_status'] == 'Pending'): ?>

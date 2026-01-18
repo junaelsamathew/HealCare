@@ -19,18 +19,40 @@ $profile = $profile_exists ? $res->fetch_assoc() : null;
 $medical_records = [];
 if ($profile_exists) {
     // Current visit records from medical_records table
+    // Current visit records from medical_records table
     $records_res = $conn->query("
-        SELECT mr.*, r.name as doctor_name, 
-        (SELECT medicine_details FROM prescriptions WHERE patient_id = $user_id AND (DATE(prescription_date) = DATE(mr.created_at) OR appointment_id = mr.appointment_id) LIMIT 1) as prescription,
+        SELECT mr.*, r.name as doctor_name, u.user_id as doctor_user_id,
+        p.medicine_details as prescription,
+        p.prescription_id,
+        b.bill_id,
+        b.payment_status as bill_status,
+        b.bill_type as type_of_bill,
+        b.bill_type as type_of_bill,
+        b.total_amount as bill_amount,
+        mr.appointment_id,
         (SELECT GROUP_CONCAT(test_name SEPARATOR ', ') FROM lab_tests WHERE appointment_id = mr.appointment_id) as lab_tests
         FROM medical_records mr
         LEFT JOIN users u ON mr.doctor_id = u.user_id
         LEFT JOIN registrations r ON u.registration_id = r.registration_id
+        LEFT JOIN prescriptions p ON mr.prescription_id = p.prescription_id
+        LEFT JOIN billing b ON p.prescription_id = b.reference_id AND (b.bill_type = 'Pharmacy' OR b.bill_type = 'Medical Services')
         WHERE mr.patient_id = $user_id 
-        ORDER BY mr.created_at DESC LIMIT 1
+        ORDER BY mr.created_at DESC LIMIT 5
     ");
     while ($row = $records_res->fetch_assoc()) {
         $medical_records[] = $row;
+    }
+}
+
+// Handle Nurse Request from Patient Dashboard
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash'])) {
+    $doctor_id = intval($_POST['doctor_id']);
+    $admission_id = intval($_POST['admission_id']);
+    $stmt_req = $conn->prepare("INSERT INTO nurse_vitals_requests (patient_id, doctor_id, admission_id) VALUES (?, ?, ?)");
+    $stmt_req->bind_param("iii", $user_id, $doctor_id, $admission_id);
+    if ($stmt_req->execute()) {
+        header("Location: patient_dashboard.php?msg=Nurse+Requested");
+        exit();
     }
 }
 ?>
@@ -325,6 +347,16 @@ if ($profile_exists) {
                         <small style="color: #64748b;">(Excl. medicines/procedures)</small>
                     </div>
                 </div>
+                <div style="margin-top: 20px; border-top: 1px solid rgba(16, 185, 129, 0.2); padding-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <p style="margin: 0; font-size: 13px; color: #cbd5e1;"><i class="fas fa-user-nurse"></i> Need assistance? You can request a nurse for a vitals check.</p>
+                    <form method="POST">
+                        <input type="hidden" name="doctor_id" value="<?php echo $adm['doctor_id']; ?>">
+                        <input type="hidden" name="admission_id" value="<?php echo $adm['admission_id']; ?>">
+                        <button type="submit" name="request_nurse_dash" style="background: #3b82f6; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 12px;">
+                            <i class="fas fa-hand-holding-medical"></i> Request Nurse Check
+                        </button>
+                    </form>
+                </div>
             </div>
             <?php } elseif ($adm_res && $adm_chk->num_rows > 0 && isset($adm_status) && $adm_status == 'Pending') { 
                 // Fetch details for Pending Request
@@ -464,7 +496,55 @@ if ($profile_exists) {
                                 <?php if(!empty($record['prescription'])): ?>
                                     <div style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid #10b981; padding: 15px; border-radius: 4px; margin-top: 10px;">
                                         <strong style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; margin-bottom: 5px;"><i class="fas fa-pills"></i> Prescribed Medication:</strong>
-                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($record['prescription'])); ?></p>
+                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px;"><?php echo nl2br(htmlspecialchars($record['prescription'])); ?></p>
+                                        
+                                        <div style="border-top: 1px solid rgba(16, 185, 129, 0.2); padding-top: 10px; display:flex; gap:10px;">
+                                            <?php if($record['bill_id']): ?>
+                                                <?php if($record['bill_status'] == 'Paid'): ?>
+                                                    <a href="print_receipt.php?bill_id=<?php echo $record['bill_id']; ?>" target="_blank" style="padding: 8px 15px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration:none;">
+                                                        <i class="fas fa-download"></i> <?php echo ($record['type_of_bill'] == 'Medical Services') ? 'Download Combined Receipt' : 'Download Receipt'; ?>
+                                                    </a>
+                                                    <span style="padding: 8px 0; color: #10b981; font-size: 12px; font-weight: 600;"><i class="fas fa-check-circle"></i> Paid</span>
+                                                <?php else: ?>
+                                                    <a href="payment_gateway.php?bill_id=<?php echo $record['bill_id']; ?>" style="padding: 8px 15px; background: #f59e0b; color: #000; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration:none;">
+                                                        <i class="fas fa-credit-card"></i> Pay Bill (₹<?php echo number_format($record['bill_amount']); ?>)
+                                                    </a>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <?php 
+                                                // Check for Lab Tests to decide if we need a Combined Bill
+                                                $has_labs = !empty($record['lab_tests']);
+                                                $action_type = $has_labs ? 'Combined' : 'Pharmacy';
+                                                
+                                                // Check if bill exists via direct query safely
+                                                $chk_ref = intval($record['prescription_id']);
+                                                $chk_bill = null;
+                                                if($chk_ref > 0) {
+                                                    $chk_bill = $conn->query("SELECT bill_id FROM billing WHERE reference_id = $chk_ref AND (bill_type='Pharmacy' OR bill_type='Medical Services')");
+                                                }
+                                                
+                                                if($chk_bill && $chk_bill->num_rows > 0) {
+                                                     echo '<a href="patient_dashboard.php" style="font-size:12px; color:#3b82f6;"><i class="fas fa-sync"></i> Refresh Status</a>';
+                                                } else {
+                                                
+                                                $btn_text = $has_labs ? 'Generate Combined Bill' : 'Generate Bill';
+                                                // High visibility for Combined
+                                                $btn_style = $has_labs ? 'background: #ef4444; color: white; border: 2px solid white; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.4);' : 'background: #3b82f6; color: white;';
+                                                ?>
+                                                <form action="generate_bill.php" method="POST" target="_blank" style="margin-top:5px;">
+                                                    <input type="hidden" name="patient_id" value="<?php echo $user_id; ?>">
+                                                    <input type="hidden" name="doctor_id" value="<?php echo $record['doctor_user_id']; ?>">
+                                                    <input type="hidden" name="appointment_id" value="<?php echo $record['appointment_id']; ?>">
+                                                    <input type="hidden" name="reference_id" value="<?php echo $record['prescription_id']; ?>">
+                                                    <input type="hidden" name="bill_type" value="<?php echo $action_type; ?>">
+                                                    <input type="hidden" name="amount" value="0">
+                                                    <button type="submit" style="padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; <?php echo $btn_style; ?>">
+                                                        <i class="fas fa-file-invoice-dollar"></i> <?php echo $btn_text; ?>
+                                                    </button>
+                                                </form>
+                                                <?php } ?>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 <?php endif; ?>
 

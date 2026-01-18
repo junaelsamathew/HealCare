@@ -2455,13 +2455,17 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     SELECT a.*, 
                            rd.name as doctor_name, 
                            rp.name as patient_name_reg,
-                           pp.name as patient_name_prof
+                           pp.name as patient_name_prof,
+                           b.payment_status as bill_status,
+                           b.bill_id,
+                           b.total_amount
                     FROM appointments a
                     LEFT JOIN users ud ON a.doctor_id = ud.user_id
                     LEFT JOIN registrations rd ON ud.registration_id = rd.registration_id
                     LEFT JOIN users up ON a.patient_id = up.user_id
                     LEFT JOIN registrations rp ON up.registration_id = rp.registration_id
                     LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id
+                    LEFT JOIN billing b ON a.appointment_id = b.appointment_id
                     ORDER BY a.appointment_date DESC
                 ");
                 ?>
@@ -2476,25 +2480,48 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                 <th>Date & Time</th>
                                 <th>Department</th>
                                 <th>Status</th>
+                                <th>Billing</th>
                                 <th>Queue</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php while($appt = $all_appts->fetch_assoc()): 
                                 $p_name = $appt['patient_name_prof'] ?? $appt['patient_name_reg'] ?? 'Walk-in/Unknown';
-                                $d_name = $appt['doctor_name'] ?? 'Unassigned';
+                                $raw_d_name = $appt['doctor_name'] ?? 'Unassigned';
+                                $d_name = ($raw_d_name != 'Unassigned') 
+                                    ? 'Dr. ' . str_ireplace('Dr. ', '', $raw_d_name) 
+                                    : '<span style="color:#ef4444; font-size:11px;">Unassigned</span>';
+                                
+                                // Status Logic
+                                $st = strtolower($appt['status']);
+                                $badge = 'pending'; // Default orange
+                                if ($st == 'scheduled' || $st == 'confirmed') $badge = 'active'; // Green
+                                elseif ($st == 'completed' || $st == 'checked' || $st == 'visited') $badge = 'completed'; // Blue
+                                elseif ($st == 'cancelled' || $st == 'rejected') $badge = 'rejected'; // Red
+                                
+                                // Billing Logic
+                                $bill_badge = '';
+                                if($appt['bill_id']) {
+                                    if($appt['bill_status'] == 'Paid') $bill_badge = '<span class="badge badge-active"><i class="fas fa-check-circle"></i> Paid</span>';
+                                    else $bill_badge = '<span class="badge badge-unpaid"><i class="fas fa-clock"></i> Pending</span>';
+                                } else {
+                                    $bill_badge = '<span style="color:#64748b; font-size:11px;">Not Generated</span>';
+                                }
                             ?>
                                 <tr>
                                     <td><small style="color:var(--primary-blue);">#<?php echo $appt['appointment_id']; ?></small></td>
-                                    <td><strong><?php echo htmlspecialchars($p_name); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($d_name); ?></td>
                                     <td>
-                                        <?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?><br>
-                                        <small><?php echo date('h:i A', strtotime($appt['appointment_time'] ?? $appt['appointment_date'])); ?></small>
+                                        <strong><?php echo htmlspecialchars($p_name); ?></strong>
                                     </td>
-                                    <td><?php echo htmlspecialchars($appt['department']); ?></td>
-                                    <td><span class="badge badge-<?php echo strtolower($appt['status'] == 'Scheduled' ? 'active' : ($appt['status'] == 'Requested' ? 'pending' : 'completed')); ?>"><?php echo $appt['status']; ?></span></td>
-                                    <td><?php echo $appt['queue_number'] ?? '-'; ?></td>
+                                    <td><?php echo $d_name; ?></td>
+                                    <td>
+                                        <div style="font-weight:600; font-size:13px;"><?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?></div>
+                                        <div style="font-size:11px; color:var(--text-gray);"><?php echo date('h:i A', strtotime($appt['appointment_time'] ?? $appt['appointment_date'])); ?></div>
+                                    </td>
+                                    <td><span style="font-size:12px; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px;"><?php echo htmlspecialchars($appt['department']); ?></span></td>
+                                    <td><span class="badge badge-<?php echo $badge; ?>"><?php echo ucfirst($appt['status']); ?></span></td>
+                                    <td><?php echo $bill_badge; ?></td>
+                                    <td style="font-weight:700; color:var(--text-gray);"><?php echo $appt['queue_number'] ?? '-'; ?></td>
                                 </tr>
                             <?php endwhile; ?>
                         </tbody>

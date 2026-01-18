@@ -260,6 +260,10 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                             <div style="display: flex; flex-direction: column; gap: 15px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <span style="font-size: 13px; color: #cbd5e1;">Final Test Results</span>
+                                    <div style="display: items-center;">
+                                       <span style="color:#94a3b8; font-size:12px; margin-right:5px;">Bill Amount: ₹</span>
+                                       <input type="number" name="cost" value="500" style="width:80px; padding:5px; border-radius:5px; border:1px solid #475569; background:#1e293b; color:white; font-size:12px;" required>
+                                    </div>
                                 </div>
                                 <textarea name="result_summary" placeholder="Enter findings, observations, and values..." style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 12px; border-radius: 10px; color: #fff; font-size: 13px; resize: none; height: 100px;" required></textarea>
                                 

@@ -445,32 +445,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </thead>
                         <tbody>
                             <?php
-                            // Fetch Billing records where type is Pharmacy
+                            // Fetch Dispensed Prescriptions (Source of Truth) linked with Billing Info
                             $hist_sql = "
-                                SELECT b.*, r.name as patient_name 
-                                FROM billing b
-                                JOIN users u ON b.patient_id = u.user_id
-                                JOIN registrations r ON u.registration_id = r.registration_id
-                                WHERE b.bill_type LIKE '%Pharmacy%' OR b.bill_type LIKE '%Medicine%'
-                                ORDER BY b.bill_date DESC LIMIT 50
+                                SELECT p.prescription_id, 
+                                       p.prescription_date,
+                                       rp.name as patient_name,
+                                       b.bill_id, 
+                                       b.total_amount, 
+                                       b.payment_status
+                                FROM prescriptions p
+                                JOIN users up ON p.patient_id = up.user_id
+                                JOIN registrations rp ON up.registration_id = rp.registration_id
+                                LEFT JOIN billing b ON p.prescription_id = b.reference_id 
+                                WHERE p.status = 'Dispensed'
+                                ORDER BY p.prescription_date DESC LIMIT 50
                             ";
                             $hist_res = $conn->query($hist_sql);
+                            
                             if(!$hist_res) {
-                                // Fallback
+                                echo "<tr><td colspan='6'>Error loading history: " . $conn->error . "</td></tr>";
                             } else {
                                 if($hist_res->num_rows > 0) {
                                     while($row = $hist_res->fetch_assoc()) {
+                                        $inv_display = $row['bill_id'] ? "#INV-".str_pad($row['bill_id'], 4, '0', STR_PAD_LEFT) : "<span style='color:#94a3b8;'>Unbilled</span>";
+                                        $amt_display = $row['total_amount'] ? "$".number_format($row['total_amount'], 2) : "-";
+                                        
                                         echo "<tr>
-                                            <td>#INV-".str_pad($row['bill_id'], 4, '0', STR_PAD_LEFT)."</td>
+                                            <td>" . $inv_display . "</td>
                                             <td><strong style='color:white;'>".htmlspecialchars($row['patient_name'])."</strong></td>
-                                            <td>".date('M d, Y', strtotime($row['bill_date']))."</td>
-                                            <td>Pharmacy / Medicines</td>
-                                            <td>$".number_format($row['total_amount'], 2)."</td>
+                                            <td>".date('M d, Y', strtotime($row['prescription_date']))."</td>
+                                            <td><span style='font-size:12px; color:#cbd5e1;'>RX #". $row['prescription_id'] ." - Medicines</span></td>
+                                            <td>" . $amt_display . "</td>
                                             <td><span class='status-pill' style='color:#10b981; border:1px solid #10b981; padding:2px 8px; border-radius:10px;'>Dispensed</span></td>
                                         </tr>";
                                     }
                                 } else {
-                                    echo "<tr><td colspan='6' style='text-align:center; padding: 30px;'>No history records found.</td></tr>";
+                                    echo "<tr><td colspan='6' style='text-align:center; padding: 30px;'>No dispensed medicines found.</td></tr>";
                                 }
                             }
                             ?>
@@ -632,11 +642,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <label style="color:#94a3b8; font-size:12px; display:block;">Quantity</label>
                         <input type="number" name="quantity" id="edit_qty" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px;">
                     </div>
+                </div>
                     <div>
                         <label style="color:#94a3b8; font-size:12px; display:block;">Unit Price ($)</label>
                         <input type="number" step="0.01" name="price" id="edit_price" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px;">
                     </div>
-                </div>
                 <div style="margin-bottom:20px;">
                     <label style="color:#94a3b8; font-size:12px; display:block;">Shelf Location</label>
                     <input type="text" name="location" id="edit_loc" placeholder="e.g. Shelf A1" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px;">
@@ -645,6 +655,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
         </div>
     </div>
+
+    <!-- Pharmacy Bill Modal (Restored & Updated) -->
+    <div id="billModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#0f172a; padding:30px; border-radius:12px; width:500px; max-width:90%; border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 style="color:white;">Generate Pharmacy Bill</h3>
+                <i class="fas fa-times" style="color:#64748b; cursor:pointer;" onclick="document.getElementById('billModal').style.display='none'"></i>
+            </div>
+            <form action="generate_bill.php" method="POST">
+                <input type="hidden" name="patient_id" id="bill_pid">
+                <input type="hidden" name="doctor_id" id="bill_did">
+                <input type="hidden" name="reference_id" id="bill_ref">
+                <input type="hidden" name="bill_type" value="Pharmacy">
+                
+                <div style="margin-bottom:15px;">
+                    <label style="color:#94a3b8; font-size:12px; display:block; margin-bottom:5px;">Patient Name</label>
+                    <input type="text" id="bill_pname" readonly style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px; cursor:not-allowed;">
+                </div>
+
+                <div style="margin-bottom:15px; background: rgba(16, 185, 129, 0.1); padding: 15px; border-radius: 8px; border: 1px dashed #10b981;">
+                    <label style="color:#10b981; font-size:13px; font-weight:bold; display:block; margin-bottom:5px;"><i class="fas fa-calculator"></i> System Auto-Calculation</label>
+                    <p style="color:#cbd5e1; font-size:12px; margin:0;">Total amount will be calculated automatically based on medicine prices and prescribed duration. Minimum charge of $150 applies if calculation fails.</p>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="color:#94a3b8; font-size:12px; display:block; margin-bottom:5px;">Remarks (Optional)</label>
+                    <textarea name="description" rows="3" placeholder="List of medicines (optional)" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px; resize:none;"></textarea>
+                </div>
+
+                <button type="submit" style="width:100%; padding:12px; background:#4fc3f7; color:#020617; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">Confirm & Generate Bill</button>
+            </form>
+        </div>
 
     <script>
         function notifyAdmin() {

@@ -26,14 +26,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id'])) {
         }
     }
     
-    // Verify and Fetch Appointment ID
+    // Verify and Fetch Appointment ID & Patient/Doctor Details
     $appt_id = null;
-    $stmt_check = $conn->prepare("SELECT appointment_id FROM lab_tests WHERE labtest_id = ?");
+    $patient_id = null;
+    $doctor_id = null;
+    $test_name = "Lab Test";
+
+    $stmt_check = $conn->prepare("SELECT appointment_id, patient_id, doctor_id, test_name FROM lab_tests WHERE labtest_id = ?");
     $stmt_check->bind_param("i", $order_id);
     $stmt_check->execute();
     $res_check = $stmt_check->get_result();
     if ($res_check->num_rows > 0) {
-        $appt_id = $res_check->fetch_assoc()['appointment_id'];
+        $row = $res_check->fetch_assoc();
+        $appt_id = $row['appointment_id'];
+        $patient_id = $row['patient_id'];
+        $doctor_id = $row['doctor_id'];
+        $test_name = $row['test_name'];
     }
 
     // Update Database
@@ -46,6 +54,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id'])) {
             $stmt_appt = $conn->prepare("UPDATE appointments SET status = 'Lab Completed' WHERE appointment_id = ?");
             $stmt_appt->bind_param("i", $appt_id);
             $stmt_appt->execute();
+        }
+
+        // Generate Bill
+        $cost = floatval($_POST['cost']);
+        if ($cost > 0 && $patient_id) {
+            $bill_type = "Lab Test: " . $test_name;
+            $pay_status = 'Pending';
+            $b_date = date('Y-m-d');
+            $stmt_bill = $conn->prepare("INSERT INTO billing (patient_id, doctor_id, appointment_id, bill_type, total_amount, payment_status, bill_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt_bill->bind_param("iiisdss", $patient_id, $doctor_id, $appt_id, $bill_type, $cost, $pay_status, $b_date);
+            $stmt_bill->execute();
         }
 
         header("Location: staff_lab_staff_dashboard.php?section=completed&msg=Report+Finalized");

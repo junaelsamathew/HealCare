@@ -51,11 +51,13 @@ try {
 
     // For Appointments, Redirect to Booking Success
     $res = $conn->query("SELECT b.*, a.queue_number, a.appointment_date, a.appointment_time, 
-                         ud.username as doc_name, p.name as pat_name
+                         ud.username as doc_name, COALESCE(pp.name, rp.name, p.username) as pat_name
                          FROM billing b 
                          LEFT JOIN appointments a ON b.appointment_id = a.appointment_id
                          LEFT JOIN users ud ON b.doctor_id = ud.user_id
                          LEFT JOIN users p ON b.patient_id = p.user_id
+                         LEFT JOIN patient_profiles pp ON b.patient_id = pp.user_id
+                         LEFT JOIN registrations rp ON p.registration_id = rp.registration_id
                          WHERE b.bill_id = $bill_id");
                          
     if ($res->num_rows > 0) {

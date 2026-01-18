@@ -229,7 +229,7 @@ $res_appts = $conn->query($sql_appts);
                         <div style="display: flex; align-items: center; gap: 20px;">
                             <span class="status-badge status-<?php echo str_replace(' ', '', $appt['status']); ?>"><?php echo $appt['status']; ?></span>
                             
-                            <?php if ($appt['status'] == 'Requested' || $appt['status'] == 'Pending'): ?>
+                            <?php if ($appt['status'] == 'Requested' || $appt['status'] == 'Pending' || $appt['status'] == 'Confirmed' || $appt['status'] == 'Scheduled'): ?>
                                 <form method="POST" style="display:inline;">
                                     <input type="hidden" name="action" value="update">
                                     <input type="hidden" name="appt_id" value="<?php echo $appt['appointment_id']; ?>">
@@ -238,7 +238,8 @@ $res_appts = $conn->query($sql_appts);
                             <?php endif; ?>
 
                             <?php 
-                            $active_statuses = ['Approved', 'Checked-In', 'Scheduled', 'Confirmed', 'Pending Lab', 'Lab Completed'];
+                            // Only allow Consult if status is Approved or further progressed
+                            $active_statuses = ['Approved', 'Checked-In', 'Pending Lab', 'Lab Completed'];
                             if (in_array($appt['status'], $active_statuses)): 
                             ?>
                                 <?php

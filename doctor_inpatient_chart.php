@@ -37,6 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['daily_note'])) {
     exit();
 }
 
+// Handle Nurse Request
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse'])) {
+    $pid = $adm['patient_id'];
+    $stmt_req = $conn->prepare("INSERT INTO nurse_vitals_requests (patient_id, doctor_id, admission_id) VALUES (?, ?, ?)");
+    $stmt_req->bind_param("iii", $pid, $doctor_id, $adm_id);
+    $stmt_req->execute();
+    header("Location: doctor_inpatient_chart.php?admission_id=$adm_id&msg=Nurse Requested");
+    exit();
+}
+
+
 // Fetch Notes
 $notes = $conn->query("SELECT * FROM inpatient_treatment WHERE admission_id = $adm_id ORDER BY visit_date DESC");
 
@@ -126,14 +137,23 @@ $vitals = $conn->query("SELECT * FROM patient_vitals WHERE patient_id = $pid ORD
                                 <div><strong style="color: #fca5a5;">BP:</strong> <?php echo $v['blood_pressure_systolic'].'/'.$v['blood_pressure_diastolic']; ?></div>
                                 <div><strong style="color: #86efac;">HR:</strong> <?php echo $v['heart_rate']; ?></div>
                                 <div><strong style="color: #93c5fd;">Temp:</strong> <?php echo $v['temperature']; ?>°C</div>
-                                <div><strong style="color: #fde047;">SpO2:</strong> <?php echo $v['oxygen_saturation']; ?>%</div>
+                                <div><strong style="color: #fde047;">SpO2:</strong> <?php echo $v['spo2']; ?>%</div>
+<?php if(!empty($v['notes'])): ?>
+    <div style="grid-column: 1/-1; margin-top: 5px; font-size: 11px; color: #94a3b8; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 5px;">
+        <strong>Nurse Note:</strong> <?php echo htmlspecialchars($v['notes']); ?>
+    </div>
+<?php endif; ?>
                             </div>
                         </div>
                     <?php endwhile; ?>
                 <?php else: ?>
                     <p style="color: #64748b;">No vitals recorded.</p>
                 <?php endif; ?>
-                <button class="btn-add" style="width:100%; margin-top:10px; background:#3b82f6;">Request Nurse Check</button>
+                <form method="POST">
+                    <button type="submit" name="request_nurse" class="btn-add" style="width:100%; margin-top:10px; background:#3b82f6;">
+                        <i class="fas fa-hand-holding-medical"></i> Request Nurse Check
+                    </button>
+                </form>
             </div>
 
             <div class="card">

@@ -1,0 +1,140 @@
+2026-01-18 13:12:34 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 40
+    [doctor_id] => 21
+    [appointment_id] => 37
+    [reference_id] => 22
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-1244
+    [user_id] => 40
+    [full_name] => Jewel Treasa Raphel
+)
+
+2026-01-18 13:13:19 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 40
+    [doctor_id] => 25
+    [appointment_id] => 18
+    [reference_id] => 3
+    [bill_type] => Pharmacy
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-1244
+    [user_id] => 40
+    [full_name] => Jewel Treasa Raphel
+)
+
+2026-01-18 13:18:13 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 40
+    [doctor_id] => 21
+    [appointment_id] => 37
+    [reference_id] => 21
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-1244
+    [user_id] => 40
+    [full_name] => Jewel Treasa Raphel
+)
+
+2026-01-18 14:07:22 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 37
+    [doctor_id] => 20
+    [appointment_id] => 36
+    [reference_id] => 20
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-7027
+    [user_id] => 37
+    [full_name] => Akshay Krishna R
+)
+
+2026-01-18 14:08:25 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 37
+    [doctor_id] => 20
+    [appointment_id] => 36
+    [reference_id] => 20
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-7027
+    [user_id] => 37
+    [full_name] => Akshay Krishna R
+)
+
+2026-01-18 14:23:53 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 41
+    [doctor_id] => 19
+    [appointment_id] => 24
+    [reference_id] => 7
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-7102
+    [user_id] => 41
+    [full_name] => Divinia Mario Antony
+)
+
+2026-01-18 17:38:47 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 37
+    [doctor_id] => 20
+    [appointment_id] => 38
+    [reference_id] => 23
+    [bill_type] => Pharmacy
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-7027
+    [user_id] => 37
+    [full_name] => Akshay Krishna R
+)
+
