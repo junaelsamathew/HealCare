@@ -201,15 +201,48 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                             <p style="color: #cbd5e1; font-size: 12px; margin-top: 5px;"><?php echo nl2br(htmlspecialchars($order['instructions'] ?: 'No special instructions.')); ?></p>
                         </div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.02); padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft); display:flex; align-items:center; justify-content:center;">
-                        <form action="update_lab_status.php" method="POST" style="text-align:center;">
-                            <input type="hidden" name="order_id" value="<?php echo $order['labtest_id']; ?>">
-                            <input type="hidden" name="status" value="Processing">
-                            <i class="fas fa-microscope" style="font-size: 40px; color: #4fc3f7; margin-bottom: 20px;"></i>
-                            <h4 style="color: #fff; margin-bottom: 10px;">Ready to Process?</h4>
-                            <p style="color: #64748b; font-size: 12px; margin-bottom: 20px;">Mark sample as received and start analysis.</p>
-                            <button type="submit" style="background: #4fc3f7; color: #020617; border: none; padding: 12px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; transition:0.3s;">Accept & Start</button>
-                        </form>
+                    <div style="background: rgba(255,255,255,0.02); padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft); display:flex; align-items:center; justify-content:center; flex-direction: column;">
+                        <?php if (($order['payment_status'] ?? 'Pending') == 'Paid'): ?>
+                            <form action="update_lab_status.php" method="POST" style="text-align:center;">
+                                <input type="hidden" name="order_id" value="<?php echo $order['labtest_id']; ?>">
+                                <input type="hidden" name="status" value="Processing">
+                                <i class="fas fa-microscope" style="font-size: 40px; color: #4fc3f7; margin-bottom: 20px;"></i>
+                                <h4 style="color: #fff; margin-bottom: 10px;">Ready to Process?</h4>
+                                <p style="color: #64748b; font-size: 12px; margin-bottom: 20px;">Payment Verified. Mark sample as received.</p>
+                                <button type="submit" style="background: #4fc3f7; color: #020617; border: none; padding: 12px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; transition:0.3s; box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);">Accept & Start</button>
+                            </form>
+                        <?php else: ?>
+                             <div id="payment-step-1-<?php echo $order['labtest_id']; ?>" style="text-align:center;">
+                                <div style="width: 60px; height: 60px; background: rgba(245, 158, 11, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                    <i class="fas fa-qrcode" style="font-size: 24px; color: #f59e0b;"></i>
+                                </div>
+                                <h4 style="color: #fff; margin-bottom: 10px;">Payment Required</h4>
+                                <p style="color: #64748b; font-size: 12px; margin-bottom: 20px;">Collect payment before processing test.</p>
+                                <button onclick="generateQR(<?php echo $order['labtest_id']; ?>)" style="background: #f59e0b; color: #020617; border: none; padding: 12px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; transition:0.3s; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);">
+                                    <i class="fas fa-qrcode" style="margin-right: 8px;"></i> Generate QR Code
+                                </button>
+                            </div>
+                            
+                            <div id="payment-step-loading-<?php echo $order['labtest_id']; ?>" style="display:none; text-align:center;">
+                                 <div style="margin-bottom: 20px;">
+                                    <i class="fas fa-circle-notch fa-spin" style="font-size: 30px; color: #4fc3f7;"></i>
+                                 </div>
+                                 <p style="color: #94a3b8; font-size: 12px;">Generating Secure Payment QR...</p>
+                            </div>
+
+                            <div id="payment-step-2-<?php echo $order['labtest_id']; ?>" style="display:none; text-align:center;">
+                                <div style="background: white; padding: 10px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=HealCare_Lab_Payment_<?php echo $order['labtest_id']; ?>" alt="Payment QR" style="display: block;">
+                                </div>
+                                <p style="color: #64748b; font-size: 12px; margin-bottom: 20px;">Ask patient to scan & pay</p>
+                                <form action="mark_lab_paid.php" method="POST">
+                                    <input type="hidden" name="order_id" value="<?php echo $order['labtest_id']; ?>">
+                                    <button type="submit" style="background: #10b981; color: #fff; border: none; padding: 12px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; transition:0.3s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                        <i class="fas fa-check-circle" style="margin-right: 8px;"></i> Payment Done
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php 
@@ -418,5 +451,17 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
     $staff_type = 'lab_staff';
     include 'includes/report_upload_modal.php'; 
     ?>
+    <script>
+        function generateQR(id) {
+            document.getElementById('payment-step-1-'+id).style.display = 'none';
+            document.getElementById('payment-step-loading-'+id).style.display = 'block';
+            
+            // Simulate API latency for effect
+            setTimeout(() => {
+                document.getElementById('payment-step-loading-'+id).style.display = 'none';
+                document.getElementById('payment-step-2-'+id).style.display = 'block';
+            }, 1000); // 1 second delay
+        }
+    </script>
 </body>
 </html>

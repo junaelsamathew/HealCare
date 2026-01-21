@@ -27,12 +27,14 @@ try {
     $conn->query("CREATE DATABASE IF NOT EXISTS $dbname");
     $conn->select_db($dbname);
 
+/*
     // Check if the 'users' table exists to decide if we need to run setup
     $table_check = $conn->query("SHOW TABLES LIKE 'users'");
     if ($table_check->num_rows == 0) {
         // Run initial setup only if tables are missing
         include_once __DIR__ . '/db_setup_logic.php';
     }
+*/
 } catch (Exception $e) {
     die("Database Connection Error: " . $e->getMessage());
 }

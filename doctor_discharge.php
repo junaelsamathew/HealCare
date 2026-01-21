@@ -48,7 +48,21 @@ $rates = [
 $rate = $rates[$adm['ward_type']] ?? 1000;
 $room_charge = $days * $rate;
 $doc_charge = $days * 500; // 500 per day doctor visit
-$total_est = $room_charge + $doc_charge;
+
+// Fetch other pending bills during this admission (Lab, Pharmacy, etc.)
+$patient_id = intval($adm['patient_id']);
+$adm_start = $adm['admission_date'];
+$other_bills_res = $conn->query("SELECT bill_id, bill_type, total_amount FROM billing WHERE patient_id = $patient_id AND payment_status = 'Pending' AND bill_date >= DATE('$adm_start')");
+$other_charges = [];
+$other_total = 0;
+if ($other_bills_res) {
+    while ($row = $other_bills_res->fetch_assoc()) {
+        $other_charges[] = $row;
+        $other_total += $row['total_amount'];
+    }
+}
+
+$total_est = $room_charge + $doc_charge + $other_total;
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $diagnosis = $_POST['final_diagnosis'];
@@ -76,7 +90,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt_upd->bind_param("ii", $bill_id, $adm_id);
         $stmt_upd->execute();
         
-        // 4. Free Room
+        // 4. Mark merged bills as Paid (Merged)
+        if (!empty($other_charges)) {
+            $bill_ids = array_column($other_charges, 'bill_id');
+            $ids_str = implode(',', $bill_ids);
+            $conn->query("UPDATE billing SET payment_status = 'Paid', payment_mode = 'Merged', transaction_ref = 'Merged into Bill #$bill_id' WHERE bill_id IN ($ids_str)");
+        }
+        
+        // 5. Free Room
         $rid = $adm['room_id'];
         $conn->query("UPDATE rooms SET status = 'Available' WHERE room_id = $rid");
         
@@ -148,10 +169,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <span>Room Charges (<?php echo $days; ?> days @ ₹<?php echo $rate; ?>)</span>
                         <span>₹<?php echo number_format($room_charge); ?></span>
                     </div>
+                    <?php foreach($other_charges as $oc): ?>
                     <div class="bill-row">
-                        <span>Doctor Visit Charges (<?php echo $days; ?> days)</span>
-                        <span>₹<?php echo number_format($doc_charge); ?></span>
+                        <span><?php echo htmlspecialchars($oc['bill_type']); ?></span>
+                        <span>₹<?php echo number_format($oc['total_amount']); ?></span>
                     </div>
+                    <?php endforeach; ?>
                     <div class="total-row">
                         <span>Total Bill Amount</span>
                         <span>₹<?php echo number_format($total_est); ?></span>

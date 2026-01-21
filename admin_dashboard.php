@@ -74,7 +74,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $role_display .= ' (' . ucfirst(str_replace('_', ' ', $reg['staff_type'])) . ')';
             }
 
-            $perms = ($role == 'doctor') ? 'View Medical Records, Write prescriptions' : 'General Access';
+            $perms = 'General Access';
+            if ($role == 'patient') {
+                $perms = 'Patient Access';
+            } elseif ($role == 'doctor') {
+                $perms = 'Clinical Access';
+            } elseif ($role == 'admin') {
+                $perms = 'Full Access';
+            }
             $conn->query("INSERT INTO users (registration_id, username, email, password, role, permissions, force_password_change, status) 
                          VALUES ($reg_id, '$username', '$email', '$password', '$role', '$perms', 1, 'Active')");
             $new_user_id = $conn->insert_id;
@@ -221,7 +228,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $email = mysqli_real_escape_string($conn, $_POST['email']);
         $password = password_hash($_POST['password'], PASSWORD_DEFAULT);
         $role = $_POST['role'];
-        $perms = isset($_POST['permissions']) ? implode(', ', $_POST['permissions']) : 'General Access';
+        $perms = isset($_POST['permissions']) ? implode(', ', $_POST['permissions']) : '';
+        if (empty($perms)) {
+            if ($role == 'patient') $perms = 'Patient Access';
+            elseif ($role == 'doctor') $perms = 'Clinical Access';
+            elseif ($role == 'admin') $perms = 'Full Access';
+            else $perms = 'General Access';
+        }
 
         $conn->begin_transaction();
         try {
@@ -622,6 +635,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $error_msg = "Error: " . $e->getMessage();
             }
         }
+    } elseif ($action == 'update_appointment_status') {
+        $aid = (int)$_POST['appointment_id'];
+        $status = mysqli_real_escape_string($conn, $_POST['status']);
+        if ($conn->query("UPDATE appointments SET status = '$status' WHERE appointment_id = $aid")) {
+            $success_msg = "Appointment #$aid updated to $status successfully!";
+        } else {
+            $error_msg = "Error updating appointment: " . $conn->error;
+        }
     }
 }
 
@@ -670,17 +691,59 @@ try {
     $occupancy_rate = 0;
 }
 
-// Chart Data: Consultation Traffic (Last 7 Days)
+// Chart Data: Consultation Traffic (Last 7 Days + 1 for comparison)
 $chart_labels = [];
 $chart_values = [];
-for ($i = 6; $i >= 0; $i--) {
+$chart_diffs = [];
+$all_counts = [];
+
+// Fetch last 8 days to have comparison for 7 days
+for ($i = 7; $i >= 0; $i--) {
     $date = date('Y-m-d', strtotime("-$i days"));
-    $display_date = date('M d', strtotime("-$i days"));
-    $chart_labels[] = $display_date;
-    
-    $traffic = $conn->query("SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = '$date'")->fetch_assoc()['count'];
-    $chart_values[] = (int)$traffic;
+    $traffic_res = $conn->query("SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = '$date'");
+    $count = $traffic_res ? (int)$traffic_res->fetch_assoc()['count'] : 0;
+    $all_counts[] = $count;
 }
+
+$total_consults_7d = 0;
+$max_consults = -1;
+$peak_day = "N/A";
+$peak_index = 0;
+
+// Filter for last 7 days metrics
+for ($i = 0; $i < 7; $i++) {
+    $idx = $i + 1; // index in $all_counts (7 days ago is index 1, today is index 7)
+    $count = $all_counts[$idx];
+    $prev_count = $all_counts[$idx - 1];
+    
+    $display_label = date('D', strtotime(-(6 - $i) . " days"));
+    $full_date = date('M d', strtotime(-(6 - $i) . " days"));
+    
+    $chart_labels[] = $display_label;
+    $chart_values[] = $count;
+    $chart_diffs[] = $count - $prev_count;
+    
+    $total_consults_7d += $count;
+    if ($count > $max_consults) {
+        $max_consults = $count;
+        $peak_day = $full_date;
+        $peak_index = $i;
+    }
+}
+$avg_consults_7d = round($total_consults_7d / 7, 1);
+
+// Generate Trend Insight
+$trend_insight = "Consultation volume remains steady.";
+$weekend_sum = $chart_values[array_search('Sat', $chart_labels)] + $chart_values[array_search('Sun', $chart_labels)];
+$weekday_avg = ($total_consults_7d - $weekend_sum) / 5;
+if ($weekend_sum / 2 > $weekday_avg * 1.2) {
+    $trend_insight = "Higher consultation volume observed over the weekend.";
+} elseif ($chart_diffs[6] > 0) {
+    $trend_insight = "Consultation volume is on an upward trend today.";
+} elseif ($total_consults_7d > 20) {
+    $trend_insight = "Overall high consultation volume recorded this week.";
+}
+
 
 // Pharmacy stock alerts (Low Stock & Expiry)
 $low_stock_list = [];
@@ -718,6 +781,26 @@ try {
     $pharmacy_alerts = 0;
     $expiry_alerts = 0;
 }
+ 
+// User Management Statistics
+try {
+    $stat_patients = $conn->query("SELECT COUNT(*) as count FROM users WHERE role = 'patient'")->fetch_assoc()['count'];
+    $stat_staff = $conn->query("SELECT COUNT(*) as count FROM users WHERE role IN ('staff', 'doctor', 'admin')")->fetch_assoc()['count'];
+    $stat_active = $conn->query("SELECT COUNT(*) as count FROM users WHERE status = 'Active'")->fetch_assoc()['count'];
+} catch (Exception $e) {
+    $stat_patients = $stat_staff = $stat_active = 0;
+}
+
+// Appointment Management Statistics
+try {
+    $stat_total_appts = $conn->query("SELECT COUNT(*) as count FROM appointments")->fetch_assoc()['count'];
+    $stat_pending_appts = $conn->query("SELECT COUNT(*) as count FROM appointments WHERE status = 'Pending'")->fetch_assoc()['count'];
+    $stat_completed_appts = $conn->query("SELECT COUNT(*) as count FROM appointments WHERE status IN ('Completed', 'Checked', 'Visited')")->fetch_assoc()['count'];
+    $stat_today_appts = $conn->query("SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = CURDATE()")->fetch_assoc()['count'];
+} catch (Exception $e) {
+    $stat_total_appts = $stat_pending_appts = $stat_completed_appts = $stat_today_appts = 0;
+}
+
 
 // Fetch data based on section
 $pending_requests = $conn->query("SELECT * FROM registrations WHERE status = 'Pending' ORDER BY registered_date DESC");
@@ -731,7 +814,6 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
     <title>Admin Dashboard - HealCare</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary-blue: #3b82f6;
@@ -945,6 +1027,192 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
         .search-input-group input:focus {
             border-color: var(--primary-blue);
+        }
+
+        /* Charts */
+        .filter-select {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: white;
+            outline: none;
+            cursor: pointer;
+            min-width: 140px;
+            font-family: inherit;
+        }
+
+        .filter-select:focus {
+            border-color: var(--primary-blue);
+        }
+
+        /* User Specific Styles */
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--primary-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+            font-size: 14px;
+            border: 2px solid rgba(255,255,255,0.1);
+            text-transform: uppercase;
+        }
+
+        .user-info-cell {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-meta {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-white);
+        }
+
+        .user-email {
+            font-size: 11px;
+            color: var(--text-gray);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        .status-Active { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+        .status-Inactive, .status-Suspended { background: #ef4444; }
+        .status-Pending { background: #f59e0b; }
+
+        /* Actions Dropdown */
+        .actions-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .actions-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-gray);
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .actions-btn:hover {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--primary-blue);
+            border-color: var(--primary-blue);
+        }
+
+        .actions-menu {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            width: 180px;
+            background: var(--dark-blue);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 100;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .actions-menu.show {
+            display: block;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .actions-item {
+            padding: 10px 15px;
+            font-size: 13px;
+            color: var(--text-gray);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: 0.2s;
+            width: 100%;
+            border: none;
+            background: transparent;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .actions-item:hover {
+            background: rgba(255,255,255,0.03);
+            color: var(--text-white);
+        }
+
+        .actions-item.delete:hover {
+            color: var(--accent-red);
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Stats Cards in User Section */
+        .user-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .user-stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-stat-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .user-stat-info h4 {
+            font-size: 12px;
+            color: var(--text-gray);
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .user-stat-info p {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-white);
         }
 
         /* Charts */
@@ -1254,7 +1522,63 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
         /* Admin specific fixes for new header */
         .sidebar { top: 72px !important; height: calc(100vh - 72px) !important; }
         .main-content { margin-top: 72px !important; }
+
+        /* Chart & Summary Styles */
+        .chart-container {
+            background: linear-gradient(145deg, #0f172a, #020617);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(59, 130, 246, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-container::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .summary-card-minimal {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .summary-card-minimal:hover {
+            background: rgba(30, 41, 59, 0.8);
+            border-color: var(--primary-blue);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), 0 0 15px rgba(59, 130, 246, 0.1);
+        }
+
+        .summary-card-minimal .label {
+            font-size: 11px;
+            color: var(--text-gray);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .summary-card-minimal .value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-white);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
     </style>
+
 </head>
 <body>
     <!-- Universal Header -->
@@ -1526,14 +1850,45 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         <h3 style="font-size: 18px; font-weight: 700;">Consultation Traffic</h3>
                         <p style="font-size: 12px; color: var(--text-gray);">Daily appointment trends for the past week</p>
                     </div>
-                    <div style="background: rgba(59, 130, 246, 0.1); padding: 8px 15px; border-radius: 8px; font-size: 11px; color: var(--primary-blue); font-weight: 700;">
+                    <div style="background: rgba(59, 130, 246, 0.1); padding: 8px 15px; border-radius: 8px; font-size: 11px; color: var(--primary-blue); font-weight: 700; cursor: pointer;">
                         <i class="fas fa-calendar-alt"></i> LAST 7 DAYS
                     </div>
                 </div>
-                <div style="height: 350px;">
-                    <canvas id="consultationChart"></canvas>
+                <div style="height: 350px; position: relative; width: 100%; margin-bottom: 20px; display: block;">
+                    <canvas id="consultationChart" style="display: block; width: 100% !important; height: 350px !important; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(59, 130, 246, 0.3);"></canvas>
+                    <div id="chartFallback" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--text-gray); font-size: 14px; display: none;">Preparing Visualization...</div>
                 </div>
+
+
+                <!-- Summary Metrics below chart -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 30px; padding-top: 25px; border-top: 1px solid var(--border-color);">
+                    <div class="summary-card-minimal">
+                        <div class="label">Total Consultations</div>
+                        <div class="value" style="color: var(--primary-blue);"><?php echo $total_consults_7d; ?></div>
+                        <div style="font-size: 10px; color: var(--text-gray); margin-top: 4px;">Last 7 days total</div>
+                    </div>
+                    <div class="summary-card-minimal">
+                        <div class="label">Average per Day</div>
+                        <div class="value" style="color: var(--accent-green);"><?php echo $avg_consults_7d; ?></div>
+                        <div style="font-size: 10px; color: var(--text-gray); margin-top: 4px;">Mean traffic volume</div>
+                    </div>
+                    <div class="summary-card-minimal">
+                        <div class="label">Peak Day</div>
+                        <div class="value" style="color: var(--accent-orange);"><?php echo $peak_day; ?></div>
+                        <div style="font-size: 10px; color: var(--text-gray); margin-top: 4px;">Highest volume recorded</div>
+                    </div>
+                </div>
+
+                <!-- Trend Insight -->
+                <div style="margin-top: 25px; padding: 15px 20px; background: rgba(59, 130, 246, 0.05); border-radius: 12px; border-left: 4px solid var(--primary-blue); display: flex; align-items: center; gap: 12px;">
+                    <i class="fas fa-info-circle" style="color: var(--primary-blue); font-size: 16px;"></i>
+                    <p style="font-size: 13px; color: var(--text-gray); margin: 0; font-weight: 500;">
+                        Insight: <span style="color: var(--text-white);"><?php echo $trend_insight; ?></span>
+                    </p>
+                </div>
+
             </div>
+
 
             <!-- Quick Actions -->
             <div class="content-section">
@@ -2089,59 +2444,151 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             </div>
 
         <?php elseif ($section == 'all-users'): ?>
-            <!-- All Users -->
+            <!-- All Users Redesigned -->
             <div class="top-bar">
                 <div class="page-title">
                     <h1>User Management</h1>
-                    <p>View and manage all registered users</p>
+                    <p>Oversee all specialized medical and administrative accounts</p>
+                </div>
+                <a href="?section=create-user" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Add New User
+                </a>
+            </div>
+
+            <!-- Summary Row -->
+            <div class="user-stats-grid">
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue);">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Total Users</h4>
+                        <p><?php echo $total_users; ?></p>
+                    </div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green);">
+                        <i class="fas fa-user-injured"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Patients</h4>
+                        <p><?php echo $stat_patients; ?></p>
+                    </div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-orange);">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Staff & Doctors</h4>
+                        <p><?php echo $stat_staff; ?></p>
+                    </div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(96, 165, 250, 0.1); color: var(--primary-blue);">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Active Accounts</h4>
+                        <p><?php echo $stat_active; ?></p>
+                    </div>
                 </div>
             </div>
 
             <div class="filter-container">
                 <div class="search-input-group">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="userSearch" placeholder="Search users by name, email, or role..." onkeyup="filterTable('userSearch', 'userTable')">
+                    <input type="text" id="userSearch" placeholder="Search by name, email, or username..." onkeyup="advancedUserFilter()">
                 </div>
+                <select id="roleFilter" class="filter-select" onchange="advancedUserFilter()">
+                    <option value="">All Roles</option>
+                    <option value="doctor">Doctors</option>
+                    <option value="staff">Staff</option>
+                    <option value="patient">Patients</option>
+                    <option value="admin">Admins</option>
+                </select>
+                <select id="statusFilter" class="filter-select" onchange="advancedUserFilter()">
+                    <option value="">All Status</option>
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Suspended">Suspended</option>
+                </select>
             </div>
 
-            <div class="content-section">
-                <table id="userTable">
+            <div class="content-section" style="padding: 0; overflow: visible;">
+                <table id="userTable" style="margin: 0; border: none;">
                     <thead>
                         <tr>
-                            <th>ID / App ID</th>
-                            <th>Email</th>
-                            <th>Role</th>
+                            <th style="padding-left: 30px;">User Identification</th>
+                            <th>Role / Designation</th>
                             <th>Username</th>
-                            <th>Permissions</th>
-                            <th>Status</th>
-                            <th>Created At</th>
-                            <th>Actions</th>
+                            <th>Account Status</th>
+                            <th>Access Level</th>
+                            <th>Joined On</th>
+                            <th style="text-align: right; padding-right: 30px;">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php 
                         $all_users_display = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrations r ON u.registration_id = r.registration_id ORDER BY u.created_at DESC");
                         while($row = $all_users_display->fetch_assoc()): 
+                            $initials = strtoupper(substr($row['username'], 0, 1));
+                            $avatar_bg = ($row['role'] == 'doctor' ? '#3b82f6' : ($row['role'] == 'staff' ? '#10b981' : ($row['role'] == 'admin' ? '#8b5cf6' : '#64748b')));
                         ?>
-                            <tr>
-                                <td><strong style="color: var(--primary-blue);"><?php echo htmlspecialchars($row['app_id'] ?? $row['username']); ?></strong></td>
-                                <td><?php echo htmlspecialchars($row['email']); ?></td>
-                                 <td><span class="badge badge-<?php 
-                                    echo ($row['role'] == 'admin' ? 'active' : ($row['role'] == 'doctor' ? 'pending' : ($row['role'] == 'staff' ? 'completed' : 'active'))); 
-                                ?>"><?php echo ucfirst($row['role']); ?></span></td>
-                                <td><small style="color: var(--text-gray);"><?php echo htmlspecialchars($row['username']); ?></small></td>
-                                <td><small style="color: var(--text-gray);"><?php echo htmlspecialchars($row['permissions'] ?? 'Full Access'); ?></small></td>
-                                <td><span class="badge badge-<?php 
-                                    echo ($row['status'] == 'Active' ? 'active' : ($row['status'] == 'Suspended' ? 'rejected' : 'pending')); 
-                                ?>"><?php echo $row['status']; ?></span></td>
-                                <td><small><?php echo date('M d, Y', strtotime($row['created_at'])); ?></small></td>
+                            <tr class="user-row" data-role="<?php echo $row['role']; ?>" data-status="<?php echo $row['status']; ?>">
+                                <td style="padding-left: 30px;">
+                                    <div class="user-info-cell">
+                                        <div class="user-avatar" style="background: <?php echo $avatar_bg; ?>;"><?php echo $initials; ?></div>
+                                        <div class="user-meta">
+                                            <span class="user-name"><?php echo htmlspecialchars($row['app_id'] ?? ($row['role'] == 'patient' ? 'PATIENT' : 'INTERNAL USER')); ?></span>
+                                            <span class="user-email"><?php echo htmlspecialchars($row['email']); ?></span>
+                                        </div>
+                                    </div>
+                                </td>
                                 <td>
-                                    <button class="btn btn-primary" style="font-size: 11px; padding: 5px 10px;" onclick='openEditUserModal(<?php echo json_encode($row); ?>)'><i class="fas fa-edit"></i> Edit</button>
-                                    <form method="POST" style="display:inline;" onsubmit="return confirm('WARNING: This will permanently delete the user and all their records. Continue?')">
-                                        <input type="hidden" name="action" value="delete_user">
-                                        <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
-                                        <button type="submit" class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;"><i class="fas fa-trash"></i> Delete</button>
-                                    </form>
+                                    <span class="badge badge-<?php 
+                                        echo ($row['role'] == 'admin' ? 'active' : ($row['role'] == 'doctor' ? 'pending' : ($row['role'] == 'staff' ? 'completed' : 'active'))); 
+                                    ?>"><?php echo ucfirst($row['role']); ?></span>
+                                </td>
+                                <td><code style="color: var(--primary-blue); font-size: 12px;"><?php echo htmlspecialchars($row['username']); ?></code></td>
+                                <td>
+                                    <div style="display: flex; align-items: center;">
+                                        <span class="status-dot status-<?php echo $row['status']; ?>"></span>
+                                        <span style="font-size: 13px; font-weight: 500;"><?php echo $row['status']; ?></span>
+                                    </div>
+                                </td>
+                                <td><small style="color: var(--text-gray);"><?php echo htmlspecialchars($row['permissions'] ?? 'Restricted'); ?></small></td>
+                                <td><small style="color: var(--text-gray);"><?php echo date('M d, Y', strtotime($row['created_at'])); ?></small></td>
+                                <td style="text-align: right; padding-right: 30px;">
+                                    <div class="actions-dropdown">
+                                        <button class="actions-btn" onclick="toggleUserActions(event, 'actions-<?php echo $row['user_id']; ?>')">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <div id="actions-<?php echo $row['user_id']; ?>" class="actions-menu">
+                                            <button class="actions-item" onclick='openEditUserModal(<?php echo json_encode($row); ?>)'>
+                                                <i class="fas fa-edit"></i> Edit Details
+                                            </button>
+                                            <form method="POST" style="margin: 0;">
+                                                <input type="hidden" name="action" value="edit_user">
+                                                <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
+                                                <input type="hidden" name="username" value="<?php echo $row['username']; ?>">
+                                                <input type="hidden" name="email" value="<?php echo $row['email']; ?>">
+                                                <input type="hidden" name="role" value="<?php echo $row['role']; ?>">
+                                                <input type="hidden" name="status" value="<?php echo ($row['status'] == 'Active' ? 'Suspended' : 'Active'); ?>">
+                                                <button type="submit" class="actions-item">
+                                                    <i class="fas <?php echo ($row['status'] == 'Active' ? 'fa-user-slash' : 'fa-user-check'); ?>"></i>
+                                                    <?php echo ($row['status'] == 'Active' ? 'Suspend Account' : 'Activate Account'); ?>
+                                                </button>
+                                            </form>
+                                            <form method="POST" style="margin: 0;" onsubmit="return confirm('Deleted users cannot be recovered. Continue?')">
+                                                <input type="hidden" name="action" value="delete_user">
+                                                <input type="hidden" name="user_id" value="<?php echo $row['user_id']; ?>">
+                                                <button type="submit" class="actions-item delete">
+                                                    <i class="fas fa-trash"></i> Delete Permanent
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endwhile; ?>
@@ -2440,17 +2887,79 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             </div>
 
         <?php elseif ($section == 'appointments'): ?>
-            <!-- Appointments Management -->
+            <!-- Appointments Management Redesigned -->
             <div class="top-bar">
                 <div class="page-title">
                     <h1>Appointments Management</h1>
-                    <p>View and manage all patient appointments</p>
+                    <p>Track patient visits and consultation schedules</p>
                 </div>
             </div>
 
-            <div class="content-section">
+            <!-- Summary Row -->
+            <div class="user-stats-grid">
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue);">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Total Bookings</h4>
+                        <p><?php echo $stat_total_appts; ?></p>
+                    </div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-orange);">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Pending Today</h4>
+                        <p><?php echo $stat_today_appts; ?></p>
+                    </div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green);">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Completed</h4>
+                        <p><?php echo $stat_completed_appts; ?></p>
+                    </div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue);">
+                        <i class="fas fa-hourglass-start"></i>
+                    </div>
+                    <div class="user-stat-info">
+                        <h4>Waitlist</h4>
+                        <p><?php echo $stat_pending_appts; ?></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-container">
+                <div class="search-input-group">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="apptSearch" placeholder="Search by patient name, doctor, or department..." onkeyup="advancedApptFilter()">
+                </div>
+                <select id="apptStatusFilter" class="filter-select" onchange="advancedApptFilter()">
+                    <option value="">All Statuses</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="confirmed">Confirmed</option>
+                </select>
+                <select id="apptDeptFilter" class="filter-select" onchange="advancedApptFilter()">
+                    <option value="">All Departments</option>
+                    <?php 
+                    $app_depts = $conn->query("SELECT DISTINCT department FROM appointments WHERE department != ''");
+                    if($app_depts) {
+                        while($ad = $app_depts->fetch_assoc()) echo "<option value='".strtolower($ad['department'])."'>{$ad['department']}</option>";
+                    }
+                    ?>
+                </select>
+            </div>
+
+            <div class="content-section" style="padding: 0; overflow: visible;">
                 <?php
-                // Fetch All Appointments
                 $all_appts = $conn->query("
                     SELECT a.*, 
                            rd.name as doctor_name, 
@@ -2470,71 +2979,85 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 ");
                 ?>
 
-                <?php if ($all_appts && $all_appts->num_rows > 0): ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Patient</th>
-                                <th>Doctor</th>
-                                <th>Date & Time</th>
-                                <th>Department</th>
-                                <th>Status</th>
-                                <th>Billing</th>
-                                <th>Queue</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while($appt = $all_appts->fetch_assoc()): 
+                <table id="apptTable" style="margin: 0; border: none;">
+                    <thead>
+                        <tr>
+                            <th style="padding-left: 30px;">Patient Details</th>
+                            <th>Medical Expert</th>
+                            <th>Schedule Info</th>
+                            <th>Dept / Category</th>
+                            <th>Status</th>
+                            <th style="padding-right: 30px;">Billing Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($all_appts && $all_appts->num_rows > 0): 
+                            while($appt = $all_appts->fetch_assoc()): 
                                 $p_name = $appt['patient_name_prof'] ?? $appt['patient_name_reg'] ?? 'Walk-in/Unknown';
                                 $raw_d_name = $appt['doctor_name'] ?? 'Unassigned';
                                 $d_name = ($raw_d_name != 'Unassigned') 
                                     ? 'Dr. ' . str_ireplace('Dr. ', '', $raw_d_name) 
-                                    : '<span style="color:#ef4444; font-size:11px;">Unassigned</span>';
+                                    : 'Unassigned Specialist';
                                 
-                                // Status Logic
                                 $st = strtolower($appt['status']);
-                                $badge = 'pending'; // Default orange
-                                if ($st == 'scheduled' || $st == 'confirmed') $badge = 'active'; // Green
-                                elseif ($st == 'completed' || $st == 'checked' || $st == 'visited') $badge = 'completed'; // Blue
-                                elseif ($st == 'cancelled' || $st == 'rejected') $badge = 'rejected'; // Red
-                                
-                                // Billing Logic
-                                $bill_badge = '';
-                                if($appt['bill_id']) {
-                                    if($appt['bill_status'] == 'Paid') $bill_badge = '<span class="badge badge-active"><i class="fas fa-check-circle"></i> Paid</span>';
-                                    else $bill_badge = '<span class="badge badge-unpaid"><i class="fas fa-clock"></i> Pending</span>';
-                                } else {
-                                    $bill_badge = '<span style="color:#64748b; font-size:11px;">Not Generated</span>';
-                                }
-                            ?>
-                                <tr>
-                                    <td><small style="color:var(--primary-blue);">#<?php echo $appt['appointment_id']; ?></small></td>
-                                    <td>
-                                        <strong><?php echo htmlspecialchars($p_name); ?></strong>
-                                    </td>
-                                    <td><?php echo $d_name; ?></td>
-                                    <td>
-                                        <div style="font-weight:600; font-size:13px;"><?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?></div>
-                                        <div style="font-size:11px; color:var(--text-gray);"><?php echo date('h:i A', strtotime($appt['appointment_time'] ?? $appt['appointment_date'])); ?></div>
-                                    </td>
-                                    <td><span style="font-size:12px; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:4px;"><?php echo htmlspecialchars($appt['department']); ?></span></td>
-                                    <td><span class="badge badge-<?php echo $badge; ?>"><?php echo ucfirst($appt['status']); ?></span></td>
-                                    <td><?php echo $bill_badge; ?></td>
-                                    <td style="font-weight:700; color:var(--text-gray);"><?php echo $appt['queue_number'] ?? '-'; ?></td>
-                                </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+                                $initials = strtoupper(substr($p_name, 0, 1));
+                        ?>
+                            <tr class="appt-row" data-status="<?php echo $st; ?>" data-dept="<?php echo strtolower($appt['department']); ?>">
+                                <td style="padding-left: 30px;">
+                                    <div class="user-info-cell">
+                                        <div class="user-avatar" style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue);"><?php echo $initials; ?></div>
+                                        <div class="user-meta">
+                                            <span class="user-name"><?php echo htmlspecialchars($p_name); ?></span>
+                                            <span class="user-email">#APP-<?php echo $appt['appointment_id']; ?> (Queue: <?php echo $appt['queue_number'] ?? '-'; ?>)</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 500; font-size: 14px;"><?php echo $d_name; ?></div>
+                                    <div style="font-size: 11px; color: var(--text-gray);">Assigned Faculty</div>
+                                </td>
+                                <td>
+                                    <div style="font-weight: 600; font-size: 13px; color: var(--text-white);">
+                                        <?php echo date('M d, Y', strtotime($appt['appointment_date'])); ?>
+                                    </div>
+                                    <div style="font-size: 11px; color: var(--primary-blue); font-weight: 600;">
+                                        <?php echo date('h:i A', strtotime($appt['appointment_time'] ?? $appt['appointment_date'])); ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <?php echo htmlspecialchars($appt['department']); ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center;">
+                                        <span class="status-dot status-<?php 
+                                            echo ($st == 'scheduled' || $st == 'confirmed' ? 'Active' : ($st == 'completed' || $st == 'checked' || $st == 'visited' ? 'Active' : ($st == 'cancelled' || $st == 'rejected' ? 'Suspended' : 'Pending'))); 
+                                        ?>"></span>
+                                        <span style="font-size: 13px; font-weight: 500;"><?php echo ucfirst($appt['status']); ?></span>
+                                    </div>
+                                </td>
+                                <td style="padding-right: 30px;">
+                                    <?php if($appt['bill_id']): ?>
+                                        <span class="badge badge-<?php echo $appt['bill_status'] == 'Paid' ? 'active' : 'unpaid'; ?>">
+                                            <?php echo $appt['bill_status']; ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span style="color: var(--text-gray); font-size: 11px;">Not Generated</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
                 <?php else: ?>
                     <div class="placeholder-section">
                         <i class="fas fa-calendar-times"></i>
-                        <h3>No Appointments Found</h3>
-                        <p>There are no appointments in the system yet.</p>
+                        <h3>No Appointments Data</h3>
+                        <p>Currently there are no registered appointments in the system.</p>
                     </div>
                 <?php endif; ?>
             </div>
-
         <?php elseif ($section == 'doctor-scheduling'): ?>
             <!-- Doctor Scheduling -->
             <div class="top-bar">
@@ -3918,78 +4441,212 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             });
         }
 
-        <?php if ($section == 'dashboard'): ?>
-        // Initialize Consultation Chart
-        const ctx = document.getElementById('consultationChart').getContext('2d');
-        const consultationChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: <?php echo json_encode($chart_labels); ?>,
-                datasets: [{
-                    label: 'Consultations',
-                    data: <?php echo json_encode($chart_values); ?>,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#3b82f6',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        mode: 'index',
+        function advancedUserFilter() {
+            const search = document.getElementById('userSearch').value.toLowerCase();
+            const role = document.getElementById('roleFilter').value.toLowerCase();
+            const status = document.getElementById('statusFilter').value.toLowerCase();
+            const rows = document.querySelectorAll('.user-row');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const userRole = row.getAttribute('data-role').toLowerCase();
+                const userStatus = row.getAttribute('data-status').toLowerCase();
+
+                const matchesSearch = text.includes(search);
+                const matchesRole = role === "" || userRole === role;
+                const matchesStatus = status === "" || userStatus === status;
+
+                if (matchesSearch && matchesRole && matchesStatus) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+        function advancedApptFilter() {
+            const search = document.getElementById('apptSearch').value.toLowerCase();
+            const status = document.getElementById('apptStatusFilter').value.toLowerCase();
+            const dept = document.getElementById('apptDeptFilter').value.toLowerCase();
+            const rows = document.querySelectorAll('.appt-row');
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const apptStatus = row.getAttribute('data-status').toLowerCase();
+                const apptDept = row.getAttribute('data-dept').toLowerCase();
+
+                const matchesSearch = text.includes(search);
+                const matchesStatus = status === "" || apptStatus === status;
+                const matchesDept = dept === "" || apptDept === dept;
+
+                if (matchesSearch && matchesStatus && matchesDept) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+        function toggleUserActions(event, id) {
+            event.stopPropagation();
+            const menu = document.getElementById(id);
+            const allMenus = document.querySelectorAll('.actions-menu');
+            
+            allMenus.forEach(m => {
+                if (m.id !== id) m.classList.remove('show');
+            });
+            
+            menu.classList.toggle('show');
+        }
+
+        // Close dropdowns when clicking anywhere
+        window.onclick = function(event) {
+            if (!event.target.closest('.actions-dropdown')) {
+                const menus = document.querySelectorAll('.actions-menu');
+                menus.forEach(m => m.classList.remove('show'));
+            }
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script>
+    <?php if ($section == 'dashboard'): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fallback = document.getElementById('chartFallback');
+        if (fallback) fallback.style.display = 'block';
+
+        setTimeout(() => {
+            const ctx = document.getElementById('consultationChart');
+            if (!ctx) {
+                console.error("Canvas element #consultationChart not found even after timeout");
+                return;
+            }
+
+            const labels = <?php echo json_encode($chart_labels); ?>;
+            const data = <?php echo json_encode($chart_values); ?>;
+            const diffs = <?php echo json_encode($chart_diffs); ?>;
+            const peakIdx = <?php echo $peak_index; ?>;
+            const avgVal = <?php echo $avg_consults_7d; ?>;
+
+            if (typeof Chart === 'undefined') {
+                if (fallback) fallback.innerText = "Error: Visualization library (Chart.js) failed to load.";
+                return;
+            }
+
+            if (fallback) fallback.style.display = 'none';
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Appointments',
+                        data: data,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 4,
+                        tension: 0.45,
+                        fill: true,
+                        pointRadius: data.map((_, i) => i === peakIdx ? 8 : 4),
+                        pointBackgroundColor: data.map((_, i) => i === peakIdx ? '#3b82f6' : '#ffffff'),
+                        pointBorderColor: '#3b82f6',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 9,
+                        pointHoverBackgroundColor: '#ffffff',
+                        pointHoverBorderColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
                         intersect: false,
-                        backgroundColor: '#1e293b',
-                        titleColor: '#94a3b8',
-                        bodyColor: '#fff',
-                        borderColor: 'rgba(255,255,255,0.1)',
-                        borderWidth: 1,
-                        padding: 12,
-                        displayColors: false,
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y + ' Patients Consulted';
+                        mode: 'index',
+                    },
+                    animation: {
+                        duration: 1200,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleFont: { family: 'Poppins', size: 14, weight: 'bold' },
+                            bodyFont: { family: 'Poppins', size: 13 },
+                            padding: 15,
+                            cornerRadius: 12,
+                            displayColors: false,
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const index = context.dataIndex;
+                                    const val = context.parsed.y;
+                                    const diff = diffs[index];
+                                    let diffText = diff === 0 ? ' (No change)' : (diff > 0 ? ` (+${diff})` : ` (${diff})`);
+                                    return [
+                                        `Count: ${val} patients`,
+                                        `Prev Day: ${diffText}`
+                                    ];
+                                }
+                            }
+                        },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    yMin: avgVal,
+                                    yMax: avgVal,
+                                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                                    borderWidth: 1,
+                                    borderDash: [6, 6],
+                                    label: {
+                                        display: true,
+                                        content: 'AVG: ' + avgVal,
+                                        position: 'end',
+                                        backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                        color: '#94a3b8',
+                                        font: { size: 10, weight: '600' },
+                                        padding: 4
+                                    }
+                                },
+                                peakLabel: {
+                                    type: 'label',
+                                    xValue: peakIdx,
+                                    yValue: data[peakIdx],
+                                    content: ['PEAK'],
+                                    color: '#3b82f6',
+                                    font: { size: 11, weight: 'bold', family: 'Poppins' },
+                                    position: 'top',
+                                    yAdjust: -15
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.03)', drawBorder: false },
+                            ticks: { 
+                                color: '#64748b', 
+                                stepSize: 1,
+                                font: { family: 'Poppins', size: 11 }
+                            },
+                            suggestedMax: Math.max(...data) + 2
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { 
+                                color: '#64748b',
+                                font: { family: 'Poppins', size: 11 }
                             }
                         }
                     }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)',
-                            drawBorder: false
-                        },
-                        ticks: {
-                            color: '#94a3b8',
-                            font: { size: 11 },
-                            stepSize: 1
-                        }
-                    },
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: '#94a3b8',
-                            font: { size: 11 }
-                        }
-                    }
                 }
-            }
-        });
-        <?php endif; ?>
+            });
+        }, 800);
+    });
+    <?php endif; ?>
     </script>
 </body>
 </html>

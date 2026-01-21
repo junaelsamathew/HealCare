@@ -448,7 +448,7 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
                     $counter++;
                 }
 
-                $conn->query("INSERT INTO users (registration_id, username, email, password, role, status) VALUES ($rid, '$uname', '$email', '$dummy_pass', 'patient', 'Active')");
+                $conn->query("INSERT INTO users (registration_id, username, email, password, role, permissions, status) VALUES ($rid, '$uname', '$email', '$dummy_pass', 'patient', 'Patient Access', 'Active')");
                 
                 $new_user_id = $conn->insert_id;
                 
@@ -634,8 +634,8 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
                     $username = $patient_code; 
 
                     // 3. Create User Entry with 'Active' status
-                    $sql_user = "INSERT INTO users (registration_id, username, email, password, role, status) 
-                                 VALUES ('$registration_id', '$username', '$email', '$pass', '$role', 'Active')";
+                    $sql_user = "INSERT INTO users (registration_id, username, email, password, role, permissions, status) 
+                                 VALUES ('$registration_id', '$username', '$email', '$pass', '$role', 'Patient Access', 'Active')";
                     $conn->query($sql_user);
                     $user_id = $conn->insert_id;
 

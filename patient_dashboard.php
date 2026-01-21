@@ -460,8 +460,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
                                     <?php endif; ?>
                                 <?php elseif ($lab_order['status'] == 'Processing'): ?>
                                     <span style="color: #f59e0b; font-size: 11px;">Processing...</span>
+                                <?php elseif (($lab_order['status'] == 'Pending' || $lab_order['status'] == 'Requested') && ($lab_order['payment_status'] ?? 'Pending') == 'Paid'): ?>
+                                    <button onclick="showAuthQR(<?php echo $lab_order['labtest_id']; ?>, '<?php echo htmlspecialchars($lab_order['test_name']); ?>')" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">
+                                        <i class="fas fa-qrcode"></i> View Auth Code
+                                    </button>
                                 <?php else: ?>
-                                    <span style="color: #94a3b8; font-size: 11px;">Pending Action</span>
+                                    <span style="color: #f59e0b; font-size: 11px;"><i class="fas fa-coins"></i> Payment Pending</span>
                                 <?php endif; ?>
                             </div>
                         <?php endwhile; else: ?>
@@ -613,6 +617,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
     </div>
 
     <!-- FontAwesome for icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <!-- Auth QR Modal -->
+    <div id="qrModal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; max-width: 300px; width: 90%; border: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="color: #fff; margin-bottom: 5px;">Test Authorization</h3>
+            <p id="qrTestName" style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;"></p>
+            
+            <div style="background: white; padding: 10px; border-radius: 10px; display: inline-block; margin-bottom: 20px;">
+                <img id="qrImage" src="" alt="Auth QR" style="width: 180px; height: 180px;">
+            </div>
+            
+            <p style="color: #10b981; font-size: 12px; font-weight: 600; margin-bottom: 20px;">
+                <i class="fas fa-check-circle"></i> Payment Verified
+            </p>
+            
+            <button onclick="document.getElementById('qrModal').style.display='none'" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px 30px; border-radius: 8px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function showAuthQR(id, name) {
+            document.getElementById('qrTestName').textContent = name;
+            document.getElementById('qrImage').src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=HealCare_AUTH_" + id;
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+    </script>
 </body>
 </html>

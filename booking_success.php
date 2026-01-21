@@ -70,7 +70,7 @@ $username = $_SESSION['username'] ?? 'User';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Confirmed - HealCare</title>
+    <title><?php echo (isset($_GET['paid']) || (isset($_GET['from']) && $_GET['from'] == 'payment')) ? 'Payment Confirmed' : 'Booking Confirmed'; ?> - HealCare</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles/dashboard.css">
@@ -204,8 +204,13 @@ $username = $_SESSION['username'] ?? 'User';
         <main class="main-content" style="display: flex; align-items: center; justify-content: center;">
             <div class="success-card">
                 <div class="success-icon"><i class="fas fa-check"></i></div>
-                <h2>Appointment Confirmed!</h2>
-                <p>Your request has been successfully submitted.</p>
+                <?php if(isset($_GET['paid']) || (isset($_GET['from']) && $_GET['from'] == 'payment')): ?>
+                    <h2>Payment Confirmed!</h2>
+                    <p>Your medical services payment has been successfully processed.</p>
+                <?php else: ?>
+                    <h2>Appointment Confirmed!</h2>
+                    <p>Your request has been successfully submitted.</p>
+                <?php endif; ?>
                 
                 <div class="details-grid">
                     <div class="row"><strong>Booking ID:</strong> <span style="font-family:monospace;"><?php echo $booking_id; ?></span></div>
@@ -213,7 +218,7 @@ $username = $_SESSION['username'] ?? 'User';
                     <div class="row"><strong>Doctor:</strong> <span><?php echo $doctor_name; ?></span></div>
                     <div class="row"><strong>Date / Time:</strong> <span><?php echo date('M d, Y', strtotime($date)); ?> &bull; <?php echo $time; ?></span></div>
                     <div class="row"><strong>Patient:</strong> <span><?php echo htmlspecialchars($patient_name); ?></span></div>
-                    <div class="row"><strong>Fee:</strong> <span>₹<?php echo number_format($fee, 0); ?></span></div>
+                    <div class="row"><strong>Medical Services Bill:</strong> <span>₹<?php echo number_format($fee, 0); ?></span></div>
                     <?php if(isset($_GET['paid'])): ?>
                         <div class="row"><strong>Status:</strong> <span style="color:#10b981; font-weight:bold;">PAID</span></div>
                     <?php else: ?>

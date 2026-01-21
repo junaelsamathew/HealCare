@@ -240,7 +240,7 @@ $txn_id = $data['transaction_id'] ?? 'CASH-' . rand(10000,99999);
             <tbody>
                 <tr>
                     <td>
-                        <strong><?php echo htmlspecialchars($data['bill_type']); ?> Fee</strong><br>
+                        <strong><?php echo htmlspecialchars($data['bill_type']); ?> Bill</strong><br>
                         <span style="font-size: 11px; color: #64748b;">Professional medical services</span>
                     </td>
                     <td>Dr. <?php echo htmlspecialchars($data['doctor_name']); ?><br><span style="font-size: 10px; color: #94a3b8;"><?php echo htmlspecialchars($data['specialization']); ?></span></td>

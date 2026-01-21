@@ -138,3 +138,43 @@ SESSION: Array
     [full_name] => Akshay Krishna R
 )
 
+2026-01-19 05:50:09 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 41
+    [doctor_id] => 23
+    [appointment_id] => 39
+    [reference_id] => 25
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-7102
+    [user_id] => 41
+    [full_name] => Divinia Mario Antony
+)
+
+2026-01-19 16:41:22 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 38
+    [doctor_id] => 19
+    [appointment_id] => 41
+    [reference_id] => 28
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-3781
+    [user_id] => 38
+    [full_name] => Juna Elsa Mathew
+)
+

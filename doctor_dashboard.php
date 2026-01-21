@@ -855,7 +855,7 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
 
                 <!-- Right: Active Consultation -->
                 <div class="consult-form">
-                    <form method="POST" action="save_consultation.php">
+                    <form method="POST" action="save_consultation.php" onsubmit="return validateConsultationForm(this)">
                         <input type="hidden" name="patient_id" value="<?php echo $_GET['patient_id'] ?? ''; ?>">
                         <input type="hidden" name="doctor_id" value="<?php echo $user_id; ?>">
                         <input type="hidden" name="appointment_id" value="<?php echo $_GET['appt_id'] ?? ''; ?>">
@@ -866,13 +866,13 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
 
                         <div>
                             <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Diagnosis</label>
-                            <input type="text" name="diagnosis" style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; color: white; margin-bottom: 15px;" placeholder="Primary Diagnosis (e.g. Viral Fever)">
+                            <input type="text" name="diagnosis" required style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; color: white; margin-bottom: 15px;" placeholder="Describe diagnosis (e.g. Seasonal Flu with mild fever)">
                             
                             <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Doctor's Internal Notes / Treatment Plan</label>
-                            <textarea name="treatment" style="width: 100%; height: 80px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; color: white; padding: 15px; margin-bottom: 15px;" placeholder="Enter clinical observations..."></textarea>
+                            <textarea name="treatment" required style="width: 100%; height: 80px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: 10px; color: white; padding: 15px; margin-bottom: 15px;" placeholder="Detailed clinical observations and treatment plan..."></textarea>
                             
                             <label style="font-size: 13px; font-weight: 600; margin-bottom: 8px; display: block;">Special Notes to Patient</label>
-                            <textarea name="special_notes" style="width: 100%; height: 60px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; color: white; padding: 15px; margin-bottom: 15px;" placeholder="Advice to patient (e.g. Bed rest for 3 days, drink more water)"></textarea>
+                            <textarea name="special_notes" required style="width: 100%; height: 60px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; color: white; padding: 15px; margin-bottom: 15px;" placeholder="Advice to patient (e.g. Drink plenty of fluids, complete the full antibiotic course)"></textarea>
                         </div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -1053,6 +1053,37 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
         }
         function closeConsultation() {
             document.getElementById('consultModal').style.display = 'none';
+        }
+
+        function validateConsultationForm(form) {
+            const diagnosis = form.diagnosis.value.trim();
+            const treatment = form.treatment.value.trim();
+            const specialNotes = form.special_notes.value.trim();
+
+            if (diagnosis.length < 5) {
+                alert("Please provide a more descriptive diagnosis.");
+                return false;
+            }
+
+            if (treatment.length < 10) {
+                alert("Please provide more detailed treatment notes.");
+                return false;
+            }
+
+            // Rubbish check: simple check for high entropy / mash
+            const isRubbish = (str) => {
+                const uniqueChars = new Set(str.toLowerCase().replace(/[^a-z]/g, '')).size;
+                const ratio = uniqueChars / str.length;
+                // If it's short and has almost all unique random chars, or very few unique chars repeated
+                return (str.length > 5 && ratio > 0.8 && !str.includes(' '));
+            };
+
+            if (isRubbish(diagnosis)) {
+                alert("Diagnosis seems invalid. Please enter a meaningful diagnosis.");
+                return false;
+            }
+
+            return true;
         }
     </script>
 

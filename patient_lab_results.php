@@ -156,6 +156,14 @@ $display_name = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['name'] : $_S
                                 </a>
                             <?php elseif ($row['status'] == 'Completed'): ?>
                                 <span style="font-size: 12px; color: #10b981;">Report Finalized (No File)</span>
+                            <?php elseif (($row['status'] == 'Pending' || $row['status'] == 'Requested') && ($row['payment_status'] ?? 'Pending') == 'Paid'): ?>
+                                <button onclick="showAuthQR(<?php echo $row['labtest_id']; ?>, '<?php echo htmlspecialchars($row['test_name']); ?>')" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-qrcode"></i> View Authorization Code
+                                </button>
+                            <?php elseif (($row['status'] == 'Pending' || $row['status'] == 'Requested') && ($row['payment_status'] ?? 'Pending') != 'Paid'): ?>
+                                <span style="font-size: 12px; color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 8px 15px; border-radius: 20px;">
+                                    <i class="fas fa-exclamation-triangle"></i> Payment Pending
+                                </span>
                             <?php else: ?>
                                 <span style="font-size: 12px; color: #64748b; background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 20px;">
                                     <i class="fas fa-clock"></i> In Progress
@@ -177,5 +185,30 @@ $display_name = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['name'] : $_S
 
         </main>
     </div>
+    <!-- Auth QR Modal -->
+    <div id="qrModal" style="display:none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; max-width: 300px; width: 90%; border: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="color: #fff; margin-bottom: 5px;">Test Authorization</h3>
+            <p id="qrTestName" style="color: #94a3b8; font-size: 13px; margin-bottom: 20px;"></p>
+            
+            <div style="background: white; padding: 10px; border-radius: 10px; display: inline-block; margin-bottom: 20px;">
+                <img id="qrImage" src="" alt="Auth QR" style="width: 180px; height: 180px;">
+            </div>
+            
+            <p style="color: #10b981; font-size: 12px; font-weight: 600; margin-bottom: 20px;">
+                <i class="fas fa-check-circle"></i> Payment Verified
+            </p>
+            
+            <button onclick="document.getElementById('qrModal').style.display='none'" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px 30px; border-radius: 8px; cursor: pointer;">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function showAuthQR(id, name) {
+            document.getElementById('qrTestName').textContent = name;
+            document.getElementById('qrImage').src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=HealCare_AUTH_" + id;
+            document.getElementById('qrModal').style.display = 'flex';
+        }
+    </script>
 </body>
 </html>

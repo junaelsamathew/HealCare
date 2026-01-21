@@ -12,3 +12,7 @@ Success! Bill ID: 36
 Success! Bill ID: 37
 2026-01-18 17:38:47 - Attempting Insert: Patient: 37, Ref: 23, Type: Pharmacy, Amt: 150, Appt: 38
 Success! Bill ID: 40
+2026-01-19 05:50:09 - Attempting Insert: Patient: 41, Ref: 25, Type: Medical Services, Amt: 650, Appt: 39
+Success! Bill ID: 43
+2026-01-19 16:41:22 - Attempting Insert: Patient: 38, Ref: 28, Type: Medical Services, Amt: 650, Appt: 41
+Success! Bill ID: 48

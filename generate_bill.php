@@ -33,15 +33,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $amount = 0;
         $desc_parts = [];
         $appt_id = isset($_POST['appointment_id']) ? intval($_POST['appointment_id']) : 0;
-        // Logic for Lab depends on this ID being accurate
+        
+        // Find appointment if not provided
         if($appt_id == 0 && $doctor_id > 0) {
-             // Fallback attempt to find it early
              $q = $conn->query("SELECT appointment_id FROM appointments WHERE patient_id = $patient_id AND doctor_id = $doctor_id ORDER BY appointment_date DESC LIMIT 1");
              if($q && $q->num_rows > 0) $appt_id = $q->fetch_assoc()['appointment_id'];
         }
         
         // 1. Calculate Pharmacy Component
-        if ($ref_id > 0) { // Reference ID here is Prescription ID
+        if ($ref_id > 0) { // Reference ID is Prescription ID
              $presc_q = $conn->query("SELECT medicine_details FROM prescriptions WHERE prescription_id = $ref_id");
              if ($presc_q && $presc_q->num_rows > 0) {
                  $presc_text = strtolower($presc_q->fetch_assoc()['medicine_details']);
@@ -64,21 +64,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
              }
         }
 
-        // 2. Calculate Lab Component
+        // 2. Calculate Lab Component (All pending labs for this appointment)
         if ($appt_id > 0) {
-             // Check for unbilled, completed or pending lab tests
-             $lab_q = $conn->query("SELECT test_name FROM lab_tests WHERE appointment_id = $appt_id");
+             $lab_q = $conn->query("SELECT test_name FROM lab_tests WHERE appointment_id = $appt_id AND status != 'Cancelled'");
              if ($lab_q && $lab_q->num_rows > 0) {
                  $l_cost = 0;
                  while($l = $lab_q->fetch_assoc()) {
-                     $l_cost += 500.00; // Flat Fee per Test for now
+                     $l_cost += 500.00; // Flat Fee per Test
                  }
                  $amount += $l_cost;
                  $desc_parts[] = "Lab Tests (₹$l_cost)";
+                 
+                 // Mark related individual pending lab bills as Merged if any
+                 $conn->query("UPDATE billing SET payment_status = 'Paid', payment_mode = 'Merged', transaction_ref = 'Merged into Combined Bill' WHERE appointment_id = $appt_id AND bill_type LIKE 'Lab Test%' AND payment_status = 'Pending'");
              }
         }
         
-        $bill_type = 'Medical Services'; // Unified Type
+        $bill_type = 'Medical Services'; // Final type for display
         $description = implode(", ", $desc_parts);
     }
     

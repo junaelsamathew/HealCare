@@ -247,8 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <input type="hidden" name="action" value="dispense">
                                     <input type="hidden" name="prescription_id" value="<?php echo $presc['prescription_id']; ?>">
                                     <button type="button" class="btn-print" onclick="window.open('print_prescription.php?id=<?php echo $presc['prescription_id']; ?>', '_blank', 'width=900,height=800')" style="background: transparent; border: 1px solid var(--border-soft); color: #fff; padding: 10px 20px; border-radius: 10px; cursor: pointer;">Print Rx</button>
-                                    <button type="submit" style="background: #4fc3f7; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer;">Dispense</button>
-                                </form>
+                                    <button type="button" onclick="openBillModalCombined('<?php echo $presc['prescription_id']; ?>', '<?php echo $presc['patient_id']; ?>', '<?php echo $presc['doctor_id']; ?>', '<?php echo addslashes($presc['patient_name']); ?>')" style="background: #4fc3f7; color: #020617; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer;">Bill & Dispense</button>
+                                 </form>
                             </div>
                         </div>
                         <?php endwhile; ?>
@@ -679,9 +679,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <p style="color:#cbd5e1; font-size:12px; margin:0;">Total amount will be calculated automatically based on medicine prices and prescribed duration. Minimum charge of $150 applies if calculation fails.</p>
                 </div>
 
+                <div style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
+                    <input type="checkbox" name="bill_type" value="Combined" id="is_combined" style="width:20px; height:20px;">
+                    <label for="is_combined" style="color:white; font-size:14px; cursor:pointer;">Combine with pending Lab Tests</label>
+                </div>
+
                 <div style="margin-bottom:20px;">
                     <label style="color:#94a3b8; font-size:12px; display:block; margin-bottom:5px;">Remarks (Optional)</label>
-                    <textarea name="description" rows="3" placeholder="List of medicines (optional)" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px; resize:none;"></textarea>
+                    <textarea name="description" id="bill_desc" rows="3" placeholder="List of medicines (optional)" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px; resize:none;"></textarea>
                 </div>
 
                 <button type="submit" style="width:100%; padding:12px; background:#4fc3f7; color:#020617; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">Confirm & Generate Bill</button>
@@ -709,6 +714,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById(id).style.display = 'flex';
         }
 
+
+        function openBillModalCombined(rxId, pId, dId, pName) {
+            document.getElementById('billModal').style.display = 'flex';
+            document.getElementById('bill_ref').value = rxId;
+            document.getElementById('bill_pid').value = pId;
+            document.getElementById('bill_did').value = dId;
+            document.getElementById('bill_pname').value = pName;
+            document.getElementById('bill_desc').value = "Dispensing Rx #" + rxId;
+            // Default to combined if possible
+            document.getElementById('is_combined').checked = true;
+        }
 
         function openEditModal(btn) {
             try {
