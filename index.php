@@ -568,4 +568,8 @@ include 'includes/header.php';
             setInterval(showNextDoctors, 3000);
         });
     </script>
+
+    <!-- Chatbot Widget -->
+    <?php include 'includes/chatbot_widget.php'; ?>
+
 <?php include 'includes/footer.php'; ?>

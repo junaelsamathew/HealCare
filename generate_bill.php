@@ -32,16 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($bill_type === 'Combined') {
         $amount = 0;
         $desc_parts = [];
+        $medicine_list = [];
         $appt_id = isset($_POST['appointment_id']) ? intval($_POST['appointment_id']) : 0;
         
-        // Find appointment if not provided
         if($appt_id == 0 && $doctor_id > 0) {
              $q = $conn->query("SELECT appointment_id FROM appointments WHERE patient_id = $patient_id AND doctor_id = $doctor_id ORDER BY appointment_date DESC LIMIT 1");
              if($q && $q->num_rows > 0) $appt_id = $q->fetch_assoc()['appointment_id'];
         }
         
         // 1. Calculate Pharmacy Component
-        if ($ref_id > 0) { // Reference ID is Prescription ID
+        if ($ref_id > 0) { 
              $presc_q = $conn->query("SELECT medicine_details FROM prescriptions WHERE prescription_id = $ref_id");
              if ($presc_q && $presc_q->num_rows > 0) {
                  $presc_text = strtolower($presc_q->fetch_assoc()['medicine_details']);
@@ -56,49 +56,58 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                          $per_day = 2;
                          if (preg_match('/(\d+)-(\d+)-(\d+)/', $presc_text, $f_matches)) $per_day = intval($f_matches[1]) + intval($f_matches[2]) + intval($f_matches[3]);
                          $p_cost += ($days * $per_day * $price);
+                         $medicine_list[] = ucwords($stock['medicine_name']);
                      }
                  }
-                 if($p_cost == 0) $p_cost = 150.00; // Min Pharmacy Charge
+                 if($p_cost == 0) $p_cost = 150.00;
                  $amount += $p_cost;
-                 $desc_parts[] = "Medicines (₹$p_cost)";
+                 $desc_parts[] = "Medicines: " . implode(", ", $medicine_list);
              }
         }
 
-        // 2. Calculate Lab Component (All pending labs for this appointment)
+        // 2. Calculate Lab Component
         if ($appt_id > 0) {
              $lab_q = $conn->query("SELECT test_name FROM lab_tests WHERE appointment_id = $appt_id AND status != 'Cancelled'");
              if ($lab_q && $lab_q->num_rows > 0) {
                  $l_cost = 0;
+                 $tests = [];
                  while($l = $lab_q->fetch_assoc()) {
-                     $l_cost += 500.00; // Flat Fee per Test
+                     $l_cost += 500.00; 
+                     $tests[] = $l['test_name'];
                  }
                  $amount += $l_cost;
-                 $desc_parts[] = "Lab Tests (₹$l_cost)";
-                 
-                 // Mark related individual pending lab bills as Merged if any
+                 $desc_parts[] = "Lab Tests: " . implode(", ", $tests);
                  $conn->query("UPDATE billing SET payment_status = 'Paid', payment_mode = 'Merged', transaction_ref = 'Merged into Combined Bill' WHERE appointment_id = $appt_id AND bill_type LIKE 'Lab Test%' AND payment_status = 'Pending'");
              }
         }
         
-        $bill_type = 'Medical Services'; // Final type for display
-        $description = implode(", ", $desc_parts);
+        // 3. Calculate Consultation Fee (Include if details are pending)
+        if ($appt_id > 0) {
+             $cons_q = $conn->query("SELECT total_amount FROM billing WHERE appointment_id = $appt_id AND bill_type = 'Consultation' AND payment_status = 'Pending'");
+             if ($cons_q && $cons_q->num_rows > 0) {
+                 $c_amt = $cons_q->fetch_assoc()['total_amount'];
+                 $amount += $c_amt;
+                 $desc_parts[] = "Consultation (₹$c_amt)";
+                 $conn->query("UPDATE billing SET payment_status = 'Paid', payment_mode = 'Merged', transaction_ref = 'Merged into Combined Bill' WHERE appointment_id = $appt_id AND bill_type = 'Consultation' AND payment_status = 'Pending'");
+             }
+        }
+        
+        $bill_type = 'Pharmacy / Complete Clinic Bill';
+        $description = implode(" | ", $desc_parts);
     }
     
     // Automatic Calculation for Pharmacy (Standalone)
     if ($bill_type === 'Pharmacy' && $ref_id > 0) {
         $amount = 0;
+        $medicine_list = [];
         $presc_q = $conn->query("SELECT medicine_details FROM prescriptions WHERE prescription_id = $ref_id");
         if ($presc_q && $presc_q->num_rows > 0) {
             $presc_text = strtolower($presc_q->fetch_assoc()['medicine_details']);
-            
-            // Fetch Pricing Master
             $stock_q = $conn->query("SELECT medicine_name, unit_price FROM pharmacy_stock");
             while ($stock = $stock_q->fetch_assoc()) {
                 $name = strtolower($stock['medicine_name']);
                 if (strpos($presc_text, $name) !== false) {
                     $price = floatval($stock['unit_price']);
-                    
-                    // 1. Determine Duration (Default: 5 days)
                     $days = 5; 
                     if (preg_match('/(\d+)\s*days?/i', $presc_text, $matches)) {
                         $days = intval($matches[1]);
@@ -106,38 +115,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $days = intval($matches[1]) * 7;
                     }
 
-                    // 2. Determine Frequency (Default: 2 times/day)
                     $per_day = 2;
                     if (preg_match('/(\d+)-(\d+)-(\d+)/', $presc_text, $f_matches)) {
                         $per_day = intval($f_matches[1]) + intval($f_matches[2]) + intval($f_matches[3]);
                     } elseif (strpos($presc_text, 'od') !== false) { $per_day = 1; }
                     elseif (strpos($presc_text, 'tds') !== false) { $per_day = 3; }
                     
-                    // Calculate
                     $qty = $days * $per_day;
                     $amount += ($qty * $price);
+                    $medicine_list[] = ucwords($stock['medicine_name']);
                 }
             }
         }
-        // Fallback or Min Charge
-        if ($amount == 0) $amount = 150.00; // Minimum consultation/dispensing fee if parsing fails
+        if ($amount == 0) $amount = 150.00;
+        $bill_type = 'Pharmacy / Medicines';
+        $description = "Dispensed Medicines: " . implode(", ", $medicine_list);
     } elseif ($amount <= 0 && $patient_id <= 0) {
         die("Invalid Amount or Patient ID");
     }
 
     $payment_status = 'Pending';
     $bill_date = date('Y-m-d');
-    
-    // Insert into Billing
-    // Note: 'appointment_id' is used as a generic reference in the current schema or we add a new column.
-    // The schema has `appointment_id`. We might need to be careful. 
-    // If it's Pharmacy, `appointment_id` might be null or we track the original appointment.
-    // For now, let's treat `appointment_id` as nullable in DB (usually is).
-    // If strict foreign key exists, we might have issues.
-    
-    // Let's assume we can store 0 or NULL for appointment_id if not directly linked, 
-    // OR we try to find the latest appointment for this patient/doctor combo.
-    
     $appt_id = null;
     
     // Try to link to a recent active appointment for context IF not already set
@@ -162,13 +160,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     file_put_contents($debug_log, date('Y-m-d H:i:s') . " - Attempting Insert: Patient: $patient_id, Ref: $ref_id, Type: $bill_type, Amt: $amount, Appt: " . ($appt_id ?: 'NULL') . "\n", FILE_APPEND);
 
     // Prepare Insert
-    $stmt = $conn->prepare("INSERT INTO billing (patient_id, doctor_id, appointment_id, reference_id, bill_type, total_amount, payment_status, bill_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO billing (patient_id, doctor_id, appointment_id, reference_id, bill_type, description, total_amount, payment_status, bill_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
     if(!$stmt) {
         file_put_contents($debug_log, "Prepare Failed: " . $conn->error . "\n", FILE_APPEND);
         die("System Error: Prepare Failed");
     }
     
-    $stmt->bind_param("iiiisdss", $patient_id, $doctor_id, $appt_id, $ref_id, $bill_type, $amount, $payment_status, $bill_date);
+    $stmt->bind_param("iiiissdss", $patient_id, $doctor_id, $appt_id, $ref_id, $bill_type, $description, $amount, $payment_status, $bill_date);
     
     if ($stmt->execute()) {
         $bill_id = $conn->insert_id;
@@ -286,11 +284,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
              exit;
         }
 
-        if ($bill_type == 'Pharmacy') {
-             // Mark Prescription as Dispensed
-             $conn->query("UPDATE prescriptions SET status = 'Dispensed' WHERE prescription_id = $ref_id");
+        if (strpos($bill_type, 'Pharmacy') !== false) {
+             // Link prescription to "Awaiting Payment" status
+             $conn->query("UPDATE prescriptions SET status = 'Awaiting Payment' WHERE prescription_id = $ref_id");
              $conn->commit();
-             header("Location: staff_pharmacist_dashboard.php?section=history&msg=Prescription+marked+as+dispensed!");
+             $msg = ($bill_type == 'Pharmacy / Complete Clinic Bill') ? "Consolidated bill (Medicine + Clinic Fees) generated successfully!" : "Medicine bill generated and sent to patient!";
+             header("Location: staff_pharmacist_dashboard.php?section=dashboard&msg=" . urlencode($msg));
         } elseif (strpos($bill_type, 'Lab') !== false) {
              header("Location: staff_lab_staff_dashboard.php?section=processing&msg=Bill+Generated+Successfully");
         } else {

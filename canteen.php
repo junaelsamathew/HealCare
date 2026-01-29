@@ -323,7 +323,7 @@ $menu_items = null; // Placeholder
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link active"><i class="fas fa-utensils"></i> Canteen</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
 
@@ -486,6 +486,5 @@ $menu_items = null; // Placeholder
         toast.style.display = 'block';
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
-    </script>
-</body>
+    </script></body>
 </html>

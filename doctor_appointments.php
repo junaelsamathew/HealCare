@@ -278,5 +278,5 @@ $res_appts = $conn->query($sql_appts);
 
         </main>
     </div>
-</body>
+    <!-- Chatbot Integration --></body>
 </html>

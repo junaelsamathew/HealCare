@@ -3,6 +3,14 @@ ob_start();
 session_start();
 include 'includes/db_connect.php';
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
+require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
+require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
+
 // Fetch bill data
 $bill_id = isset($_REQUEST['bill_id']) ? (int)$_REQUEST['bill_id'] : 0;
 $bill = null;
@@ -24,13 +32,22 @@ if ($bill_id > 0) {
 
 // Payment Processing Logic
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $debug_log_file = 'c:/xampp/htdocs/HealCare/email_debug.txt';
+    file_put_contents($debug_log_file, "------------------------------------------------\n", FILE_APPEND);
+    file_put_contents($debug_log_file, date('Y-m-d H:i:s') . " - POST Request Received\n", FILE_APPEND);
+    
     if (!$bill) {
+        file_put_contents($debug_log_file, "ERROR: Invalid Invoice ID\n", FILE_APPEND);
         die("Invalid Invoice ID.");
     }
 
     $amount = $_POST['amount'];
     $patient_id = $_POST['patient_id'];
-    $bill_type = $_POST['bill_type'];
+    $bill_type = trim($_POST['bill_type']);
+    
+    file_put_contents($debug_log_file, "Bill Type: [$bill_type]\n", FILE_APPEND);
+    file_put_contents($debug_log_file, "Bill ID: [$bill_id]\n", FILE_APPEND);
+    file_put_contents($debug_log_file, "Patient ID: [$patient_id]\n", FILE_APPEND);
     
     // Check for Razorpay Success
     if (isset($_POST['razorpay_payment_id'])) {
@@ -62,6 +79,99 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $stmt->execute();
             }
             $redirect_url = "booking_success.php?booking_id=BK-$appt_id&paid=true&txn=$transaction_id";
+
+            // --- SEND CONFIRMATION EMAIL (MOVED FROM PROCESS_BOOKING) ---
+            file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - Starting Email Logic for Appt: $appt_id\n", FILE_APPEND);
+            try {
+                // 1. Get Appointment Details
+                $stmt_a = $conn->prepare("SELECT appointment_date, appointment_time, queue_number, doctor_id, patient_id FROM appointments WHERE appointment_id = ?");
+                $stmt_a->bind_param("i", $appt_id);
+                $stmt_a->execute();
+                $res_a = $stmt_a->get_result();
+                
+                if ($res_a->num_rows > 0) {
+                    $appt_row = $res_a->fetch_assoc();
+                    $date_str = $appt_row['appointment_date'];
+                    $token_num = $appt_row['queue_number'];
+                    $doc_id = $appt_row['doctor_id'];
+                    $pat_id = $appt_row['patient_id'];
+                    
+                    file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - Found Appt Data. PatID: $pat_id, DocID: $doc_id\n", FILE_APPEND);
+
+                    // 2. Get Doctor Name
+                    $doc_name = "Doctor";
+                    $q_doc = $conn->query("SELECT name FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE u.user_id = $doc_id");
+                    if ($q_doc && $q_doc->num_rows > 0) {
+                        $doc_name = $q_doc->fetch_assoc()['name'];
+                    }
+
+                    // 3. Get Patient Details (Name & Email)
+                    $pat_name = "Patient";
+                    $pat_email = "";
+                    
+                    $q_pp = $conn->query("SELECT name FROM patient_profiles WHERE user_id = $pat_id");
+                    if ($q_pp && $q_pp->num_rows > 0) {
+                        $pat_name = $q_pp->fetch_assoc()['name'];
+                    } else {
+                         $q_pr = $conn->query("SELECT name FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE u.user_id = $pat_id");
+                         if ($q_pr && $q_pr->num_rows > 0) $pat_name = $q_pr->fetch_assoc()['name'];
+                    }
+
+                    // Get Email from Users table
+                    $q_u = $conn->query("SELECT email FROM users WHERE user_id = $pat_id");
+                    if ($q_u && $q_u->num_rows > 0) {
+                        $pat_email = $q_u->fetch_assoc()['email'];
+                    }
+                    
+                    file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - Patient Email Found: [$pat_email]\n", FILE_APPEND);
+
+                    // 4. Send Email if we have email
+                    if (!empty($pat_email)) {
+                        $mail = new PHPMailer(true);
+                        $mail->isSMTP();
+                        $mail->Host       = 'smtp.gmail.com';
+                        $mail->SMTPAuth   = true;
+                        $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
+                        $mail->Password   = 'yiuwcrykatkfzdwv';
+                        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                        $mail->Port       = 465;
+                        $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
+
+                        $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                        $mail->addAddress($pat_email, $pat_name);
+
+                        $email_booking_number = date('Y', strtotime($date_str)) . "/" . str_pad($appt_id, 6, '0', STR_PAD_LEFT);
+
+                        $email_body = "
+                        <p>Greetings from HealCare Hospital</p>
+                        <p>Hello <strong>" . strtoupper(htmlspecialchars($pat_name)) . "</strong>,</p>
+                        <p>Your appointment with <strong>" . htmlspecialchars($doc_name) . "</strong> is confirmed on <strong>" . htmlspecialchars($date_str) . "</strong>.</p>
+                        <p>Token Number: <strong>" . htmlspecialchars($token_num) . "</strong></p>
+                        <p>The token time may change according to the emergency.</p>
+                        <p>Booking number: <strong>" . $email_booking_number . "</strong></p>
+                        <p>For Bookings contact us at 04828-201300, 04828-201400 or visit us at<br>
+                        </p>
+                        <br>
+                        <p>Thank you for trusting HealCare Hospital.</p>
+                        ";
+
+                        $mail->isHTML(true);
+                        $mail->Subject = 'Appointment Confirmation - HealCare Hospital';
+                        $mail->Body = $email_body;
+                        $mail->AltBody = strip_tags($email_body);
+                        $mail->send();
+                        file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - Email SENT Successfully.\n", FILE_APPEND);
+                    } else {
+                        file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - SKIPPING: No Email Found for Pat ID $pat_id\n", FILE_APPEND);
+                    }
+                } else {
+                    file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - ERROR: Appointment ID $appt_id not found in DB.\n", FILE_APPEND);
+                }
+            } catch (Exception $e) {
+                file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - EXCEPTION: " . $e->getMessage() . " | " . $mail->ErrorInfo . "\n", FILE_APPEND);
+            }
+            // ------------------------------------------------------------
+            // ------------------------------------------------------------
         } elseif ($bill_type == 'Canteen') {
             // Update Canteen Orders to 'Placed' for this patient for today that were pending payment
             // Note: This is a simplification. Ideally, we'd link orders nicely.
@@ -70,6 +180,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->execute();
             
             $redirect_url = "canteen.php?msg=Payment+Successful!+Your+order+is+being+prepared.";
+        } elseif (strpos($bill_type, 'Lab Test') === 0) {
+            // Update Lab Test Payment Status
+            $stmt = $conn->prepare("UPDATE lab_tests SET payment_status = 'Paid' WHERE appointment_id = ?");
+            // Use appointment_id to link bill to lab request
+            $stmt->bind_param("i", $bill['appointment_id']);
+            $stmt->execute();
+            
+            $redirect_url = "patient_dashboard.php?msg=Lab+Test+Payment+Successful";
         } else {
             // Generic fallback
             $redirect_url = "patient_dashboard.php?msg=Payment+Successful";

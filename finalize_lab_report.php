@@ -56,16 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id'])) {
             $stmt_appt->execute();
         }
 
-        // Generate Bill
-        $cost = floatval($_POST['cost']);
-        if ($cost > 0 && $patient_id) {
-            $bill_type = "Lab Test: " . $test_name;
-            $pay_status = 'Pending';
-            $b_date = date('Y-m-d');
-            $stmt_bill = $conn->prepare("INSERT INTO billing (patient_id, doctor_id, appointment_id, bill_type, total_amount, payment_status, bill_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt_bill->bind_param("iiisdss", $patient_id, $doctor_id, $appt_id, $bill_type, $cost, $pay_status, $b_date);
-            $stmt_bill->execute();
-        }
+
 
         header("Location: staff_lab_staff_dashboard.php?section=completed&msg=Report+Finalized");
     } else {

@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id'])) {
     $stmt->bind_param("si", $status, $order_id);
     
     if ($stmt->execute()) {
-        header("Location: staff_lab_staff_dashboard.php?section=processing&msg=Status+Updated");
+        header("Location: staff_lab_staff_dashboard.php?section=conducted&msg=Status+Updated");
     } else {
         echo "Error: " . $conn->error;
     }

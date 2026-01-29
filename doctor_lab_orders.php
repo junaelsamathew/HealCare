@@ -360,6 +360,5 @@ sort($available_tests);
             
             document.getElementById('resultModal').style.display = 'flex';
         }
-    </script>
-</body>
+    </script></body>
 </html>

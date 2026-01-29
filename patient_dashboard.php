@@ -118,6 +118,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
             padding: 25px;
             border-radius: 20px;
             border: 1px solid var(--border-color);
+        }
+        
+        /* Override chatbot position for patient dashboard - position at bottom */
+        .chatbot-toggler {
+            bottom: 30px !important;
+        }
+        
+        .chatbot {
+            bottom: 110px !important;
+        }
+        
+        @media (max-width: 490px) {
+            .chatbot-toggler {
+                bottom: 20px !important;
+            }
+        }
             margin-top: 30px;
         }
         .canteen-grid {
@@ -222,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
 
@@ -505,8 +521,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
                                         <div style="border-top: 1px solid rgba(16, 185, 129, 0.2); padding-top: 10px; display:flex; gap:10px;">
                                             <?php if($record['bill_id']): ?>
                                                 <?php if($record['bill_status'] == 'Paid'): ?>
-                                                    <a href="print_receipt.php?bill_id=<?php echo $record['bill_id']; ?>" target="_blank" style="padding: 8px 15px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration:none;">
-                                                        <i class="fas fa-download"></i> <?php echo ($record['type_of_bill'] == 'Medical Services') ? 'Download Combined Receipt' : 'Download Receipt'; ?>
+                                                    <a href="generate_receipt_pdf.php?bill_id=<?php echo $record['bill_id']; ?>" target="_blank" style="padding: 8px 15px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration:none;">
+                                                        <i class="fas fa-download"></i> <?php echo (strpos($record['type_of_bill'], 'Services') !== false) ? 'Download Combined Receipt' : 'Download Receipt'; ?>
                                                     </a>
                                                     <span style="padding: 8px 0; color: #10b981; font-size: 12px; font-weight: 600;"><i class="fas fa-check-circle"></i> Paid</span>
                                                 <?php else: ?>
@@ -514,39 +530,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
                                                         <i class="fas fa-credit-card"></i> Pay Bill (₹<?php echo number_format($record['bill_amount']); ?>)
                                                     </a>
                                                 <?php endif; ?>
-                                            <?php else: ?>
                                                 <?php 
-                                                // Check for Lab Tests to decide if we need a Combined Bill
-                                                $has_labs = !empty($record['lab_tests']);
-                                                $action_type = $has_labs ? 'Combined' : 'Pharmacy';
-                                                
-                                                // Check if bill exists via direct query safely
+                                                // Bill generation is now handled by the Pharmacist
                                                 $chk_ref = intval($record['prescription_id']);
                                                 $chk_bill = null;
                                                 if($chk_ref > 0) {
-                                                    $chk_bill = $conn->query("SELECT bill_id FROM billing WHERE reference_id = $chk_ref AND (bill_type='Pharmacy' OR bill_type='Medical Services')");
+                                                    $chk_bill = $conn->query("SELECT bill_id, payment_status FROM billing WHERE reference_id = $chk_ref AND (bill_type LIKE 'Pharmacy%')");
                                                 }
                                                 
                                                 if($chk_bill && $chk_bill->num_rows > 0) {
-                                                     echo '<a href="patient_dashboard.php" style="font-size:12px; color:#3b82f6;"><i class="fas fa-sync"></i> Refresh Status</a>';
+                                                     $b_data = $chk_bill->fetch_assoc();
+                                                     if($b_data['payment_status'] == 'Pending') {
+                                                         echo '<a href="payment_gateway.php?bill_id='.$b_data['bill_id'].'" style="padding: 10px 20px; background: #f59e0b; color: #000; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration:none;"><i class="fas fa-credit-card"></i> Pay Medicine Bill</a>';
+                                                     } elseif($b_data['payment_status'] == 'Paid') {
+                                                         echo '<span style="font-size:12px; color:#10b981;"><i class="fas fa-check-circle"></i> Bill Paid - Visit Pharmacy for Pickup</span>';
+                                                     } else {
+                                                         echo '<span style="font-size:12px; color:#4fc3f7;"><i class="fas fa-pills"></i> Medicines Dispensed & Received</span>';
+                                                     }
                                                 } else {
-                                                
-                                                $btn_text = $has_labs ? 'Generate Combined Bill' : 'Generate Bill';
-                                                // High visibility for Combined
-                                                $btn_style = $has_labs ? 'background: #ef4444; color: white; border: 2px solid white; box-shadow: 0 4px 6px rgba(239, 68, 68, 0.4);' : 'background: #3b82f6; color: white;';
+                                                    echo '<div style="font-size:12px; color:#94a3b8; padding: 10px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
+                                                            <i class="fas fa-hourglass-half"></i> Pharmacist is calculating your medicine bill...
+                                                          </div>';
+                                                }
                                                 ?>
-                                                <form action="generate_bill.php" method="POST" target="_blank" style="margin-top:5px;">
-                                                    <input type="hidden" name="patient_id" value="<?php echo $user_id; ?>">
-                                                    <input type="hidden" name="doctor_id" value="<?php echo $record['doctor_user_id']; ?>">
-                                                    <input type="hidden" name="appointment_id" value="<?php echo $record['appointment_id']; ?>">
-                                                    <input type="hidden" name="reference_id" value="<?php echo $record['prescription_id']; ?>">
-                                                    <input type="hidden" name="bill_type" value="<?php echo $action_type; ?>">
-                                                    <input type="hidden" name="amount" value="0">
-                                                    <button type="submit" style="padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; <?php echo $btn_style; ?>">
-                                                        <i class="fas fa-file-invoice-dollar"></i> <?php echo $btn_text; ?>
-                                                    </button>
-                                                </form>
-                                                <?php } ?>
                                             <?php endif; ?>
                                         </div>
                                     </div>
@@ -642,5 +648,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
             document.getElementById('qrModal').style.display = 'flex';
         }
     </script>
+    <!-- Chatbot Widget -->
+    <?php include 'includes/chatbot_widget.php'; ?>
 </body>
 </html>

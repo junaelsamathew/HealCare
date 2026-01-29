@@ -32,6 +32,11 @@ if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
         
         $token = $appt_data['queue_number'] ?? $appt_data['token_no'] ?? '00';
         $doctor_name = $appt_data['doc_realname'] ?? $appt_data['doc_username'] ?? 'Doctor';
+        // Ensure Dr. prefix
+        if (!preg_match('/^Dr\./i', $doctor_name)) {
+            $doctor_name = "Dr. " . ucwords(str_replace('.', ' ', $doctor_name));
+        }
+        
         $date = date('Y-m-d', strtotime($appt_data['appointment_date']));
         $time = date('h:i A', strtotime($appt_data['appointment_time'])); // Format time
         $patient_name = $appt_data['pat_realname'] ?? 'Valued Patient';
@@ -56,6 +61,11 @@ if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
         }
     } else {
         $doctor_name = $doctor_input ?: "Doctor";
+    }
+
+    // Ensure Dr. prefix for legacy too
+    if (!preg_match('/^Dr\./i', $doctor_name)) {
+        $doctor_name = "Dr. " . ucwords(str_replace('.', ' ', $doctor_name));
     }
     
     if(!$patient_name) $patient_name = 'Valued Patient';
@@ -205,10 +215,10 @@ $username = $_SESSION['username'] ?? 'User';
             <div class="success-card">
                 <div class="success-icon"><i class="fas fa-check"></i></div>
                 <?php if(isset($_GET['paid']) || (isset($_GET['from']) && $_GET['from'] == 'payment')): ?>
-                    <h2>Payment Confirmed!</h2>
-                    <p>Your medical services payment has been successfully processed.</p>
+                    <h2>Appointment Booked Successfully!</h2>
+                    <p>Your consultation payment has been successfully processed.</p>
                 <?php else: ?>
-                    <h2>Appointment Confirmed!</h2>
+                    <h2>Appointment Booked Successfully!</h2>
                     <p>Your request has been successfully submitted.</p>
                 <?php endif; ?>
                 
@@ -218,7 +228,7 @@ $username = $_SESSION['username'] ?? 'User';
                     <div class="row"><strong>Doctor:</strong> <span><?php echo $doctor_name; ?></span></div>
                     <div class="row"><strong>Date / Time:</strong> <span><?php echo date('M d, Y', strtotime($date)); ?> &bull; <?php echo $time; ?></span></div>
                     <div class="row"><strong>Patient:</strong> <span><?php echo htmlspecialchars($patient_name); ?></span></div>
-                    <div class="row"><strong>Medical Services Bill:</strong> <span>₹<?php echo number_format($fee, 0); ?></span></div>
+                    <div class="row"><strong>Consultation Fees:</strong> <span>₹<?php echo number_format($fee, 0); ?></span></div>
                     <?php if(isset($_GET['paid'])): ?>
                         <div class="row"><strong>Status:</strong> <span style="color:#10b981; font-weight:bold;">PAID</span></div>
                     <?php else: ?>

@@ -308,6 +308,5 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 </div>
             </div>
         </main>
-    </div>
-</body>
+    </div></body>
 </html>

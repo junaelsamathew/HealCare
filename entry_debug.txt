@@ -178,3 +178,123 @@ SESSION: Array
     [full_name] => Juna Elsa Mathew
 )
 
+2026-01-28 17:11:27 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 48
+    [doctor_id] => 23
+    [appointment_id] => 57
+    [reference_id] => 38
+    [bill_type] => Combined
+    [amount] => 0
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => patient
+    [username] => HC-P-2026-7922
+    [user_id] => 48
+    [full_name] => Augustine Joyal Jose
+)
+
+2026-01-28 17:54:20 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 48
+    [doctor_id] => 23
+    [appointment_id] => 57
+    [reference_id] => 37
+    [bill_type] => Combined
+    [description] => Dispensing Rx #37
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => staff
+    [username] => mini.jose
+    [user_id] => 30
+    [full_name] => Mini Jose
+)
+
+2026-01-28 17:59:33 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 49
+    [doctor_id] => 25
+    [appointment_id] => 58
+    [reference_id] => 39
+    [bill_type] => Combined
+    [description] => Dispensing Rx #39
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => staff
+    [username] => mini.jose
+    [user_id] => 30
+    [full_name] => Mini Jose
+)
+
+2026-01-28 18:18:00 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 48
+    [doctor_id] => 23
+    [appointment_id] => 57
+    [reference_id] => 37
+    [bill_type] => Combined
+    [description] => Dispensing Rx #37
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => staff
+    [username] => mini.jose
+    [user_id] => 30
+    [full_name] => Mini Jose
+)
+
+2026-01-28 18:26:39 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 37
+    [doctor_id] => 21
+    [appointment_id] => 44
+    [reference_id] => 32
+    [bill_type] => Combined
+    [description] => Dispensing Rx #32
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => staff
+    [username] => mini.jose
+    [user_id] => 30
+    [full_name] => Mini Jose
+)
+
+2026-01-28 18:26:49 - Script ACCESSED. Method: POST
+POST: Array
+(
+    [patient_id] => 40
+    [doctor_id] => 21
+    [appointment_id] => 20
+    [reference_id] => 34
+    [bill_type] => Combined
+    [description] => Dispensing Rx #34
+)
+
+SESSION: Array
+(
+    [logged_in] => 1
+    [user_role] => staff
+    [username] => mini.jose
+    [user_id] => 30
+    [full_name] => Mini Jose
+)
+

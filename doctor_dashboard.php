@@ -336,6 +336,19 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                 <p><?php echo $specialization; ?> • <?php echo $designation; ?></p>
             </div>
 
+            <?php if(isset($_GET['msg'])): ?>
+                <div style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 25px;">
+                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($_GET['msg']); ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if(isset($_GET['error'])): ?>
+                <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 15px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2); margin-bottom: 25px;">
+                    <i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($_GET['error']); ?>
+                </div>
+            <?php endif; ?>
+
+
             <!-- Stats Grid - Scoped to Department -->
             <!-- Quick Report Upload -->
             <div style="grid-column: span 3; background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
@@ -412,8 +425,8 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                                         Requested: <?php echo htmlspecialchars($ip['ward_type_req']); ?>
                                     </span>
                                 <?php else: ?>
-                                    <?php echo htmlspecialchars($ip['room_number']); ?><br>
-                                    <span style="font-size: 11px; color:#94a3b8;"><?php echo htmlspecialchars($ip['ward_name'] . ' (' . $ip['ward_type'] . ')'); ?></span>
+                                    <?php echo htmlspecialchars($ip['room_number'] ?? 'Unassigned'); ?><br>
+                                    <span style="font-size: 11px; color:#94a3b8;"><?php echo htmlspecialchars(($ip['ward_name'] ?? 'Ward') . ' (' . ($ip['ward_type'] ?? 'Bed') . ')'); ?></span>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -640,7 +653,7 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                                         $status_color = '#94a3b8'; 
                                         if ($status == 'Completed') $status_color = '#10b981';
                                         elseif ($status == 'Pending' || $status == 'Requested') $status_color = '#fbbf24';
-                                        elseif ($status == 'Processing') $status_color = '#f59e0b';
+                                        elseif ($status == 'Processing' || $status == 'Conducted') $status_color = '#f59e0b';
 
                                         // Priority Colors
                                         $p_bg = 'rgba(59, 130, 246, 0.1)';
@@ -886,35 +899,77 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                                     <label style="display: flex; align-items: center; gap: 10px; font-size: 12px; color: #94a3b8; cursor: pointer; margin-bottom: 8px;">
                                         <input type="checkbox" name="lab_required" value="1" id="labCheck" onchange="toggleLabFields(this.checked)"> Lab Test Required
                                     </label>
-                                    <input type="text" name="lab_test_name" id="labField" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; color: white; font-size: 12px; display: none; margin-bottom: 8px;" placeholder="e.g. Blood CBC, X-Ray">
                                     
-                                     <select name="lab_category" id="labCat" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; color: white; font-size: 12px; display: none;">
-                                         <option value="">Select Lab Category</option>
-                                         <option value="Blood / Pathology Lab">Blood / Pathology Lab (Gen Med, Cardio, Gyn, Derm)</option>
-                                         <option value="X-Ray / Imaging Lab">X-Ray / Imaging Lab (Ortho, ENT)</option>
-                                         <option value="Diagnostic Lab">Diagnostic Lab (ECG, Hearing, Eye tests)</option>
-                                         <option value="Ultrasound Lab">Ultrasound Lab (Gyn, Gen Med)</option>
-                                     </select>
+                                    <div id="labOrderFields" style="display: none;">
+                                         <select name="lab_category" id="labCat" style="width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); padding: 8px; border-radius: 6px; color: white; font-size: 12px; margin-bottom: 10px;" onchange="loadLabTests(this.value)">
+                                             <option value="">Select Lab Category</option>
+                                             <?php
+                                             $cat_res = $conn->query("SELECT category_name FROM lab_categories");
+                                             while($cat = $cat_res->fetch_assoc()) {
+                                                 echo "<option value='".htmlspecialchars($cat['category_name'])."'>".htmlspecialchars($cat['category_name'])."</option>";
+                                             }
+                                             ?>
+                                         </select>
+
+                                         <div id="labTestsContainer" style="max-height: 120px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); display: none;">
+                                             <p style="font-size: 11px; color: #64748b;">Select tests...</p>
+                                         </div>
+                                         <input type="hidden" name="lab_test_name" id="finalLabTests">
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <script>
                             function toggleLabFields(checked) {
-                                const labField = document.getElementById('labField');
+                                const container = document.getElementById('labOrderFields');
                                 const labCat = document.getElementById('labCat');
                                 
                                 if (checked) {
-                                    labField.style.display = 'block';
-                                    labCat.style.display = 'block';
-                                    labField.setAttribute('required', 'required');
+                                    container.style.display = 'block';
                                     labCat.setAttribute('required', 'required');
                                 } else {
-                                    labField.style.display = 'none';
-                                    labCat.style.display = 'none';
-                                    labField.removeAttribute('required');
+                                    container.style.display = 'none';
                                     labCat.removeAttribute('required');
                                 }
+                            }
+
+                            async function loadLabTests(category) {
+                                const container = document.getElementById('labTestsContainer');
+                                if (!category) {
+                                    container.style.display = 'none';
+                                    return;
+                                }
+
+                                container.innerHTML = '<p style="font-size: 11px; color: #4fc3f7;"><i class="fas fa-spinner fa-spin"></i> Loading tests...</p>';
+                                container.style.display = 'block';
+
+                                try {
+                                    const response = await fetch('fetch_lab_tests_ajax.php?category_name=' + encodeURIComponent(category));
+                                    const tests = await response.json();
+
+                                    if (tests.length > 0) {
+                                        let html = '';
+                                        tests.forEach(test => {
+                                            html += `
+                                                <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #fff; margin-bottom: 5px; cursor: pointer;">
+                                                    <input type="checkbox" class="lab-test-item" value="${test}" onchange="updateLabTests()"> ${test}
+                                                </label>
+                                            `;
+                                        });
+                                        container.innerHTML = html;
+                                    } else {
+                                        container.innerHTML = '<p style="font-size: 11px; color: #ef4444;">No tests found for this category.</p>';
+                                    }
+                                } catch (e) {
+                                    container.innerHTML = '<p style="font-size: 11px; color: #ef4444;">Error loading tests.</p>';
+                                }
+                            }
+
+                            function updateLabTests() {
+                                const checkboxes = document.querySelectorAll('.lab-test-item:checked');
+                                const selectedTests = Array.from(checkboxes).map(cb => cb.value);
+                                document.getElementById('finalLabTests').value = selectedTests.join(', ');
                             }
                         </script>
 
@@ -1060,26 +1115,64 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
             const treatment = form.treatment.value.trim();
             const specialNotes = form.special_notes.value.trim();
 
-            if (diagnosis.length < 5) {
-                alert("Please provide a more descriptive diagnosis.");
-                return false;
-            }
+            const isGibberish = (str) => {
+                if (!str) return false;
+                
+                // 1. Remove non-alphabetical characters for analysis
+                const cleanStr = str.toLowerCase().replace(/[^a-z]/g, '');
+                if (cleanStr.length === 0) return false;
 
-            if (treatment.length < 10) {
-                alert("Please provide more detailed treatment notes.");
-                return false;
-            }
+                // 2. Vowel Check (at least one vowel for words > 2 chars)
+                const words = str.toLowerCase().split(/\s+/);
+                const vowelPattern = /[aeiouy]/;
+                
+                for (let word of words) {
+                    const cleanWord = word.replace(/[^a-z]/g, '');
+                    if (cleanWord.length > 3 && !vowelPattern.test(cleanWord)) {
+                        return true; // Likely gibberish (e.g., "bcdfgh")
+                    }
+                }
 
-            // Rubbish check: simple check for high entropy / mash
-            const isRubbish = (str) => {
-                const uniqueChars = new Set(str.toLowerCase().replace(/[^a-z]/g, '')).size;
-                const ratio = uniqueChars / str.length;
-                // If it's short and has almost all unique random chars, or very few unique chars repeated
-                return (str.length > 5 && ratio > 0.8 && !str.includes(' '));
+                // 3. Repeated matching characters (e.g., "aaaaaaa", "abcabcabc")
+                if (/(.)\1{4,}/.test(cleanStr)) return true;
+
+                // 4. Common Keyboard Patterns
+                const patterns = ['qwerty', 'asdfgh', 'zxcvbn', 'qazwsx', 'edcrfv', '123456'];
+                for (let p of patterns) {
+                    if (cleanStr.includes(p)) return true;
+                }
+
+                // 5. Entropy/Character Distribution (Keyboard Mashing)
+                // If a string has too many unique characters relative to its length (random mash)
+                const uniqueChars = new Set(cleanStr).size;
+                const ratio = uniqueChars / cleanStr.length;
+                if (cleanStr.length > 8 && ratio > 0.7 && !str.includes(' ')) return true;
+
+                return false;
             };
 
-            if (isRubbish(diagnosis)) {
-                alert("Diagnosis seems invalid. Please enter a meaningful diagnosis.");
+            if (diagnosis.length < 3) {
+                alert("Please provide a valid diagnosis.");
+                return false;
+            }
+
+            if (isGibberish(diagnosis)) {
+                alert("Diagnosis contains invalid or junk text. Please enter a meaningful diagnosis.");
+                return false;
+            }
+
+            if (treatment.length < 5) {
+                alert("Please provide more detailed treatment plan / notes.");
+                return false;
+            }
+
+            if (isGibberish(treatment)) {
+                alert("Treatment notes contain invalid or junk text.");
+                return false;
+            }
+
+            if (specialNotes.length > 0 && isGibberish(specialNotes)) {
+                alert("Special notes contain invalid or junk text.");
                 return false;
             }
 
@@ -1091,6 +1184,5 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
     // Set staff_type for the modal
     $staff_type = 'doctor';
     include 'includes/report_upload_modal.php'; 
-    ?>
-</body>
+    ?></body>
 </html>

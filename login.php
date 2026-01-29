@@ -515,6 +515,5 @@ if (isset($_GET['redirect'])) {
     </div>
 
     <!-- Include Logic Script -->
-    <script src="js/login.js"></script>
-</body>
+    <script src="js/login.js"></script></body>
 </html>

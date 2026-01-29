@@ -64,12 +64,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif (isset($_POST['action']) && $_POST['action'] === 'dispense') {
         $id = (int)$_POST['prescription_id'];
-        if ($conn->query("UPDATE prescriptions SET status = 'Dispensed' WHERE prescription_id = $id")) {
-             $msg = "Prescription marked as dispensed!";
-             $msg_type = "success";
+        
+        // Final verification: Ensure bill is PAID before dispensing
+        $check_q = $conn->query("SELECT bill_id, payment_status FROM billing WHERE reference_id = $id AND (bill_type LIKE 'Pharmacy%')");
+        $can_dispense = false;
+        if($check_q && $check_q->num_rows > 0) {
+            $b = $check_q->fetch_assoc();
+            if($b['payment_status'] === 'Paid') $can_dispense = true;
+        }
+
+        if ($can_dispense) {
+            $conn->begin_transaction();
+            try {
+                // 1. Mark Prescription as Dispensed
+                $conn->query("UPDATE prescriptions SET status = 'Dispensed' WHERE prescription_id = $id");
+                
+                // 2. Mark Bill as Dispensed (Update clinical lifecycle of the bill)
+                $conn->query("UPDATE billing SET payment_status = 'Dispensed' WHERE reference_id = $id AND (bill_type LIKE 'Pharmacy%')");
+                
+                $conn->commit();
+                $msg = "Medicines dispensed and transaction completed successfully!";
+                $msg_type = "success";
+            } catch (Exception $e) {
+                $conn->rollback();
+                $msg = "Error finalizing dispense: " . $e->getMessage();
+                $msg_type = "error";
+            }
         } else {
-             $msg = "Error updating prescription: " . $conn->error;
-             $msg_type = "error";
+            $msg = "Error: Medicine cannot be dispensed until payment is verified as PAID.";
+            $msg_type = "error";
         }
     }
 }
@@ -203,52 +226,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <h3 style="color:#fff; margin-bottom: 20px;">Prescription Processing Queue</h3>
                         
                         <?php
-                        // Fetch Pending Prescriptions
+                        // Fetch Pending and Awaiting Payment Prescriptions
                         $presc_sql = "
                             SELECT p.*, 
                                    rp.name as patient_name, 
                                    rd.name as doctor_name, 
-                                   d.specialization
+                                   d.specialization,
+                                   b.bill_id,
+                                   b.payment_status as medicine_payment_status,
+                                   b.total_amount as medicine_bill_amount
                             FROM prescriptions p
                             JOIN users up ON p.patient_id = up.user_id
                             JOIN registrations rp ON up.registration_id = rp.registration_id
                             JOIN users ud ON p.doctor_id = ud.user_id
                             JOIN registrations rd ON ud.registration_id = rd.registration_id
                             LEFT JOIN doctors d ON ud.user_id = d.user_id
-                            WHERE p.status = 'Pending' OR p.status IS NULL
-                            ORDER BY p.prescription_date DESC
+                            LEFT JOIN billing b ON p.prescription_id = b.reference_id AND (b.bill_type LIKE 'Pharmacy%')
+                            WHERE p.status IN ('Pending', 'Awaiting Payment') OR p.status IS NULL
+                            ORDER BY 
+                                CASE 
+                                    WHEN p.status = 'Awaiting Payment' THEN 1 
+                                    ELSE 2 
+                                END ASC, p.prescription_date DESC
                         ";
                         $presc_res = $conn->query($presc_sql);
                         
                         if ($presc_res && $presc_res->num_rows > 0):
                             while ($presc = $presc_res->fetch_assoc()):
+                                $has_bill = !empty($presc['bill_id']);
+                                $is_paid = ($presc['medicine_payment_status'] === 'Paid');
+                                
+                                // Find appointment_id for context
+                                $appt_q = $conn->query("SELECT appointment_id FROM medical_records WHERE prescription_id = " . $presc['prescription_id'] . " LIMIT 1");
+                                $appt_id = ($appt_q && $appt_q->num_rows > 0) ? $appt_q->fetch_assoc()['appointment_id'] : 0;
                         ?>
-                        <div class="medicine-card">
+                        <div class="medicine-card" style="border-left-color: <?php echo $is_paid ? '#10b981' : ($has_bill ? '#f59e0b' : '#4fc3f7'); ?>">
                             <div style="display: flex; justify-content: space-between;">
                                 <div>
                                     <span style="font-size: 11px; color: #4fc3f7; font-weight: 800; text-transform: uppercase;">ID: #RX-<?php echo $presc['prescription_id']; ?></span>
                                     <h4 style="color:#fff; margin: 5px 0; font-size: 18px;"><?php echo htmlspecialchars($presc['patient_name']); ?></h4>
                                     <p style="font-size: 13px; color: #94a3b8;">Requested by: Dr. <?php echo htmlspecialchars($presc['doctor_name']); ?> (<?php echo htmlspecialchars($presc['specialization'] ?? 'General'); ?>)</p>
                                 </div>
-                                <span style="color: #4fc3f7; font-size: 11px; font-weight: bold;"><?php echo date('M d, Y', strtotime($presc['prescription_date'])); ?></span>
+                                <div style="text-align: right;">
+                                    <span style="color: #4fc3f7; font-size: 11px; font-weight: bold; display: block;"><?php echo date('M d, Y', strtotime($presc['prescription_date'])); ?></span>
+                                    <?php if($has_bill): ?>
+                                        <span class="badge" style="background: <?php echo $is_paid ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)'; ?>; color: <?php echo $is_paid ? '#10b981' : '#f59e0b'; ?>; font-size: 10px; margin-top: 5px;">
+                                            Medicine Bill: <?php echo $presc['medicine_payment_status']; ?> (₹<?php echo number_format($presc['medicine_bill_amount']); ?>)
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </div>
-                            <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px;">
+                            <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; margin-top: 10px;">
                                 <p style="font-size: 13px; color: #cbd5e1; white-space: pre-wrap; margin: 0;"><?php echo htmlspecialchars($presc['medicine_details']); ?></p>
-                                <?php if(!empty($presc['instructions'])): ?>
-                                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
-                                        <small style="color: #94a3b8;">Instructions:</small>
-                                        <p style="font-size: 12px; color: #e2e8f0; margin-top: 2px;"><?php echo htmlspecialchars($presc['instructions']); ?></p>
-                                    </div>
-                                <?php endif; ?>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                                <span style="color: #94a3b8; font-size: 13px;">Status: <strong style="color: #f59e0b;">Pending Dispense</strong></span>
-                                <form method="POST" style="display:flex; gap:10px;">
-                                    <input type="hidden" name="action" value="dispense">
-                                    <input type="hidden" name="prescription_id" value="<?php echo $presc['prescription_id']; ?>">
-                                    <button type="button" class="btn-print" onclick="window.open('print_prescription.php?id=<?php echo $presc['prescription_id']; ?>', '_blank', 'width=900,height=800')" style="background: transparent; border: 1px solid var(--border-soft); color: #fff; padding: 10px 20px; border-radius: 10px; cursor: pointer;">Print Rx</button>
-                                    <button type="button" onclick="openBillModalCombined('<?php echo $presc['prescription_id']; ?>', '<?php echo $presc['patient_id']; ?>', '<?php echo $presc['doctor_id']; ?>', '<?php echo addslashes($presc['patient_name']); ?>')" style="background: #4fc3f7; color: #020617; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; cursor: pointer;">Bill & Dispense</button>
-                                 </form>
+                            
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 10px;">
+                                <div>
+                                    <?php if(!$has_bill): ?>
+                                        <span style="color: #4fc3f7; font-size: 12px; font-weight: 600;"><i class="fas fa-file-invoice"></i> Step 1: Generate Bill</span>
+                                    <?php elseif(!$is_paid): ?>
+                                        <span style="color: #f59e0b; font-size: 12px; font-weight: 600;"><i class="fas fa-clock"></i> Step 2: Waiting for Online Payment...</span>
+                                    <?php else: ?>
+                                        <span style="color: #10b981; font-size: 12px; font-weight: 600;"><i class="fas fa-check-circle"></i> Paid! Ready to Dispense</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div style="display:flex; gap:10px;">
+                                    <?php if(!$has_bill): ?>
+                                        <button type="button" onclick="openBillModalCombined('<?php echo $presc['prescription_id']; ?>', '<?php echo $presc['patient_id']; ?>', '<?php echo $presc['doctor_id']; ?>', '<?php echo addslashes($presc['patient_name']); ?>', '<?php echo $appt_id; ?>')" style="background: #4fc3f7; color: #020617; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+                                            <i class="fas fa-receipt"></i> Generate Medicine Bill
+                                        </button>
+                                    <?php elseif($is_paid): ?>
+                                        <form method="POST">
+                                            <input type="hidden" name="action" value="dispense">
+                                            <input type="hidden" name="prescription_id" value="<?php echo $presc['prescription_id']; ?>">
+                                            <button type="submit" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+                                                <i class="fas fa-pills"></i> Dispense & Complete
+                                            </button>
+                                        </form>
+                                    <?php else: ?>
+                                        <button disabled style="background: #334155; color: #94a3b8; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: not-allowed;">
+                                            <i class="fas fa-lock"></i> Payment Pending
+                                        </button>
+                                    <?php endif; ?>
+                                    <button type="button" class="btn-print" onclick="window.open('print_prescription.php?id=<?php echo $presc['prescription_id']; ?>', '_blank', 'width=900,height=800')" style="background: transparent; border: 1px solid var(--border-soft); color: #fff; padding: 10px 15px; border-radius: 8px; cursor: pointer;"><i class="fas fa-print"></i></button>
+                                </div>
                             </div>
                         </div>
                         <?php endwhile; ?>
@@ -596,6 +657,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" style="width:100%; padding:12px; background:#4fc3f7; color:#020617; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">Add Stock</button>
             </form>
         </div>
+    </div>
     <!-- Edit Stock Modal -->
     <div id="editStockModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
         <div style="background:#0f172a; padding:30px; border-radius:12px; width:500px; max-width:90%; border:1px solid rgba(255,255,255,0.1);">
@@ -666,6 +728,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <form action="generate_bill.php" method="POST">
                 <input type="hidden" name="patient_id" id="bill_pid">
                 <input type="hidden" name="doctor_id" id="bill_did">
+                <input type="hidden" name="appointment_id" id="bill_aid">
                 <input type="hidden" name="reference_id" id="bill_ref">
                 <input type="hidden" name="bill_type" value="Pharmacy">
                 
@@ -681,7 +744,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div style="margin-bottom:15px; display:flex; align-items:center; gap:10px;">
                     <input type="checkbox" name="bill_type" value="Combined" id="is_combined" style="width:20px; height:20px;">
-                    <label for="is_combined" style="color:white; font-size:14px; cursor:pointer;">Combine with pending Lab Tests</label>
+                    <label for="is_combined" style="color:white; font-size:14px; cursor:pointer;">Consolidate with Consultation & Lab Fees</label>
                 </div>
 
                 <div style="margin-bottom:20px;">
@@ -692,6 +755,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <button type="submit" style="width:100%; padding:12px; background:#4fc3f7; color:#020617; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">Confirm & Generate Bill</button>
             </form>
         </div>
+    </div>
 
     <script>
         function notifyAdmin() {
@@ -715,14 +779,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
 
-        function openBillModalCombined(rxId, pId, dId, pName) {
+        function openBillModalCombined(rxId, pId, dId, pName, aId) {
             document.getElementById('billModal').style.display = 'flex';
             document.getElementById('bill_ref').value = rxId;
             document.getElementById('bill_pid').value = pId;
             document.getElementById('bill_did').value = dId;
+            document.getElementById('bill_aid').value = aId;
             document.getElementById('bill_pname').value = pName;
             document.getElementById('bill_desc').value = "Dispensing Rx #" + rxId;
-            // Default to combined if possible
+            // Workflow: Consolidated Bill (Pharmacist clears all pending clinic fees)
             document.getElementById('is_combined').checked = true;
         }
 

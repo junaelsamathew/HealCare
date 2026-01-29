@@ -51,7 +51,7 @@ $username = $_SESSION['username'];
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
 
@@ -144,10 +144,10 @@ $username = $_SESSION['username'];
                                 $bill_icon = 'fa-file-invoice';
                                 $is_inpatient = ($bill['admission_id'] && ($bill['adm_status'] == 'Admitted' || strpos($bill['bill_type'], 'Inpatient') !== false));
                                 
-                                if ($bill['bill_type'] == 'Medical Services') {
-                                    $service_desc = 'Combined Medical Services (Pharmacy + Lab)';
+                                if (strpos($bill['bill_type'], 'Complete Clinic Bill') !== false) {
+                                    $service_desc = 'Consolidated Clinic Bill (Medicine + Hospital)';
                                     $bill_icon = 'fa-briefcase-medical';
-                                } elseif ($bill['bill_type'] == 'Pharmacy') {
+                                } elseif (strpos($bill['bill_type'], 'Pharmacy') !== false) {
                                     $service_desc = 'Pharmacy / Medicines';
                                     $bill_icon = 'fa-pills';
                                 } elseif ($bill['bill_type'] == 'Lab Test' || strpos($bill['bill_type'], 'Lab Test:') === 0) {
@@ -205,6 +205,5 @@ $username = $_SESSION['username'];
             </div>
         </main>
     </div>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-</body>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"></body>
 </html>

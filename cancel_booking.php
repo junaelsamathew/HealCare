@@ -15,7 +15,10 @@ $msg_type = "";
 
 // Handle Cancellation Logic
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $booking_no = mysqli_real_escape_string($conn, $_POST['booking_no']);
+    // Sanitize and normalize Booking ID (remove BK- prefix if present)
+    $raw_booking_no = $_POST['booking_no'];
+    $booking_id_cleaned = str_ireplace('BK-', '', $raw_booking_no);
+    $booking_no = mysqli_real_escape_string($conn, $booking_id_cleaned);
     
     // Check if appointment exists and belongs to user
     $check_sql = "SELECT * FROM appointments WHERE appointment_id = '$booking_no' AND patient_id = '$user_id'";

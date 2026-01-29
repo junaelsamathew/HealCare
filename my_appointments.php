@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_reason'])) {
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
 
@@ -201,6 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_reason'])) {
                                 <div class="doc-info">
                                     <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
                                     <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                                    <p style="font-size:0.85rem; color:#94a3b8; margin-top:4px;">Booking ID: <strong style="color:#e2e8f0; font-family:monospace;">BK-<?php echo $appt['appointment_id']; ?></strong></p>
                                     
                                     <?php if(!empty($appt['reason'])): ?>
                                         <div style="margin-top: 8px; font-size: 13px; color: #cbd5e1; background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 6px;">
@@ -269,6 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_reason'])) {
                                 <div class="doc-info">
                                     <h4><?php echo htmlspecialchars($appt['doc_name'] ?? 'Doctor'); ?></h4>
                                     <p><?php echo htmlspecialchars($appt['specialization'] ?? 'General'); ?> • <?php echo $appt_time; ?></p>
+                                    <p style="font-size:0.85rem; color:#94a3b8; margin-top:4px;">Booking ID: <strong style="color:#e2e8f0; font-family:monospace;">BK-<?php echo $appt['appointment_id']; ?></strong></p>
                                 </div>
                                 <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo $appt['status']; ?></span>
                             </div>
@@ -337,6 +339,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_reason'])) {
             }
         });
     </script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-</body>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"></body>
 </html>

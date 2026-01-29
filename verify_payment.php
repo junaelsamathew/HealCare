@@ -42,7 +42,14 @@ if ($generated_signature == $signature) {
             }
 
             // 3. Handle Inpatient/Pharmacy/Lab Redirection
-            if ($bill_data['bill_type'] == 'Inpatient Final' || strpos($bill_data['bill_type'], 'Pharmacy') !== false || strpos($bill_data['bill_type'], 'Lab') !== false || strpos($bill_data['bill_type'], 'Medicine') !== false) {
+            if ($bill_data['bill_type'] == 'Inpatient Final' || strpos($bill_data['bill_type'], 'Pharmacy') !== false || strpos($bill_data['bill_type'], 'Clinic Bill') !== false || strpos($bill_data['bill_type'], 'Lab') !== false || strpos($bill_data['bill_type'], 'Medicine') !== false) {
+                
+                // If it's a pharmacy/complete bill, update prescription status to 'Ready'
+                $ref_id = $bill_data['reference_id'] ?? null;
+                if ($ref_id && (strpos($bill_data['bill_type'], 'Pharmacy') !== false || strpos($bill_data['bill_type'], 'Clinic Bill') !== false)) {
+                    $conn->query("UPDATE prescriptions SET status = 'Awaiting Payment' WHERE prescription_id = $ref_id");
+                }
+                
                 $conn->commit();
                 header("Location: billing.php?msg=payment_success&txn=$payment_id");
                 exit();

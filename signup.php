@@ -672,6 +672,5 @@ session_start();
                 togglePass(btn);
             }
         }
-    </script>
-</body>
+    </script></body>
 </html>

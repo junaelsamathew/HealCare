@@ -207,6 +207,5 @@ $history = $stmt->get_result();
             </div>
 
         </main>
-    </div>
-</body>
+    </div></body>
 </html>

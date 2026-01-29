@@ -221,6 +221,5 @@ $vitals = $stmt_v->get_result()->fetch_assoc();
             <?php endif; ?>
 
         </main>
-    </div>
-</body>
+    </div></body>
 </html>

@@ -14,6 +14,45 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $lab_test_name = $_POST['lab_test_name'] ?? '';
     $lab_category = $_POST['lab_category'] ?? '';
 
+    // Server-side Gibberish Detection
+    function is_gibberish($str) {
+        if (empty($str)) return false;
+        $cleanStr = strtolower(preg_replace('/[^a-z]/', '', $str));
+        if (strlen($cleanStr) === 0) return false;
+
+        // Vowel Check
+        $words = explode(' ', strtolower($str));
+        foreach($words as $word) {
+            $cw = preg_replace('/[^a-z]/', '', $word);
+            if (strlen($cw) > 3 && !preg_match('/[aeiouy]/', $cw)) {
+                return true; 
+            }
+        }
+
+        // Repeated Chars
+        if (preg_match('/(.)\1{4,}/', $cleanStr)) return true;
+
+        // Keyboard Patterns
+        $patterns = ['qwerty', 'asdfgh', 'zxcvbn', 'qazwsx', 'edcrfv', '123456'];
+        foreach($patterns as $p) {
+            if (strpos($cleanStr, $p) !== false) return true;
+        }
+
+        // Entropy
+        $unique_chars = count(count_chars($cleanStr, 1));
+        $ratio = $unique_chars / strlen($cleanStr);
+        if (strlen($cleanStr) > 8 && $ratio > 0.7 && strpos($str, ' ') === false) return true;
+
+        return false;
+    }
+
+    if (is_gibberish($diagnosis) || is_gibberish($treatment) || is_gibberish($special_notes) || is_gibberish($prescription_text)) {
+        header("Location: doctor_dashboard.php?patient_id=$patient_id&appt_id=$appt_id&error=Invalid text detected in one of the fields. Please provide meaningful medical details.");
+        exit();
+    }
+
+
+
     $conn->begin_transaction();
 
     try {
@@ -60,8 +99,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // 3. Save Lab Order if required
         if ($lab_required) {
             $status = 'Pending';
-            $stmt_lab = $conn->prepare("INSERT INTO lab_tests (patient_id, doctor_id, appointment_id, test_name, instructions, test_type, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt_lab->bind_param("iiissss", $patient_id, $doctor_id, $appt_id, $lab_test_name, $special_notes, $lab_category, $status);
+            $pay_status = 'Pending';
+            
+            // Find Category ID
+            $cat_stmt = $conn->prepare("SELECT category_id FROM lab_categories WHERE category_name = ?");
+            $cat_stmt->bind_param("s", $lab_category);
+            $cat_stmt->execute();
+            $cat_res = $cat_stmt->get_result();
+            $cat_id = ($cat_row = $cat_res->fetch_assoc()) ? $cat_row['category_id'] : 0;
+            
+
+
+            // Create Lab Request
+            $stmt_lab = $conn->prepare("INSERT INTO lab_tests (patient_id, doctor_id, appointment_id, category_id, test_name, instructions, test_type, status, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_lab->bind_param("iiiisssss", $patient_id, $doctor_id, $appt_id, $cat_id, $lab_test_name, $special_notes, $lab_category, $status, $pay_status);
             $stmt_lab->execute();
         }
 

@@ -382,6 +382,5 @@ $amount = number_format($bill['total_amount'], 2);
                 alert("Payment initiation failed:\n" + err.message);
             });
         };
-    </script>
-</body>
+    </script></body>
 </html>

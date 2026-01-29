@@ -381,6 +381,5 @@ $amount = number_format($order['total_amount'], 2);
                 alert("Payment initiation failed:\n" + err.message);
             });
         };
-    </script>
-</body>
+    </script></body>
 </html>

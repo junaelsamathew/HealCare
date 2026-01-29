@@ -177,7 +177,5 @@ $total_cart_amount = 0;
                 <a href="canteen.php" class="btn-checkout" style="margin-top: 20px;">Browse Menu</a>
             </div>
         <?php endif; ?>
-    </div>
-
-</body>
+    </div></body>
 </html>

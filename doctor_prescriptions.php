@@ -232,6 +232,5 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 </table>
             </div>
         </main>
-    </div>
-</body>
+    </div></body>
 </html>

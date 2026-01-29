@@ -187,6 +187,5 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['confirm_order'])) {
             const total = qty * price;
             document.getElementById('total-amount').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
         }
-    </script>
-</body>
+    </script></body>
 </html>

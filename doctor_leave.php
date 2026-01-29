@@ -217,6 +217,5 @@ while ($row = $res->fetch_assoc()) {
                 </table>
             </div>
         </main>
-    </div>
-</body>
+    </div></body>
 </html>

@@ -330,6 +330,4 @@ include 'includes/header.php';
             closeProfile();
         }
     }
-</script>
-
-<?php include 'includes/footer.php'; ?>
+</script><?php include 'includes/footer.php'; ?>

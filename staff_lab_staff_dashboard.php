@@ -117,8 +117,8 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
         <aside class="side-nav">
             <?php $section = $_GET['section'] ?? 'dashboard'; ?>
             <a href="?section=dashboard" class="nav-item <?php echo $section == 'dashboard' ? 'active' : ''; ?>"><i class="fas fa-vials"></i> Pending Tests</a>
-            <a href="?section=processing" class="nav-item <?php echo $section == 'processing' ? 'active' : ''; ?>"><i class="fas fa-microscope"></i> In Processing</a>
-            <a href="?section=reports" class="nav-item <?php echo $section == 'reports' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reports</a>
+            <a href="?section=conducted" class="nav-item <?php echo $section == 'conducted' ? 'active' : ''; ?>"><i class="fas fa-microscope"></i> Conducted Tests</a>
+            <a href="?section=completed" class="nav-item <?php echo $section == 'completed' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Completed Reports</a>
             <a href="?section=archive" class="nav-item <?php echo $section == 'archive' ? 'active' : ''; ?>"><i class="fas fa-archive"></i> Archive</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
@@ -140,8 +140,8 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                 $q_pending = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Pending'");
                 $pending_count = $q_pending->fetch_assoc()['count'];
 
-                $q_processing = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Processing'");
-                $proc_count = $q_processing->fetch_assoc()['count'];
+                $q_conducted = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND status = 'Conducted'");
+                $cond_count = $q_conducted->fetch_assoc()['count'];
 
                 $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
                 $completed_today = $q_completed->fetch_assoc()['count'];
@@ -160,7 +160,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
 
                 <div class="stats-grid">
                     <div class="stat-card-new"><h2><?php echo str_pad($pending_count, 2, '0', STR_PAD_LEFT); ?></h2><p>Pending Requests</p></div>
-                    <div class="stat-card-new"><h2><?php echo str_pad($proc_count, 2, '0', STR_PAD_LEFT); ?></h2><p>In Processing</p></div>
+                    <div class="stat-card-new"><h2><?php echo str_pad($cond_count, 2, '0', STR_PAD_LEFT); ?></h2><p>Conducted Tests</p></div>
                     <div class="stat-card-new"><h2><?php echo str_pad($completed_today, 2, '0', STR_PAD_LEFT); ?></h2><p>Completed (Today)</p></div>
                     <div class="stat-card-new"><h2>00</h2><p>Urgent (STAT)</p></div>
                 </div>
@@ -178,7 +178,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     JOIN registrations rp ON up.registration_id = rp.registration_id
                     JOIN users ud ON lo.doctor_id = ud.user_id
                     JOIN registrations rd ON ud.registration_id = rd.registration_id
-                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Pending'
+                    WHERE lo.category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND lo.status = 'Pending'
                     ORDER BY lo.created_at ASC
                 ";
                 $res_orders = $conn->query($sql_orders);
@@ -205,7 +205,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                         <?php if (($order['payment_status'] ?? 'Pending') == 'Paid'): ?>
                             <form action="update_lab_status.php" method="POST" style="text-align:center;">
                                 <input type="hidden" name="order_id" value="<?php echo $order['labtest_id']; ?>">
-                                <input type="hidden" name="status" value="Processing">
+                                <input type="hidden" name="status" value="Conducted">
                                 <i class="fas fa-microscope" style="font-size: 40px; color: #4fc3f7; margin-bottom: 20px;"></i>
                                 <h4 style="color: #fff; margin-bottom: 10px;">Ready to Process?</h4>
                                 <p style="color: #64748b; font-size: 12px; margin-bottom: 20px;">Payment Verified. Mark sample as received.</p>
@@ -249,15 +249,11 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     endwhile;
                 else:
                 ?>
-                <div style="text-align: center; padding: 100px; color: #64748b; background: #0f172a; border-radius: 20px; border: 1px dashed var(--border-soft);">
-                    <i class="fas fa-check-circle" style="font-size: 40px; margin-bottom: 15px; color: #10b981;"></i>
-                    <p>All clear! No pending requests for your lab today.</p>
-                </div>
                 <?php endif; ?>
 
-            <?php elseif ($_GET['section'] == 'processing'): ?>
+            <?php elseif ($_GET['section'] == 'conducted'): ?>
                 <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Processing Samples</h1>
+                    <h1 style="color:#fff; font-size: 28px;">Tests in Progress (Conducted)</h1>
                     <p style="color:#64748b; font-size:14px;">Active analysis and reporting.</p>
                 </div>
 
@@ -267,7 +263,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     FROM lab_tests lo
                     JOIN users up ON lo.patient_id = up.user_id JOIN registrations rp ON up.registration_id = rp.registration_id
                     JOIN users ud ON lo.doctor_id = ud.user_id JOIN registrations rd ON ud.registration_id = rd.registration_id
-                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Processing'
+                    WHERE lo.category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND lo.status = 'Conducted'
                     ORDER BY lo.updated_at ASC
                 ";
                 $res_proc = $conn->query($sql_proc);
@@ -293,10 +289,6 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                             <div style="display: flex; flex-direction: column; gap: 15px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <span style="font-size: 13px; color: #cbd5e1;">Final Test Results</span>
-                                    <div style="display: items-center;">
-                                       <span style="color:#94a3b8; font-size:12px; margin-right:5px;">Bill Amount: ₹</span>
-                                       <input type="number" name="cost" value="500" style="width:80px; padding:5px; border-radius:5px; border:1px solid #475569; background:#1e293b; color:white; font-size:12px;" required>
-                                    </div>
                                 </div>
                                 <textarea name="result_summary" placeholder="Enter findings, observations, and values..." style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 12px; border-radius: 10px; color: #fff; font-size: 13px; resize: none; height: 100px;" required></textarea>
                                 
@@ -325,7 +317,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     SELECT lo.*, rp.name as patient_name
                     FROM lab_tests lo
                     JOIN users up ON lo.patient_id = up.user_id JOIN registrations rp ON up.registration_id = rp.registration_id
-                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Completed'
+                    WHERE lo.category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND lo.status = 'Completed'
                     ORDER BY lo.updated_at DESC LIMIT 50
                 ";
                 $res_comp = $conn->query($sql_comp);

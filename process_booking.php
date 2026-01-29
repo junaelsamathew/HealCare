@@ -1,4 +1,12 @@
 <?php
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
+require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
+require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
+
 ob_start();
 session_start();
 include 'includes/db_connect.php';
@@ -16,6 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $reg_status = $_POST['reg_status'];
     $patient_id = null;
     $patient_name = "";
+    $patient_email = ""; // Initialize email variable
 
     $conn->begin_transaction();
 
@@ -25,8 +34,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $patient_id = $_SESSION['user_id'];
             $patient_name = $_SESSION['full_name'];
             
-            // Verify if profile exists, if not create basic one?
-            // Assuming existed.
+            // Fetch Email for Logged In User
+            $stmt_email = $conn->prepare("SELECT email FROM users WHERE user_id = ?");
+            $stmt_email->bind_param("i", $patient_id);
+            $stmt_email->execute();
+            $res_email = $stmt_email->get_result();
+            if ($row_email = $res_email->fetch_assoc()) {
+                $patient_email = $row_email['email'];
+            }
+            
         } elseif ($reg_status == 'yes') {
             // Existing Patient (Lookup)
             $op_number = $_POST['op_number'] ?? '';
@@ -34,7 +50,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             
             // Search Logic
             if (!empty($op_number)) {
-                $stmt = $conn->prepare("SELECT user_id, name FROM patient_profiles WHERE patient_code = ?");
+                $stmt = $conn->prepare("SELECT u.user_id, r.name, u.email FROM patient_profiles pp JOIN users u ON pp.user_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id WHERE pp.patient_code = ?");
                 $stmt->bind_param("s", $op_number);
                 $stmt->execute();
                 $res = $stmt->get_result();
@@ -43,14 +59,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $row = $res->fetch_assoc();
                     $patient_id = $row['user_id'];
                     $patient_name = $row['name'];
+                    $patient_email = $row['email'];
                 }
             }
             
             // Fallback to Phone if not found or OP number empty
             if (empty($patient_id) && !empty($mobile)) {
                 // Check Registrations table for phone
-                $stmt = $conn->prepare("SELECT u.user_id, r.name FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE r.phone like ?");
-                // Allow fuzzy match? No, exact.
+                $stmt = $conn->prepare("SELECT u.user_id, r.name, u.email FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE r.phone like ?");
                 $stmt->bind_param("s", $mobile);
                 $stmt->execute();
                 $res = $stmt->get_result();
@@ -59,6 +75,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $row = $res->fetch_assoc();
                     $patient_id = $row['user_id'];
                     $patient_name = $row['name'];
+                    $patient_email = $row['email'];
                 }
             }
 
@@ -99,15 +116,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt->execute();
             
             $patient_name = $full_name;
+            $patient_email = $email; // Set email for new user
         }
 
         // 2. Insert Appointment
-        // Fetch doctor's fee to ensure consistency
-        $fee_res = $conn->query("SELECT consultation_fee FROM doctors WHERE user_id = $doctor_id");
-        $doc_fee = 200.00; // Default fallback
+        // Fetch doctor's fee AND Name
+        $stmt_doc = $conn->prepare("SELECT d.consultation_fee, r.name as doctor_name FROM doctors d JOIN users u ON d.user_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id WHERE d.user_id = ?");
+        $stmt_doc->bind_param("i", $doctor_id);
+        $stmt_doc->execute();
+        $fee_res = $stmt_doc->get_result();
+        
+        $doc_fee = 200.00;
+        $doctor_name = "Doctor";
+        
         if($fee_res && $fee_res->num_rows > 0) {
             $row = $fee_res->fetch_assoc();
             $doc_fee = $row['consultation_fee'];
+            $doctor_name = $row['doctor_name'];
         }
 
         // appointment_time is TIME type. $time_slot is like "09:00 AM". MySQL handles conversion usually.
@@ -120,6 +145,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         $appt_id = $conn->insert_id;
         $booking_id = "BK-" . $appt_id;
+        
+        // Format booking number for email: YYYY/00XXXX
+        $email_booking_number = date('Y') . "/" . str_pad($appt_id, 6, '0', STR_PAD_LEFT);
 
         // 3. Create Bill for Consultation
         $bill_type = 'Consultation';
@@ -130,17 +158,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt_bill->execute();
         $bill_id = $conn->insert_id;
 
+        // Email sending moved to payment_process.php to ensure it is sent after successful payment
+
         $conn->commit();
         
         // Redirect to Success with Bill ID
-        // Redirect to Payment Gateway
         header("Location: payment_gateway.php?bill_id=$bill_id");
         exit();
 
     } catch (Exception $e) {
         $conn->rollback();
         echo "Error: " . $e->getMessage();
-        // In production, log error and show friendly message
     }
 }
 ?>

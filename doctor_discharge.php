@@ -17,8 +17,8 @@ $doctor_id = $_SESSION['user_id'];
 // Fetch Admission Details
 $sql = "SELECT a.*, r.room_number, w.ward_name, w.ward_type, u.username as patient_name, u.user_id as patient_id, reg.name as real_name
         FROM admissions a 
-        JOIN rooms r ON a.room_id = r.room_id 
-        JOIN wards w ON r.ward_id = w.ward_id
+        LEFT JOIN rooms r ON a.room_id = r.room_id 
+        LEFT JOIN wards w ON r.ward_id = w.ward_id
         JOIN users u ON a.patient_id = u.user_id
         JOIN registrations reg ON u.registration_id = reg.registration_id
         WHERE a.admission_id = ? AND a.status = 'Admitted'";
@@ -45,7 +45,8 @@ $rates = [
     'ICU' => 5000,
     'Emergency' => 2000
 ];
-$rate = $rates[$adm['ward_type']] ?? 1000;
+$ward_type = $adm['ward_type'] ?? 'General';
+$rate = $rates[$ward_type] ?? 1000;
 $room_charge = $days * $rate;
 $doc_charge = $days * 500; // 500 per day doctor visit
 
@@ -98,8 +99,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         
         // 5. Free Room
-        $rid = $adm['room_id'];
-        $conn->query("UPDATE rooms SET status = 'Available' WHERE room_id = $rid");
+        $rid = $adm['room_id'] ?? null;
+        if ($rid) {
+            $conn->query("UPDATE rooms SET status = 'Available' WHERE room_id = $rid");
+        }
         
         $conn->commit();
         header("Location: doctor_dashboard.php?msg=Patient Discharged Successfully");
@@ -148,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
                 <div>
                     <span style="color:#94a3b8;">Admitted Location:</span><br>
-                    <strong><?php echo htmlspecialchars($adm['ward_name'] . ' - ' . $adm['room_number']); ?></strong>
+                    <strong><?php echo htmlspecialchars(($adm['ward_name'] ?? 'N/A') . ' - ' . ($adm['room_number'] ?? 'N/A')); ?></strong>
                 </div>
                 <div>
                     <span style="color:#94a3b8;">Admission Date:</span><br>
@@ -156,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
                 <div>
                     <span style="color:#94a3b8;">Ward Type:</span><br>
-                    <span style="color: #f59e0b;"><?php echo htmlspecialchars($adm['ward_type']); ?></span>
+                    <span style="color: #f59e0b;"><?php echo htmlspecialchars($adm['ward_type'] ?? 'General'); ?></span>
                 </div>
             </div>
         </div>
@@ -204,6 +207,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             <button type="submit" class="btn-submit">Generate Bill & Discharge Patient</button>
         </form>
-    </div>
-</body>
+    </div></body>
 </html>

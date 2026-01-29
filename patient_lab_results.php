@@ -107,7 +107,7 @@ $display_name = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['name'] : $_S
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
 
@@ -209,6 +209,5 @@ $display_name = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['name'] : $_S
             document.getElementById('qrImage').src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=HealCare_AUTH_" + id;
             document.getElementById('qrModal').style.display = 'flex';
         }
-    </script>
-</body>
+    </script></body>
 </html>

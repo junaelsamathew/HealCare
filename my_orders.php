@@ -154,7 +154,7 @@ $result = $stmt->get_result();
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
                 <a href="my_orders.php" class="nav-link active"><i class="fas fa-receipt"></i> My Orders</a>
-                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
 
@@ -203,6 +203,5 @@ $result = $stmt->get_result();
             <?php endif; ?>
 
         </main>
-    </div>
-</body>
+    </div></body>
 </html>

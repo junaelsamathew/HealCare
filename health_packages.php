@@ -325,9 +325,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <button class="btn-select-pkg" style="margin-top: 20px;" onclick="window.location.href='index.php'">Return Home</button>
         </div>
     </div>
-    <?php endif; ?>
-
-    <?php include 'includes/footer.php'; ?>
+    <?php endif; ?><?php include 'includes/footer.php'; ?>
 
     <script>
         const modal = document.getElementById('bookingModal');

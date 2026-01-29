@@ -324,7 +324,7 @@ if(isset($_SESSION['user_id'])) {
                                 <div class="doc-qual"><?php echo $selected_doc['qual']; ?></div>
                                 <div style="color:var(--primary-blue); font-weight:600; text-transform:uppercase; margin-bottom: 5px;"><?php echo $selected_doc['dept']; ?></div>
                                 <div style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); padding: 5px 12px; border-radius: 15px; display: inline-block; font-size: 0.85rem; font-weight: 700;">
-                                    Medical Services Bill: ₹<?php echo number_format($selected_doc['consultation_fee'], 0); ?>
+                                    Consultation Fees: ₹<?php echo number_format($selected_doc['consultation_fee'], 0); ?>
                                 </div>
                             </div>
                         </div>
@@ -456,6 +456,5 @@ if(isset($_SESSION['user_id'])) {
             }
             return true;
         }
-    </script>
-</body>
+    </script></body>
 </html>

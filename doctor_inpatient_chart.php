@@ -161,6 +161,5 @@ $vitals = $conn->query("SELECT * FROM patient_vitals WHERE patient_id = $pid ORD
                 <a href="doctor_discharge.php?admission_id=<?php echo $adm_id; ?>" style="display:block; text-align:center; padding:12px; background:#f59e0b; color:white; border-radius:8px; text-decoration:none; font-weight:600;">Initiate Discharge</a>
             </div>
         </div>
-    </div>
-</body>
+    </div></body>
 </html>
