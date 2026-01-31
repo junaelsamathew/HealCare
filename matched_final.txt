@@ -1,0 +1,10 @@
+
+|Ancy James|NULL|uploads/photos/1767773286_photo_doctor-7.jpg
+|Mary mariam|General Medicine / Cardiovascular|uploads/photos/1767778549_photo_doctor-10.jpg
+|Leena jose|Gynecology|uploads/photos/1767778693_photo_doctor-8.jpg
+|Jacob Mathew|Orthopedics|uploads/photos/1767778873_photo_doctor-8.jpg
+|Krishnan manoj|ENT|uploads/photos/1767779066_photo_doctor-appointment.jpg
+|June Mary Antony|Ophthalmology|images/dr_june_mary_antony.png
+|Alan Thomas |Dermatology|uploads/photos/1767779772_photo_doctor-2.jpg
+|Abner Sam Jose|ENT|uploads/photos/1767956831_photo_doctor-5.jpg
+|Elsa Mathew|Gynecology|
