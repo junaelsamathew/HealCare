@@ -15,7 +15,7 @@
         <div class="container">
             <div class="top-bar-content">
                 <a href="index.php" class="logo">
-                    <img src="images/healcare_logo.jpg?v=<?php echo time(); ?>" alt="HealCare Logo" class="logo-img" style="height: 40px; width: auto;"> <span class="animated-brand">HEALCARE HOSPITAL</span>
+                    <img src="images/healcare_logo.jpg?v=<?php echo time(); ?>" alt="HealCare Logo" class="logo-img" style="height: 65px; width: auto;"> <span class="animated-brand">HEALCARE HOSPITAL</span>
                 </a>
                 <div class="top-info">
                     <div class="info-item">

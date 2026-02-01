@@ -15,13 +15,15 @@ $appt_id = str_replace('BK-', '', $booking_id);
 if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
     // If details are missing, fetch them from DB using Appointment ID
     $stmt = $conn->prepare("SELECT a.*, d.consultation_fee, u_doc.username as doc_username, 
-                            r_doc.name as doc_realname, r_pat.name as pat_realname 
+                            r_doc.name as doc_realname, r_pat.name as pat_realname,
+                            b.bill_id, b.payment_status as bill_status
                             FROM appointments a 
                             LEFT JOIN users u_doc ON a.doctor_id = u_doc.user_id 
                             LEFT JOIN registrations r_doc ON u_doc.registration_id = r_doc.registration_id
                             LEFT JOIN users u_pat ON a.patient_id = u_pat.user_id 
                             LEFT JOIN registrations r_pat ON u_pat.registration_id = r_pat.registration_id
                             LEFT JOIN doctors d ON a.doctor_id = d.user_id
+                            LEFT JOIN billing b ON a.appointment_id = b.appointment_id AND b.bill_type = 'Consultation'
                             WHERE a.appointment_id = ?");
     $stmt->bind_param("i", $appt_id);
     $stmt->execute();
@@ -41,6 +43,8 @@ if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
         $time = date('h:i A', strtotime($appt_data['appointment_time'])); // Format time
         $patient_name = $appt_data['pat_realname'] ?? 'Valued Patient';
         $fee = $appt_data['consultation_fee'] ?? 200;
+        $db_bill_id = $appt_data['bill_id'];
+        $db_bill_status = $appt_data['bill_status'];
         
     } else {
         $doctor_name = "Unknown";
@@ -262,14 +266,24 @@ $username = $_SESSION['username'] ?? 'User';
                     <?php if(isset($_GET['paid'])): ?>
                         <div class="row"><strong>Status:</strong> <span style="color:#10b981; font-weight:bold;">PAID</span></div>
                     <?php else: ?>
-                        <div class="row"><strong>Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PENDING</span></div>
+                        <div class="row"><strong>Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PAY LATER (AT PHARMACY)</span></div>
                     <?php endif; ?>
                 </div>
 
-                <?php if(!isset($_GET['paid']) && isset($_GET['bill_id'])): ?>
+                <?php 
+                $payment_needed = !isset($_GET['paid']) && (isset($_GET['bill_id']) || (isset($db_bill_id) && $db_bill_status != 'Paid'));
+                $target_bill_id = $_GET['bill_id'] ?? ($db_bill_id ?? null);
+                
+                if($payment_needed && $target_bill_id): 
+                ?>
                     <div class="payment-box">
-                        <p style="margin: 0 0 15px; color: #f59e0b; font-weight: 500; font-size:0.95rem;">Please complete your payment to finalize the slot.</p>
-                        <a href="payment_gateway.php?bill_id=<?php echo $_GET['bill_id']; ?>" class="btn-print">Proceed to Payment</a>
+                        <p style="margin: 0 0 15px; color: #f59e0b; font-weight: 500; font-size:0.95rem;">Please complete your online payment to finalize the slot.</p>
+                        <a href="payment_gateway.php?bill_id=<?php echo $target_bill_id; ?>" class="btn-print">Proceed to Payment (Razorpay)</a>
+                    </div>
+                <?php elseif(!isset($_GET['paid'])): ?>
+                    <div class="payment-box" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.4);">
+                        <p style="margin: 0 0 15px; color: #3b82f6; font-weight: 500; font-size:0.95rem;">You can pay your consultation fees later along with your pharmacy medicines.</p>
+                        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Slip</button>
                     </div>
                 <?php else: ?>
                     <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Details</button>

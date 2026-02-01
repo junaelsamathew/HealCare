@@ -236,9 +236,13 @@ $about = $doc['bio'] ?? $doc['additional_details'] ?? 'Expert medical consultati
             <div class="profile-left-col">
                 <div class="doctor-image-container">
                     <?php 
-                        $photo = $doc['profile_photo'];
-                        if (empty($photo) || !file_exists($photo)) {
-                            $photo = 'images/default-doctor.jpg';
+                        $photo = 'images/doctor_placeholder.png';
+                        if (!empty($doc['profile_photo'])) {
+                            if (file_exists($doc['profile_photo'])) {
+                                $photo = $doc['profile_photo'];
+                            } elseif (file_exists('images/' . $doc['profile_photo'])) {
+                                $photo = 'images/' . $doc['profile_photo'];
+                            }
                         }
                     ?>
                     <img src="<?php echo $photo; ?>" alt="<?php echo htmlspecialchars($name); ?>">

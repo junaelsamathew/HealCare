@@ -194,8 +194,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
         <main class="main-ops">
             <?php if (!isset($_GET['section']) || $_GET['section'] == 'dashboard' || $_GET['section'] == 'patients'): ?>
                 <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Ward Management - <?php echo $department; ?></h1>
-                    <p style="color:#64748b; font-size:14px;">Monitor assigned patients and update vital signs.</p>
+                    <?php 
+                    include_once 'includes/greeting_logic.php';
+                    $nurse_display_name = $_SESSION['full_name'] ?? $_SESSION['username'];
+                    ?>
+                    <!-- Personalized Greeting Banner -->
+                    <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 30px; border-radius: 16px; border: 1px solid var(--border-soft); margin-bottom: 30px; position: relative; overflow: hidden;">
+                        <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(59, 130, 246, 0.05); border-radius: 50%; filter: blur(20px);"></div>
+                        <div style="position: relative; z-index: 1;">
+                            <h2 style="color: #fff; font-size: 24px; margin-bottom: 5px;"><?php echo $greeting; ?>, <?php echo htmlspecialchars($nurse_display_name); ?></h2>
+                            <p style="color: #64748b; font-size: 14px;">Welcome to the <strong><?php echo $department; ?></strong> ward. Monitor your patients and ensure timely care delivery.</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h1 style="color:#fff; font-size: 28px;">Ward Management</h1>
+                            <p style="color:#64748b; font-size:14px;">Monitor assigned patients and update vital signs.</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="stats-grid">

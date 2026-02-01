@@ -187,8 +187,14 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                             <div class="form-group" style="margin-bottom: 25px; display: flex; align-items: center; gap: 20px;">
                                 <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #eee; border: 2px solid rgba(255,255,255,0.2);">
                                     <?php 
-                                        $photo_path = $reg_data['profile_photo'] ?? 'assets/images/default_doctor.png';
-                                        if (empty($photo_path) || !file_exists($photo_path)) $photo_path = 'assets/images/default_doctor.png';
+                                        $photo_path = 'images/doctor_placeholder.png'; // Default
+                                        if (!empty($reg_data['profile_photo'])) {
+                                            if (file_exists($reg_data['profile_photo'])) {
+                                                $photo_path = $reg_data['profile_photo'];
+                                            } elseif (file_exists('images/' . $reg_data['profile_photo'])) {
+                                                $photo_path = 'images/' . $reg_data['profile_photo'];
+                                            }
+                                        }
                                     ?>
                                     <img src="<?php echo $photo_path; ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                 </div>

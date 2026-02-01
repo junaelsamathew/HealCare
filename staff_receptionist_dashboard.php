@@ -308,6 +308,18 @@ $calendar_result = $conn->query($cal_sql);
 
             <?php if (!isset($_GET['section']) || $_GET['section'] == 'dashboard'): ?>
                 <div style="margin-bottom: 30px;">
+                    <?php 
+                    include_once 'includes/greeting_logic.php';
+                    ?>
+                    <!-- Personalized Greeting Banner -->
+                    <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 30px; border-radius: 16px; border: 1px solid var(--border-soft); margin-bottom: 30px; position: relative; overflow: hidden;">
+                        <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(59, 130, 246, 0.05); border-radius: 50%; filter: blur(40px);"></div>
+                        <div style="position: relative; z-index: 1;">
+                            <h2 style="color: #fff; font-size: 24px; margin-bottom: 5px;"><?php echo $greeting; ?>, <?php echo htmlspecialchars($staff_name); ?></h2>
+                            <p style="color: #64748b; font-size: 14px;">The hospital is busy today. Assist patients with registrations and coordinate with the clinical staff.</p>
+                        </div>
+                    </div>
+
                     <h1 style="color:#fff; font-size: 28px;">Reception Dashboard</h1>
                     <p style="color:#64748b; font-size:14px;">Manage patient flow and appointments.</p>
                 </div>

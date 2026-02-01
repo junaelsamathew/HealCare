@@ -200,13 +200,17 @@ include 'includes/header.php';
             <?php while($row = $result->fetch_assoc()): ?>
                 <div class="doctor-card-premium">
                     <div class="doctor-thumb">
-                        <?php if(!empty($row['profile_photo']) && file_exists($row['profile_photo'])): ?>
-                            <img src="<?php echo $row['profile_photo']; ?>" alt="<?php echo $row['name']; ?>">
-                        <?php else: ?>
-                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #eef7ff; color: #1e90ff; font-size: 60px;">
-                                <i class="fas fa-user-md"></i>
-                            </div>
-                        <?php endif; ?>
+                        <?php 
+                        $img = 'images/doctor_placeholder.png';
+                        if (!empty($row['profile_photo'])) {
+                            if (file_exists($row['profile_photo'])) {
+                                $img = $row['profile_photo'];
+                            } elseif (file_exists('images/' . $row['profile_photo'])) {
+                                $img = 'images/' . $row['profile_photo'];
+                            }
+                        }
+                        ?>
+                        <img src="<?php echo $img; ?>" alt="<?php echo $row['name']; ?>">
                     </div>
                     <div class="result-dept"><?php echo htmlspecialchars($row['department'] ?? 'General Medicine'); ?></div>
                     <h3><?php echo htmlspecialchars($row['name']); ?></h3>

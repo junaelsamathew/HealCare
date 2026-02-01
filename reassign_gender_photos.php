@@ -28,7 +28,7 @@ $photo_mapping = [
     // --- MALE DOCTORS ---
     'jacob.mathew@healcare.com'   => 'images/doctor-1.jpg',  // Male
     'krishnan.manoj@healcare.com' => 'images/doctor-5.jpg',  // Male
-    'alan.thomas@healcare.com'    => 'images/doctor-6.jpg',  // Male
+    'alan.thomas@healcare.com'    => 'dr_alan_thomas.jpg',  // Male (Correct Photo)
     'suresh.k@healcare.com'       => 'images/doctor-7.jpg',  // Male
     'kurian.thomas@healcare.com'  => 'images/doctor-5.jpg',  // Male
     'johnymathew56@gmail.com'     => 'images/doctor-1.jpg',  // Male

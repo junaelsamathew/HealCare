@@ -18,7 +18,7 @@ $patient_name = "Valued Patient";
 $service_name = "Service";
 
 if ($bill_id > 0) {
-    $res = $conn->query("SELECT b.*, r.name as patient_name 
+    $res = $conn->query("SELECT b.*, r.name as patient_name, r.email as patient_email 
                          FROM billing b 
                          JOIN users u ON b.patient_id = u.user_id 
                          JOIN registrations r ON u.registration_id = r.registration_id 
@@ -26,6 +26,7 @@ if ($bill_id > 0) {
     if ($res && $res->num_rows > 0) {
         $bill = $res->fetch_assoc();
         $patient_name = $bill['patient_name'];
+        $patient_email = $bill['patient_email'];
         $service_name = ($bill['bill_type'] == 'Canteen') ? 'Canteen Order' : ($bill['bill_type'] ?: 'Medical Service');
     }
 }
@@ -291,15 +292,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <!-- Payment Options -->
         <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-            <div onclick="document.getElementById('rzp-button1').click()" style="padding: 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; transition:0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+            <div onclick="document.getElementById('rzp-button1').click()" style="padding: 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; background: #f0f7ff; transition:0.3s;" onmouseover="this.style.background='#e0efff'" onmouseout="this.style.background='#f0f7ff'">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <img src="https://cdn.iconscout.com/icon/free/png-256/free-razorpay-1649771-1399875.png" height="30" alt="Razorpay">
                     <div>
-                        <div style="font-weight: 600; color: #0f172a;">Pay Online</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="font-weight: 600; color: #0f172a;">Pay Online</div>
+                            <span style="font-size: 10px; background: #3b82f6; color: white; padding: 2px 6px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Recommended</span>
+                        </div>
                         <div style="font-size: 12px; color: #64748b;">UPI, Cards, NetBanking</div>
                     </div>
                 </div>
-                <i class="fas fa-chevron-right" style="color: #cbd5e1;"></i>
+                <i class="fas fa-chevron-right" style="color: #3b82f6;"></i>
             </div>
             <!-- Test Mode (For Dev Only) -->
             <form action="payment_process.php" method="POST" id="testForm">
@@ -360,7 +364,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 data-description="Payment for <?php echo $service_name; ?>"
                 data-image="assets/images/logo.png"
                 data-prefill.name="<?php echo htmlspecialchars($patient_name); ?>"
-                data-prefill.email="patient@example.com"
+                data-prefill.email="<?php echo htmlspecialchars($patient_email ?? 'patient@example.com'); ?>"
                 data-theme.color="#3b82f6"
             ></script>
             <input type="hidden" custom="Hidden Element" name="hidden">

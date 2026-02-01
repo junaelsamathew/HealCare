@@ -59,7 +59,7 @@ $where_conditions = ["a.doctor_id = $user_id"];
 if ($current_filter == 'Requested') {
     $where_conditions[] = "a.status IN ('Requested', 'Pending')";
 } elseif ($current_filter == 'Approved/Scheduled') {
-    $where_conditions[] = "a.status IN ('Approved', 'Confirmed', 'Scheduled')";
+    $where_conditions[] = "a.status IN ('Approved', 'Confirmed', 'Scheduled', 'Pending Lab', 'Checked-In')";
 } elseif ($current_filter == 'Completed') {
     $where_conditions[] = "a.status IN ('Completed', 'Lab Completed')";
 } elseif ($current_filter == 'Cancelled') {
@@ -307,6 +307,7 @@ $res_appts = $conn->query($sql_appts);
                 <a href="doctor_dashboard.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="doctor_patients.php" class="nav-link"><i class="fas fa-user-injured"></i> Patients</a>
                 <a href="doctor_appointments.php" class="nav-link active"><i class="fas fa-calendar-check"></i> Appointments</a>
+                <a href="create_appointment.php" class="nav-link"><i class="fas fa-plus-circle"></i> Create Appointment</a>
                 <a href="doctor_prescriptions.php" class="nav-link"><i class="fas fa-file-prescription"></i> Prescriptions</a>
                 <a href="doctor_lab_orders.php" class="nav-link"><i class="fas fa-flask"></i> Lab Orders</a>
                 <a href="doctor_leave.php" class="nav-link"><i class="fas fa-calendar-minus"></i> Apply Leave</a>
@@ -338,9 +339,9 @@ $res_appts = $conn->query($sql_appts);
                             $border_class = 'border-gray';
                             if ($status == 'Cancelled') $border_class = 'border-red';
                             elseif ($status == 'Completed' || $status == 'Lab Completed') $border_class = 'border-green';
-                            elseif ($status == 'Approved' || $status == 'Scheduled' || $status == 'Confirmed') $border_class = 'border-blue';
+                            elseif ($status == 'Approved' || $status == 'Scheduled' || $status == 'Confirmed' || $status == 'Pending Lab') $border_class = 'border-blue';
                             elseif ($status == 'Requested' || $status == 'Pending') $border_class = 'border-blue'; 
-
+                            elseif ($status == 'Lab Completed') $border_class = 'border-green';
                             $date_obj = new DateTime($appt['appointment_date']);
                             $day = $date_obj->format('d');
                             $month = $date_obj->format('M');
@@ -386,16 +387,20 @@ $res_appts = $conn->query($sql_appts);
                                             <button type="submit" name="status" value="Cancelled" class="btn-card-action">Decline</button>
                                         </div>
                                     </form>
-                                <?php elseif($status == 'Approved' || $status == 'Scheduled' || $status == 'Confirmed' || $status == 'Lab Completed'): ?>
+                                <?php elseif($status == 'Approved' || $status == 'Scheduled' || $status == 'Confirmed' || $status == 'Lab Completed' || $status == 'Pending Lab' || $status == 'Checked-In'): ?>
                                     <form method="POST">
                                         <input type="hidden" name="action" value="update_status">
                                         <input type="hidden" name="appt_id" value="<?php echo $appt['appointment_id']; ?>">
                                         <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-                                             <a href="doctor_dashboard.php?patient_id=<?php echo $appt['patient_id']; ?>&appt_id=<?php echo $appt['appointment_id']; ?>" class="btn-card-action btn-card-primary" style="text-align:center; text-decoration:none;">Start Consultation</a>
+                                             <?php 
+                                                $is_lab = ($status == 'Pending Lab' || $status == 'Lab Completed');
+                                                $btn_text = $is_lab ? 'Review Lab & Consult' : 'Start Consultation';
+                                             ?>
+                                             <a href="doctor_dashboard.php?patient_id=<?php echo $appt['patient_id']; ?>&appt_id=<?php echo $appt['appointment_id']; ?>" class="btn-card-action btn-card-primary" style="text-align:center; text-decoration:none;"><?php echo $btn_text; ?></a>
                                         </div>
                                     </form>
                                 <?php else: ?>
-                                    <button class="btn-card-action" disabled>Closed</button>
+                                    <button class="btn-card-action" disabled>Closed (<?php echo $status; ?>)</button>
                                 <?php endif; ?>
                             </div>
                         </div>

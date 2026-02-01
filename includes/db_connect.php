@@ -1,5 +1,6 @@
 <?php
 $servername = "127.0.0.1";
+date_default_timezone_set('Asia/Kolkata');
 $username = "root";
 $password = "";
 $dbname = "healcare";

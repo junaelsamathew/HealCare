@@ -809,6 +809,13 @@ try {
     $stat_total_appts = $stat_pending_appts = $stat_completed_appts = $stat_today_appts = 0;
 }
 
+// Leave Management Statistics
+try {
+    $stat_pending_leaves = $conn->query("SELECT COUNT(*) as count FROM doctor_leaves WHERE status = 'Pending'")->fetch_assoc()['count'];
+} catch (Exception $e) {
+    $stat_pending_leaves = 0;
+}
+
 
 // Fetch data based on section
 $pending_requests = $conn->query("SELECT * FROM registrations WHERE status = 'Pending' ORDER BY registered_date DESC");
@@ -1869,7 +1876,19 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
         <?php if ($section == 'dashboard'): ?>
             <!-- Dashboard Overview -->
-            <div class="top-bar">
+            <?php 
+            include_once 'includes/greeting_logic.php';
+            $admin_display_name = $_SESSION['full_name'] ?? 'Administrator';
+            ?>
+            <div class="greeting-banner" style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 35px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: rgba(59, 130, 246, 0.05); border-radius: 50%; filter: blur(40px);"></div>
+                <div style="position: relative; z-index: 1;">
+                    <h2 style="color: #fff; font-size: 28px; font-weight: 700; margin-bottom: 10px;"><?php echo $greeting; ?>, <?php echo htmlspecialchars($admin_display_name); ?></h2>
+                    <p style="color: #94a3b8; font-size: 15px;">Monitor hospital operations, manage staff registrations, and track clinical performance from your central command center.</p>
+                </div>
+            </div>
+
+            <div class="top-bar" style="display: none;"> <!-- Hide old top bar -->
                 <div class="page-title">
                     <h1>Dashboard Overview</h1>
                     <p>Welcome back, <?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Admin'); ?>. Here's what's happening today.</p>
@@ -1881,7 +1900,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         <?php 
                         $notif_count = $pending_requests->num_rows; 
                         $total_pharmacy = ($pharmacy_alerts > 0 ? 1 : 0) + ($expiry_alerts > 0 ? 1 : 0);
-                        $total_notifs = $notif_count + $total_pharmacy;
+                        $total_notifs = $notif_count + $total_pharmacy + $stat_pending_leaves;
                         if ($total_notifs > 0): 
                         ?>
                             <span class="notification-badge"><?php echo $total_notifs; ?></span>
@@ -1894,6 +1913,16 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             <span style="font-size: 11px; color: var(--primary-blue); cursor: pointer;">Mark all as read</span>
                         </div>
                         <div style="max-height: 400px; overflow-y: auto;">
+                            <?php if ($stat_pending_leaves > 0): ?>
+                                <a href="?section=leaves" class="notification-item">
+                                    <i class="fas fa-calendar-minus" style="color: #f59e0b;"></i>
+                                    <div>
+                                        <p>Pending Leave Requests</p>
+                                        <span><?php echo $stat_pending_leaves; ?> doctor applications awaiting review</span>
+                                    </div>
+                                </a>
+                            <?php endif; ?>
+
                             <?php if ($notif_count > 0): ?>
                                 <a href="?section=pending-requests" class="notification-item">
                                     <i class="fas fa-user-plus"></i>
@@ -2002,6 +2031,17 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     <div class="stat-card-title">Pharmacy Alerts</div>
                     <div class="stat-card-value" style="color: var(--accent-red);"><?php echo $pharmacy_alerts; ?></div>
                     <div class="stat-card-subtitle">Low stock items • Click to view</div>
+                </div>
+
+                <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='?section=leaves'">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-orange);">
+                            <i class="fas fa-calendar-minus"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-title">Pending Leaves</div>
+                    <div class="stat-card-value" style="color: var(--accent-orange);"><?php echo $stat_pending_leaves; ?></div>
+                    <div class="stat-card-subtitle">Doctors awaiting approval</div>
                 </div>
             </div>
 

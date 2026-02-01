@@ -44,7 +44,7 @@ if (isset($_GET['redirect'])) {
 
         /* Top Bar Header */
         .login-header {
-            height: 80px;
+            height: 100px;
             background: #ffffff;
             display: flex;
             align-items: center;
@@ -376,7 +376,7 @@ if (isset($_GET['redirect'])) {
     <!-- Header -->
     <header class="login-header">
         <a href="index.php" class="logo-main">
-            <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
+            <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 75px;">
             <span class="animated-brand">HEALCARE HOSPITAL</span>
         </a>
         <div class="header-info-group">

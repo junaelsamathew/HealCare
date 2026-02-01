@@ -10,8 +10,10 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'doctor') {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
-// Fetch actual doctor professional info
-$stmt = $conn->prepare("SELECT * FROM doctors WHERE user_id = ?");
+// --- Schema verified ---
+
+// Fetch actual doctor professional info with profile photo
+$stmt = $conn->prepare("SELECT d.*, r.profile_photo FROM doctors d JOIN users u ON d.user_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id WHERE d.user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -21,16 +23,32 @@ if ($res->num_rows > 0) {
     $specialization = $doctor['specialization'];
     $department = $doctor['department'];
     $designation = $doctor['designation'];
+    $profile_photo = $doctor['profile_photo'];
 } else {
     // Fallback for demo/manual users without doctor profiles
     $specialization = "General Healthcare / Consultation";
     $department = "General Medicine";
     $designation = "Professional Consultant";
+    $profile_photo = null;
 }
 
 $doctor_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
 if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') === false) {
     $doctor_name = "Dr. " . $doctor_name;
+}
+
+// Determine Avatar
+$doctor_avatar = 'images/doctor_placeholder.png'; // Default
+if (!empty($profile_photo)) {
+    if (file_exists($profile_photo)) {
+        $doctor_avatar = $profile_photo;
+    } elseif (file_exists('images/' . $profile_photo)) {
+        $doctor_avatar = 'images/' . $profile_photo;
+    }
+} elseif (stripos($doctor_name, 'Maria Vineeth') !== false) {
+    $doctor_avatar = 'images/doctor_maria.png';
+} elseif (stripos($doctor_name, 'June Mary') !== false) {
+    $doctor_avatar = 'images/dr_june_mary_antony.png';
 }
 
 // Handle Status Updates (Accept Appointment)
@@ -124,6 +142,114 @@ $stmt_total = $conn->prepare("SELECT COUNT(*) as count FROM appointments WHERE d
 $stmt_total->bind_param("i", $user_id);
 $stmt_total->execute();
 $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
+
+// --- Fetch Next Patient Details ---
+$next_patient = null;
+$today = date('Y-m-d');
+$stmt_next = $conn->prepare("
+    SELECT a.*, r.name as patient_name, r.phone, r.registered_date, pp.patient_code, pp.gender, pp.date_of_birth,
+           (SELECT weight FROM patient_vitals WHERE patient_id = a.patient_id ORDER BY recorded_at DESC LIMIT 1) as weight,
+           (SELECT height FROM patient_vitals WHERE patient_id = a.patient_id ORDER BY recorded_at DESC LIMIT 1) as height,
+           (SELECT appointment_date FROM appointments WHERE patient_id = a.patient_id AND status = 'Completed' AND appointment_date < ? ORDER BY appointment_date DESC LIMIT 1) as last_visit
+    FROM appointments a 
+    JOIN users u ON a.patient_id = u.user_id 
+    JOIN registrations r ON u.registration_id = r.registration_id 
+    LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id 
+    WHERE a.doctor_id = ? AND a.appointment_date = ? AND a.status IN ('Scheduled', 'Confirmed', 'Approved', 'Checked-In', 'Requested', 'Pending Lab', 'Lab Completed')
+    ORDER BY 
+        CASE 
+            WHEN a.urgency = 'Emergency' THEN 1 
+            WHEN a.urgency = 'Urgent' THEN 2 
+            WHEN a.status = 'Lab Completed' THEN 3
+            ELSE 4
+        END, a.appointment_time ASC LIMIT 1
+");
+$stmt_next->bind_param("sis", $today, $user_id, $today);
+$stmt_next->execute();
+$next_patient = $stmt_next->get_result()->fetch_assoc();
+
+// --- Fetch Weekly Consultation Stats (Day by Day) ---
+$daily_stats = [];
+for ($i = 6; $i >= 0; $i--) {
+    $date = date('Y-m-d', strtotime("-$i days"));
+    $day_name = date('D', strtotime($date));
+    
+    $stmt_count = $conn->prepare("SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status = 'Completed'");
+    $stmt_count->bind_param("is", $user_id, $date);
+    $stmt_count->execute();
+    $day_count = $stmt_count->get_result()->fetch_assoc()['count'];
+    
+    $daily_stats[] = [
+        'day' => $day_name,
+        'count' => $day_count
+    ];
+}
+$labels_json = json_encode(array_column($daily_stats, 'day'));
+$counts_json = json_encode(array_column($daily_stats, 'count'));
+
+// --- Time-based Greeting Logic ---
+include_once 'includes/greeting_logic.php';
+
+// --- Handle Appointment Creation (Refined Referral Workflow) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])) {
+    $app_date = $_POST['app_date'];
+    $app_time = $_POST['app_time'];
+    $urgency = $_POST['urgency'];
+    $reason = $_POST['reason'] ?? 'Clinical Referral';
+    $is_ext = (isset($_POST['is_external']) && $_POST['is_external'] == '1') ? 1 : 0;
+    $target_doctor = intval($_POST['target_doctor_id']);
+    $referring_doctor_id = $user_id; // Current logged-in doctor
+
+    // Auto-fix schema silently (one-time)
+    $conn->query("ALTER TABLE appointments ADD COLUMN referred_by INT NULL");
+
+    // Fetch target doctor info
+    $stmt_doc_info = $conn->prepare("SELECT department, consultation_fee FROM doctors WHERE user_id = ?");
+    $stmt_doc_info->bind_param("i", $target_doctor);
+    $stmt_doc_info->execute();
+    $d_row = $stmt_doc_info->get_result()->fetch_assoc();
+    $dept = $d_row['department'] ?? 'General Medicine';
+    $fee = $d_row['consultation_fee'] ?? 500;
+
+    // Token indexing
+    $t_res = $conn->query("SELECT MAX(queue_number) as last_token FROM appointments WHERE doctor_id = $target_doctor AND appointment_date = '$app_date'");
+    $token = ($t_res && $tr = $t_res->fetch_assoc()) ? intval($tr['last_token']) + 1 : 1;
+
+    if ($is_ext) {
+        $ext_name = $_POST['external_name'];
+        $ext_phone = $_POST['external_phone'];
+        $stmt = $conn->prepare("INSERT INTO appointments 
+            (doctor_id, department, appointment_date, appointment_time, status, is_external, external_name, external_phone, urgency, reason, queue_number, consultation_fee, appointment_type, referred_by) 
+            VALUES (?, ?, ?, ?, 'Requested', 1, ?, ?, ?, ?, ?, ?, 'Clinical Referral', ?)");
+        $stmt->bind_param("isssssssidi", $target_doctor, $dept, $app_date, $app_time, $ext_name, $ext_phone, $urgency, $reason, $token, $fee, $referring_doctor_id);
+    } else {
+        $patient_id = intval($_POST['patient_id']);
+        $stmt = $conn->prepare("INSERT INTO appointments 
+            (doctor_id, patient_id, department, appointment_date, appointment_time, status, urgency, reason, queue_number, consultation_fee, appointment_type, referred_by) 
+            VALUES (?, ?, ?, ?, ?, 'Requested', ?, ?, ?, ?, 'Clinical Referral', ?)");
+        $stmt->bind_param("iisssssiddi", $target_doctor, $patient_id, $dept, $app_date, $app_time, $urgency, $reason, $token, $fee, $referring_doctor_id);
+    }
+    
+    if ($stmt->execute()) {
+        $new_appt_id = $conn->insert_id;
+        
+        // --- Requirement 5: Notify Receiving Doctor ---
+        $notif_title = "New Clinical Referral";
+        $notif_msg = "$doctor_name has referred a patient for $urgency consultation.";
+        $notif_icon = "fa-user-md";
+        $notif_url = "doctor_appointments.php?status=Requested";
+        
+        $stmt_notif = $conn->prepare("INSERT INTO notifications (user_id, category, icon, color, title, message, url, priority) VALUES (?, 'Appointment', ?, '#3b82f6', ?, ?, ?, ?)");
+        $priority = ($urgency == 'Normal') ? 'Normal' : 'High';
+        $stmt_notif->bind_param("issssss", $target_doctor, $notif_icon, $notif_title, $notif_msg, $notif_url, $priority);
+        $stmt_notif->execute();
+
+        header("Location: doctor_dashboard.php?msg=Referral created successfully. The receiving doctor has been notified.");
+    } else {
+        header("Location: doctor_dashboard.php?error=Error: " . $conn->error);
+    }
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -148,7 +274,7 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
         }
 
         .main-content {
-            padding: 40px !important;
+            padding: 25px 40px !important;
             gap: var(--section-gap);
             display: flex;
             flex-direction: column;
@@ -275,17 +401,241 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
         tr:last-child td {
             border-bottom: none;
         }
-        /* Brand Animation */
-        .brand-letter {
-            display: inline-block;
-            opacity: 0;
-            transform: translateY(-5px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
+        /* Sidebar Profile Style */
+        .sidebar-profile {
+            padding: 30px 20px;
+            text-align: center;
+            background: linear-gradient(to bottom, #2563eb, #1e4ed8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
         }
-        .brand-letter.visible {
-            opacity: 1;
-            transform: translateY(0);
+        .profile-img-container {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            margin: 0 auto 15px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
+        .profile-img-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .doctor-sidebar-name {
+            color: #fff;
+            font-size: 17px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+        .doctor-sidebar-spec {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            margin-top: 5px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Header Icons Style */
+        .header-action-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            text-decoration: none;
+            transition: all 0.3s;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .header-action-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+        .notification-dot {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 2px solid #0f172a;
+        }
+
+        .user-greeting-box {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin-right: 15px;
+            line-height: 1.2;
+        }
+
+        /* Profile Header Summary */
+        .header-profile-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding-left: 20px;
+            border-left: none;
+            margin-left: 10px;
+        }
+        .profile-info {
+            text-align: right;
+            line-height: 1.3;
+        }
+        .profile-info .doc-name {
+            display: block;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .header-avatar-container {
+            position: relative;
+            width: 42px;
+            height: 42px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .header-avatar-container:hover {
+            transform: scale(1.05);
+        }
+        .header-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            background: #fff;
+        }
+        .online-dot {
+            position: absolute;
+            bottom: 1px;
+            right: 1px;
+            width: 11px;
+            height: 11px;
+            background: #10b981;
+            border-radius: 50%;
+            border: 2px solid #0f172a;
+        }
+
+        /* Greeting Banner / Appointment Module */
+        .greeting-banner {
+            background: linear-gradient(to right, #1d4ed8, #3b82f6);
+            background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            padding: 25px 30px;
+            border-radius: 20px;
+            margin-bottom: 25px;
+            color: #fff;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.15);
+        }
+        .greeting-banner h2 { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
+        .greeting-banner p { color: rgba(255, 255, 255, 0.9); font-size: 13px; margin-bottom: 15px; max-width: 600px; line-height: 1.5; }
+        .btn-create-appt { 
+            background: #fff; color: #1d4ed8; padding: 10px 22px; border-radius: 10px; 
+            font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+            transition: all 0.3s; border: none; cursor: pointer; font-size: 13px;
+        }
+        .btn-create-appt:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+        .stat-card .stat-value { font-size: 20px !important; margin-bottom: 5px !important; }
+        .stat-card .stat-label { font-size: 11px !important; color: #94a3b8 !important; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Modal Styles */
+        .modal {
+            display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); justify-content: center; align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-card { 
+            background: #0f172a; width: 90%; max-width: 550px; border-radius: 24px; 
+            border: 1px solid rgba(255,255,255,0.1); overflow: hidden; animation: modalPop 0.3s ease;
+        }
+        @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-card-head { padding: 25px 30px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; }
+        .modal-card-body { padding: 30px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; color: #94a3b8; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        .form-control { 
+            width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); 
+            padding: 12px 15px; border-radius: 12px; color: #fff; font-size: 14px; transition: 0.3s;
+        }
+        .form-control:focus { outline: none; border-color: #3b82f6; background: rgba(255,255,255,0.08); }
+
+        /* Dropdown Styles */
+        .header-item-relative {
+            position: relative;
+        }
+        .header-dropdown {
+            position: absolute;
+            top: 50px;
+            right: 0;
+            width: 320px;
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            display: none;
+            z-index: 1100;
+            overflow: hidden;
+            animation: dropdownFade 0.3s ease;
+        }
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header-dropdown.show {
+            display: block;
+        }
+        .dropdown-header {
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dropdown-header h4 { margin: 0; font-size: 14px; color: #fff; }
+        .dropdown-body {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .dropdown-item {
+            padding: 15px 20px;
+            display: flex;
+            gap: 12px;
+            text-decoration: none;
+            transition: 0.2s;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .dropdown-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .item-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .item-content { flex: 1; }
+        .item-title { display: block; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+        .item-desc { display: block; color: #94a3b8; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -317,11 +667,94 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
         </div>
     </div>
 
-    <header class="secondary-header" style="display: flex; justify-content: flex-end; padding: 10px 40px; background: #0f172a; border-bottom: 1px solid rgba(255,255,255,0.05);">
+    <header class="secondary-header" style="display: flex; justify-content: flex-end; padding: 15px 40px; background: #0f172a; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center;">
         <div style="flex: 1;"></div>
-        <div class="user-controls" style="display: flex; align-items: center; gap: 20px;">
-            <span class="user-greeting" style="color: #cbd5e1; font-size: 14px;">Welcome, <strong style="color: #fff;"><?php echo $doctor_name; ?></strong></span>
-            <a href="logout.php" class="btn-logout" style="padding: 6px 15px; background: transparent; border: 1px solid #3b82f6; color: #fff; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.3s;">Sign Out</a>
+        <div class="user-controls" style="display: flex; align-items: center; gap: 25px;">
+
+            <!-- Action Icons -->
+            <div style="display: flex; gap: 12px; align-items: center; padding-right: 25px;">
+                <!-- Notifications -->
+                <div class="header-item-relative">
+                    <a href="javascript:void(0)" class="header-action-icon" title="Notifications" onclick="toggleDropdown('notifDropdown')">
+                        <i class="fas fa-bell"></i>
+                        <?php if($stats_pending > 0): ?><span class="notification-dot"></span><?php endif; ?>
+                    </a>
+                    <div id="notifDropdown" class="header-dropdown">
+                        <div class="dropdown-header">
+                            <h4>Notifications</h4>
+                            <span style="font-size: 10px; background: #3b82f6; color: #fff; padding: 2px 6px; border-radius: 10px;"><?php echo $stats_pending; ?> New</span>
+                        </div>
+                        <div class="dropdown-body">
+                            <a href="doctor_appointments.php" class="dropdown-item">
+                                <div class="item-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><i class="fas fa-calendar-check"></i></div>
+                                <div class="item-content">
+                                    <span class="item-title">Pending Appointments</span>
+                                    <span class="item-desc">You have <?php echo $stats_pending; ?> appointments awaiting review.</span>
+                                </div>
+                            </a>
+                            <a href="doctor_lab_orders.php" class="dropdown-item">
+                                <div class="item-icon" style="background: rgba(168, 85, 247, 0.1); color: #a855f7;"><i class="fas fa-flask"></i></div>
+                                <div class="item-content">
+                                    <span class="item-title">Lab Reports</span>
+                                    <span class="item-desc">Check latest patient test results.</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Help -->
+                <div class="header-item-relative">
+                    <a href="javascript:void(0)" class="header-action-icon" title="Help Centre" onclick="toggleDropdown('helpDropdown')">
+                        <i class="fas fa-question-circle"></i>
+                    </a>
+                    <div id="helpDropdown" class="header-dropdown">
+                        <div class="dropdown-header">
+                            <h4>Help & Support</h4>
+                        </div>
+                        <div class="dropdown-body">
+                            <a href="#" class="dropdown-item">
+                                <div class="item-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;"><i class="fas fa-book-medical"></i></div>
+                                <div class="item-content">
+                                    <span class="item-title">Medical Guidelines</span>
+                                    <span class="item-desc">Hospital protocol and clinical guidelines.</span>
+                                </div>
+                            </a>
+                            <a href="#" class="dropdown-item">
+                                <div class="item-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="fas fa-headset"></i></div>
+                                <div class="item-content">
+                                    <span class="item-title">IT Support</span>
+                                    <span class="item-desc">Report technical issues or dashboard bugs.</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Profile Summary -->
+            <div class="header-profile-box header-item-relative">
+                <div class="profile-info">
+                    <span class="doc-name"><?php echo $doctor_name; ?></span>
+                </div>
+                <div class="header-avatar-container" onclick="toggleDropdown('profileDropdown')">
+                    <img src="<?php echo $doctor_avatar; ?>" alt="Profile" class="header-avatar">
+                    <span class="online-dot"></span>
+                </div>
+                <!-- Profile/Logout Dropdown -->
+                <div id="profileDropdown" class="header-dropdown" style="width: 180px; top: 55px;">
+                    <div class="dropdown-body">
+                        <a href="logout.php" class="dropdown-item">
+                            <div class="item-icon" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;"><i class="fas fa-sign-out-alt"></i></div>
+                            <div class="item-content">
+                                <span class="item-title" style="color: #ef4444;">Sign Out</span>
+                                <span class="item-desc">Securely exit HealCare</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -333,6 +766,7 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                 <a href="doctor_dashboard.php" class="nav-link active"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="doctor_patients.php" class="nav-link"><i class="fas fa-user-injured"></i> Patients</a>
                 <a href="doctor_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> Appointments</a>
+                <a href="create_appointment.php" class="nav-link"><i class="fas fa-plus-circle"></i> Create Appointment</a>
                 <a href="doctor_prescriptions.php" class="nav-link"><i class="fas fa-file-prescription"></i> Prescriptions</a>
                 <a href="doctor_lab_orders.php" class="nav-link"><i class="fas fa-flask"></i> Lab Orders</a>
                 <a href="reports_manager.php" class="nav-link"><i class="fas fa-chart-line"></i> Reports</a>
@@ -362,23 +796,25 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                 </div>
             <?php endif; ?>
 
+            <!-- Personalized Greeting Banner -->
+            <div class="greeting-banner">
+                <div style="position: relative; z-index: 1;">
+                    <h2><?php echo $greeting; ?>, <?php echo $doctor_name; ?></h2>
+                    <p>Have a nice day at work! Manage your daily schedule, track patient consultations, and coordinate with other departments efficiently.</p>
+                    <button class="btn-create-appt" onclick="openApptModal()">
+                        <i class="fas fa-plus-circle"></i> Create Appointment
+                    </button>
+                </div>
+            </div>
+
+
 
             <!-- Stats Grid - Scoped to Department -->
-            <!-- Quick Report Upload -->
-            <div style="grid-column: span 3; background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h3 style="color: #fff; margin-bottom: 5px;"><i class="fas fa-file-upload" style="color: #3b82f6;"></i> Need to archive a report?</h3>
-                    <p style="color: #94a3b8; font-size: 13px;">Upload consultation summaries or patient case studies in PDF format.</p>
-                </div>
-                <button onclick="openReportModal()" class="btn-upload" style="background: #3b82f6; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px; border: none; cursor: pointer;">
-                    <i class="fas fa-upload"></i> Upload PDF Report
-                </button>
-            </div>
 
             <div class="doctor-stats-grid">
                 <div class="stat-card">
                     <span class="stat-value"><?php echo str_pad($stats_pending, 2, '0', STR_PAD_LEFT); ?></span>
-                    <span class="stat-label">Pending (<?php echo $department; ?>)</span>
+                    <span class="stat-label">Pending</span>
                 </div>
                 <div class="stat-card">
                     <span class="stat-value"><?php echo str_pad($stats_today, 2, '0', STR_PAD_LEFT); ?></span>
@@ -393,6 +829,141 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                     <span class="stat-label">Total Dept Consults</span>
                 </div>
             </div>
+
+            <!-- Consultation Statistics (Weekly) -->
+            <div class="content-section" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7)) !important; border: 1px solid rgba(59, 130, 246, 0.2) !important;">
+                <div class="section-head" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="color: #4fc3f7;"><i class="fas fa-chart-bar"></i> Weekly Consultation Traffic</h3>
+                        <p style="font-size: 13px; color: #94a3b8; margin-top: 5px;">Patient volume overview for the last 7 days</p>
+                    </div>
+                    <div style="text-align: right; background: rgba(16, 185, 129, 0.1); padding: 10px 20px; border-radius: 15px; border: 1px solid rgba(16, 185, 129, 0.2);">
+                        <span style="font-size: 28px; color: #10b981; font-weight: 800; display: block; line-height: 1;"><?php echo array_sum(array_column($daily_stats, 'count')); ?></span>
+                        <span style="font-size: 10px; color: #94a3b8; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">7-Day Total</span>
+                    </div>
+                </div>
+                <div style="height: 280px; margin-top: 25px;">
+                    <canvas id="weeklyConsultChart"></canvas>
+                </div>
+            </div>
+            
+            <?php if ($next_patient): 
+                $np_name = htmlspecialchars($next_patient['patient_name']);
+                $np_code = $next_patient['patient_code'] ?: 'N/A';
+                $np_phone = htmlspecialchars($next_patient['phone']);
+                $np_weight = $next_patient['weight'] ?: '--';
+                $np_height = $next_patient['height'] ?: '--';
+                $np_last = $next_patient['last_visit'] ? date('d M, Y', strtotime($next_patient['last_visit'])) : 'New Patient';
+                $np_time = date('h:i A', strtotime($next_patient['appointment_time']));
+                $np_reg = date('M d, Y', strtotime($next_patient['registered_date']));
+                
+                // Age calculation
+                $np_age = '--';
+                $np_dob = 'N/A';
+                if (!empty($next_patient['date_of_birth'])) {
+                    $dob = new DateTime($next_patient['date_of_birth']);
+                    $now = new DateTime();
+                    $np_age = $now->diff($dob)->y . ' Years';
+                    $np_dob = $dob->format('d M, Y');
+                }
+            ?>
+            <div class="content-section" style="background: linear-gradient(135deg, #1e293b, #0f172a) !important; border: 1px solid #3b82f6 !important; margin-bottom: 30px; position: relative; overflow: hidden;">
+                <div style="position: absolute; right: -20px; top: -20px; font-size: 150px; color: rgba(59, 130, 246, 0.05); transform: rotate(-15deg); z-index: 0; pointer-events: none;">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                
+                <div class="section-head" style="position: relative; z-index: 1;">
+                    <h3 style="color: #3b82f6; display: flex; align-items: center; gap: 10px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981;"></span>
+                        Up Next: Clinical Priority
+                    </h3>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 100px 1fr 280px; gap: 30px; align-items: center; position: relative; z-index: 1;">
+                    <!-- Avatar/ID -->
+                    <div style="text-align: center;">
+                        <div style="width: 80px; height: 80px; background: #3b82f6; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 10px; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);">
+                            <?php echo substr($np_name, 0, 1); ?>
+                        </div>
+                        <span style="font-size: 11px; color: #94a3b8; font-weight: 700; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px;">
+                            <?php echo $np_code; ?>
+                        </span>
+                    </div>
+
+                    <!-- Details Grid -->
+                    <div>
+                        <h2 style="color: #fff; margin: 0 0 15px 0; font-size: 24px;"><?php echo $np_name; ?></h2>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">DOB / Age</span>
+                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_dob; ?> (<?php echo $np_age; ?>)</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Weight</span>
+                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_weight; ?> kg</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Height</span>
+                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_height; ?> cm</span>
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Last Visit</span>
+                                <span style="font-size: 14px; color: #10b981; font-weight: 600;"><?php echo $np_last; ?></span>
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Registered</span>
+                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_reg; ?></span>
+                            </div>
+                            <div style="display: flex; flex-direction: column;">
+                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Scheduled For</span>
+                                <span style="font-size: 14px; color: #3b82f6; font-weight: 800;"><?php echo $np_time; ?> Today</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contact/Actions -->
+                    <div style="display: flex; flex-direction: column; gap: 12px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <a href="tel:<?php echo $np_phone; ?>" class="btn-consult" style="background: #10b981; text-align: center; justify-content: center; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-phone"></i> Call
+                            </a>
+                            <a href="sms:<?php echo $np_phone; ?>" class="btn-consult" style="background: #3b82f6; text-align: center; justify-content: center; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-comment"></i> Msg
+                            </a>
+                        </div>
+                        
+                        <?php if($next_patient['status'] == 'Requested' || $next_patient['status'] == 'Pending'): ?>
+                            <form method="POST" style="margin:0; display:flex; gap:10px;">
+                                <input type="hidden" name="update_status" value="1">
+                                <input type="hidden" name="appt_id" value="<?php echo $next_patient['appointment_id']; ?>">
+                                <button type="submit" name="new_status" value="Approved" style="flex:1; background: #10b981; color: #fff; border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; transition:0.3s;">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                                <button type="submit" name="new_status" value="Cancelled" style="flex:1; background: #ef4444; color: #fff; border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; transition:0.3s;">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            </form>
+                        <?php else: ?>
+                            <?php 
+                                $is_lab = ($next_patient['status'] == 'Pending Lab' || $next_patient['status'] == 'Lab Completed');
+                                $btn_text = $is_lab ? 'Review Lab & Consult' : 'Start Consultation';
+                                $btn_icon = $is_lab ? 'fa-flask' : 'fa-user-md';
+                                $btn_bg = $is_lab ? '#a855f7' : '#fff';
+                                $btn_color = $is_lab ? '#fff' : '#020617';
+                            ?>
+                            <a href="doctor_dashboard.php?patient_id=<?php echo $next_patient['patient_id']; ?>&appt_id=<?php echo $next_patient['appointment_id']; ?>" 
+                               style="background: <?php echo $btn_bg; ?>; color: <?php echo $btn_color; ?>; text-decoration: none; padding: 15px; border-radius: 12px; font-weight: 800; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); transition: 0.3s;">
+                                <i class="fas <?php echo $btn_icon; ?>"></i> <?php echo $btn_text; ?>
+                            </a>
+                        <?php endif; ?>
+                        
+                        <p style="margin: 0; text-align: center; font-size: 11px; color: #94a3b8;">
+                            Status: <strong style="color:<?php echo ($next_patient['status'] == 'Requested' ? '#fbbf24' : ($is_lab ? '#a855f7' : '#10b981')); ?>"><?php echo strtoupper($next_patient['status']); ?></strong>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Inpatient Rounds Section -->
             <div class="content-section" style="margin-bottom: 30px; border: 1px solid rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05);">
@@ -485,26 +1056,42 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                         <div class="appointment-list">
                             <?php
                             $today = date('Y-m-d');
-                            // Join with users/registrations to get name. Left join profile for age/gender if available.
-                            // Assuming patient_profiles exists and has data. If not, use defaults.
                             $stmt = $conn->prepare("
-                                SELECT a.*, r.name as patient_name, r.phone, pp.patient_code, pp.gender, pp.date_of_birth 
+                                SELECT a.*, 
+                                       COALESCE(r.name, a.external_name) as patient_name, 
+                                       COALESCE(r.phone, a.external_phone) as phone, 
+                                       r.registered_date, pp.patient_code, pp.gender, pp.date_of_birth,
+                                       (SELECT weight FROM patient_vitals WHERE patient_id = a.patient_id ORDER BY recorded_at DESC LIMIT 1) as weight,
+                                       (SELECT height FROM patient_vitals WHERE patient_id = a.patient_id ORDER BY recorded_at DESC LIMIT 1) as height,
+                                       (SELECT appointment_date FROM appointments WHERE patient_id = a.patient_id AND status = 'Completed' AND appointment_date < ? ORDER BY appointment_date DESC LIMIT 1) as last_visit
                                 FROM appointments a 
-                                JOIN users u ON a.patient_id = u.user_id 
-                                JOIN registrations r ON u.registration_id = r.registration_id 
+                                LEFT JOIN users u ON a.patient_id = u.user_id 
+                                LEFT JOIN registrations r ON u.registration_id = r.registration_id 
                                 LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id 
                                 WHERE a.doctor_id = ? AND a.appointment_date = ? 
-                                ORDER BY a.appointment_time ASC
+                                ORDER BY 
+                                    CASE 
+                                        WHEN a.urgency = 'Emergency' THEN 1 
+                                        WHEN a.urgency = 'Urgent' THEN 2 
+                                        ELSE 3 
+                                    END, 
+                                    a.appointment_time ASC
                             ");
-                            $stmt->bind_param("is", $user_id, $today);
+                            $stmt->bind_param("sis", $today, $user_id, $today);
                             $stmt->execute();
                             $queue_res = $stmt->get_result();
 
                             if ($queue_res->num_rows > 0) {
                                 while ($appt = $queue_res->fetch_assoc()) {
                                     $p_name = htmlspecialchars($appt['patient_name']);
-                                    $p_code = $appt['patient_code'] ?: 'N/A';
+                                    $p_code = $appt['patient_code'] ?: ($appt['is_external'] ? 'EXTERNAL' : 'N/A');
                                     $p_time = date("h:i A", strtotime($appt['appointment_time']));
+                                    $p_phone = htmlspecialchars($appt['phone']);
+                                    $urgency = $appt['urgency'] ?? 'Normal';
+                                    $is_external = $appt['is_external'];
+                                    
+                                    // Urgency styling
+                                    $urgency_class = ($urgency == 'Emergency') ? 'background:#ef4444; color:#fff;' : (($urgency == 'Urgent') ? 'background:#f59e0b; color:#fff;' : 'background:rgba(255,255,255,0.05); color:#94a3b8;');
                                     
                                     // Calculate Age
                                     $p_age = '--';
@@ -514,32 +1101,61 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                                         $p_age = $now_date->diff($dob_date)->y . ' Yrs';
                                     }
 
+                                    $p_dob = !empty($appt['date_of_birth']) ? date('d M, Y', strtotime($appt['date_of_birth'])) : 'N/A';
                                     $p_gender = $appt['gender'] ?: 'Unknown';
                                     $p_id = $appt['patient_id'];
                                     $a_id = $appt['appointment_id'];
                                     $status = $appt['status'];
+                                    $weight = $appt['weight'] ?: 'N/A';
+                                    $height = $appt['height'] ?: 'N/A';
+                                    $last_visit = $appt['last_visit'] ? date('d M, Y', strtotime($appt['last_visit'])) : ($appt['is_external'] ? 'Guest Patient' : 'First Visit');
+                                    $reg_date = $appt['registered_date'] ? date('d M, Y', strtotime($appt['registered_date'])) : 'N/A';
                                     
                                     echo '
-                                    <div class="appointment-item" style="border-left: 4px solid '.($status == 'Requested' ? '#fbbf24' : '#3b82f6').';">
+                                    <div class="appointment-item" style="border-left: 4px solid '.($urgency == 'Emergency' ? '#ef4444' : ($urgency == 'Urgent' ? '#f59e0b' : ($status == 'Requested' ? '#fbbf24' : '#3b82f6'))).'; margin-bottom: 20px;">
                                         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                                            <div class="doc-info">
-                                                <h4 style="font-size: 15px;">'.$p_name.' <span style="font-weight: normal; color: #94a3b8; font-size: 13px;">(ID: '.$p_code.')</span></h4>
-                                                <p style="font-size: 13px; margin-top: 5px;"><i class="fas fa-clock"></i> '.$p_time.' • Age: '.$p_age.' • Sex: '.$p_gender.' • <span class="badge-status-'.$status.'" style="font-weight:600;">'.$status.'</span></p>
+                                            <div class="doc-info" style="flex: 1;">
+                                                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
+                                                    <h4 style="font-size: 16px; margin: 0;">'.$p_name.' <span style="font-weight: normal; color: #94a3b8; font-size: 13px;">(ID: '.$p_code.')</span></h4>
+                                                    '.($is_external ? '<span class="badge" style="background:#3b82f6; color:#fff; font-size:10px;">EXTERNAL</span>' : '').'
+                                                    <span class="badge" style="font-size:10px; '.$urgency_class.'">'.$urgency.'</span>
+                                                    <span class="badge-status-'.$status.'" style="font-weight:600; font-size:10px;">'.$status.'</span>
+                                                </div>
+                                                
+                                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+                                                    <div style="font-size: 12px; color: #94a3b8;"><i class="fas fa-calendar-alt"></i> DOB: <span style="color: #fff;">'.$p_dob.' ('.$p_age.')</span></div>
+                                                    <div style="font-size: 12px; color: #94a3b8;"><i class="fas fa-venus-mars"></i> Gender: <span style="color: #fff;">'.$p_gender.'</span></div>
+                                                    <div style="font-size: 12px; color: #94a3b8;"><i class="fas fa-weight"></i> Weight: <span style="color: #fff;">'.$weight.' kg</span></div>
+                                                    <div style="font-size: 12px; color: #94a3b8;"><i class="fas fa-ruler-vertical"></i> Height: <span style="color: #fff;">'.$height.' cm</span></div>
+                                                    <div style="font-size: 12px; color: #94a3b8;"><i class="fas fa-history"></i> Last Visit: <span style="color: #3b82f6; font-weight: 600;">'.$last_visit.'</span></div>
+                                                    <div style="font-size: 12px; color: #94a3b8;"><i class="fas fa-user-plus"></i> Registered: <span style="color: #fff;">'.$reg_date.'</span></div>
+                                                </div>
+
+                                                <div style="display: flex; gap: 10px; align-items: center;">
+                                                    <div style="font-size: 13px; color: #fff; font-weight: 600;"><i class="fas fa-clock"></i> Scheduled: '.$p_time.'</div>
+                                                    <div style="flex: 1;"></div>
+                                                    <a href="tel:'.$p_phone.'" class="btn-consult" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);"><i class="fas fa-phone"></i> Call</a>
+                                                    <a href="sms:'.$p_phone.'" class="btn-consult" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);"><i class="fas fa-comment-alt"></i> Message</a>
+                                                </div>
                                             </div>
-                                            <div class="action-btns" style="display:flex; gap:10px;">';
+                                            <div class="action-btns" style="display:flex; flex-direction: column; gap:10px; margin-left: 20px;">';
                                                 if($status == 'Requested' || $status == 'Pending') {
-                                                    echo '<form method="POST" style="margin:0;">
+                                                    echo '<form method="POST" style="margin:0; display:flex; gap:10px;">
                                                             <input type="hidden" name="update_status" value="1">
                                                             <input type="hidden" name="appt_id" value="'.$a_id.'">
-                                                            <input type="hidden" name="new_status" value="Approved">
-                                                            <button type="submit" class="btn-consult" style="background:#10b981;"><i class="fas fa-check"></i> Approve</button>
+                                                            <button type="submit" name="new_status" value="Approved" class="btn-consult" style="background:#10b981; flex:1;"><i class="fas fa-check"></i></button>
+                                                            <button type="submit" name="new_status" value="Cancelled" class="btn-consult" style="background:#ef4444; flex:1;"><i class="fas fa-times"></i></button>
                                                           </form>';
                                                 } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed' || $status == 'Pending Lab' || $status == 'Lab Completed') {
-                                                    $is_lab = ($status == 'Pending Lab' || $status == 'Lab Completed');
-                                                    $btn_text = $is_lab ? 'Review Lab' : 'Consult';
-                                                    $btn_icon = $is_lab ? 'fa-flask' : 'fa-user-md';
-                                                    $btn_style = $is_lab ? 'background:#a855f7;' : '';
-                                                    echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult" style="'.$btn_style.'"><i class="fas '.$btn_icon.'"></i> '.$btn_text.'</a>';
+                                                    if($appt['is_external']) {
+                                                        echo '<span style="font-size: 11px; color: #94a3b8; text-align: center;"><i class="fas fa-id-card"></i> Reg. Required</span>';
+                                                    } else {
+                                                        $is_lab = ($status == 'Pending Lab' || $status == 'Lab Completed');
+                                                        $btn_text = $is_lab ? 'Review Lab' : 'Consult Now';
+                                                        $btn_icon = $is_lab ? 'fa-flask' : 'fa-user-md';
+                                                        $btn_style = $is_lab ? 'background:#a855f7;' : 'background:#3b82f6;';
+                                                        echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult" style="'.$btn_style.' text-align: center;"><i class="fas '.$btn_icon.'"></i> '.$btn_text.'</a>';
+                                                    }
                                                 }
                                     echo '  </div>
                                         </div>
@@ -552,8 +1168,9 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
                         </div>
                     </div>
 
+
                     <!-- ACTIVE CASE: Health Analysis & Medical History -->
-                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; margin-top: 30px;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; margin-top: 0px;">
                         <!-- Comprehensive Health Analytics -->
                         <div class="content-section">
                             <div class="section-head">
@@ -1087,6 +1704,51 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
             }
         });
 
+        // Weekly Consultation Traffic Chart
+        const wctCtx = document.getElementById('weeklyConsultChart').getContext('2d');
+        new Chart(wctCtx, {
+            type: 'bar',
+            data: {
+                labels: <?php echo $labels_json; ?>,
+                datasets: [{
+                    label: 'Patients Seen',
+                    data: <?php echo $counts_json; ?>,
+                    backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                    borderColor: '#3b82f6',
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    barThickness: 30,
+                    hoverBackgroundColor: '#3b82f6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#fff',
+                        bodyColor: '#cbd5e1',
+                        padding: 12,
+                        cornerRadius: 10,
+                        displayColors: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                        ticks: { color: '#94a3b8', stepSize: 1 }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#fff', font: { weight: '600' } }
+                    }
+                }
+            }
+        });
+
         // UI Functions
         let patientVitalsChart = null;
 
@@ -1269,6 +1931,151 @@ $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
             
             initBrandAnimation();
         });
+    </script>
+    <script>
+        function toggleDropdown(id) {
+            // Close all other dropdowns
+            document.querySelectorAll('.header-dropdown').forEach(d => {
+                if(d.id !== id) d.classList.remove('show');
+            });
+            // Toggle current
+            document.getElementById(id).classList.toggle('show');
+        }
+
+        // Close on outside click
+        window.onclick = function(event) {
+            if (!event.target.closest('.header-item-relative')) {
+                document.querySelectorAll('.header-dropdown').forEach(d => {
+                    d.classList.remove('show');
+                });
+            }
+        }
+    </script>
+    <!-- Create Appointment Modal -->
+    <div id="apptModal" class="modal">
+        <div class="modal-card">
+            <div class="modal-card-head">
+                <h3 style="color: #fff; margin: 0;"><i class="fas fa-calendar-plus" style="color: #10b981;"></i> New Appointment</h3>
+                <button onclick="closeApptModal()" style="background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer;"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-card-body">
+                <form method="POST">
+                    <input type="hidden" name="create_appointment" value="1">
+                    
+                    <div class="form-group">
+                        <label>Patient Type</label>
+                        <div style="display: flex; gap: 20px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff;">
+                                <input type="radio" name="is_external" value="0" checked onchange="togglePatientSource(false)"> Existing Patient
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #fff;">
+                                <input type="radio" name="is_external" value="1" onchange="togglePatientSource(true)"> External Patient
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Existing Patient Search -->
+                    <div id="existingPatientGroup" class="form-group">
+                        <label>Select Patient</label>
+                        <select name="patient_id" class="form-control">
+                            <option value="">-- Choose Patient --</option>
+                            <?php 
+                            $pall = $conn->query("SELECT u.user_id, r.name FROM users u JOIN registrations r ON u.registration_id = r.registration_id WHERE u.user_role = 'patient'");
+                            while($prow = $pall->fetch_assoc()) {
+                                echo '<option value="'.$prow['user_id'].'">'.htmlspecialchars($prow['name']).'</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <!-- External Patient Details -->
+                    <div id="externalPatientGroup" style="display: none;">
+                        <div class="form-group">
+                            <label>Patient Name (External)</label>
+                            <input type="text" name="external_name" class="form-control" placeholder="Full Name">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone Number</label>
+                            <input type="text" name="external_phone" class="form-control" placeholder="Mobile Number">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="padding: 10px; background: rgba(59, 130, 246, 0.05); border-radius: 8px; margin-bottom: 20px;">
+                        <label style="color: #60a5fa; font-size: 11px;">REFERRING DOCTOR (AUTO-FILLED)</label>
+                        <div style="color: #fff; font-weight: 600;"><?php echo $doctor_name; ?></div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div class="form-group">
+                            <label>Appointment Date</label>
+                            <input type="date" name="app_date" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Preferred Time</label>
+                            <input type="time" name="app_time" class="form-control" value="<?php echo date('H:i'); ?>" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Consulting Doctor</label>
+                        <select name="target_doctor_id" class="form-control" required>
+                            <?php 
+                            $dall = $conn->query("SELECT d.user_id, r.name FROM doctors d JOIN users u ON d.user_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id ORDER BY r.name ASC");
+                            if ($dall) {
+                                while($drow = $dall->fetch_assoc()) {
+                                    $selected = ($drow['user_id'] == $user_id) ? 'selected' : '';
+                                    echo '<option value="'.$drow['user_id'].'" '.$selected.'>'.htmlspecialchars($drow['name']).'</option>';
+                                }
+                            }
+                            ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="background: rgba(239, 68, 68, 0.05); padding: 12px; border-radius: 10px; border-left: 3px solid #ef4444;">
+                        <label style="color: #ef4444; font-weight: 700;">URGENCY LEVEL</label>
+                        <select name="urgency" class="form-control" style="border-color: rgba(239, 68, 68, 0.3);">
+                            <option value="Normal">Normal Consultation</option>
+                            <option value="Urgent">Urgent (Priority)</option>
+                            <option value="Emergency">Stat / Emergency</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Clinical Notes (Brief)</label>
+                        <textarea name="reason" class="form-control" rows="2" placeholder="e.g. Cardio evaluation requested for persistent chest pain..."></textarea>
+                    </div>
+
+                    <div style="margin-top: 30px;">
+                        <button type="submit" style="width: 100%; padding: 15px; background: #10b981; color: #fff; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 15px;">Book Appointment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openApptModal() { document.getElementById('apptModal').classList.add('active'); }
+        function closeApptModal() { document.getElementById('apptModal').classList.remove('active'); }
+        
+        function togglePatientSource(isExt) {
+            document.getElementById('existingPatientGroup').style.display = isExt ? 'none' : 'block';
+            document.getElementById('externalPatientGroup').style.display = isExt ? 'block' : 'none';
+            
+            // Set required attributes accordingly
+            const extName = document.querySelector('input[name="external_name"]');
+            const extPhone = document.querySelector('input[name="external_phone"]');
+            const intSearch = document.querySelector('select[name="patient_id"]');
+            
+            if(isExt) {
+                extName.required = true;
+                extPhone.required = true;
+                intSearch.required = false;
+            } else {
+                extName.required = false;
+                extPhone.required = false;
+                intSearch.required = true;
+            }
+        }
     </script>
 </body>
 </html>

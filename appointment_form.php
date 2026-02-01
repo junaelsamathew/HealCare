@@ -36,9 +36,15 @@ $result = $conn->query($sql);
 
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
-        if(empty($row['img'])) {
-            $row['img'] = 'images/doctor-' . (rand(1, 10)) . '.jpg'; 
+        $img_path = 'images/doctor_placeholder.png'; // Default
+        if (!empty($row['img'])) {
+            if (file_exists($row['img'])) {
+                $img_path = $row['img'];
+            } elseif (file_exists('images/' . $row['img'])) {
+                $img_path = 'images/' . $row['img'];
+            }
         }
+        $row['img'] = $img_path;
         $doctors[] = $row;
     }
 }

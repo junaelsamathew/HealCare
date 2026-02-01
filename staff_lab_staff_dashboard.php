@@ -41,6 +41,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles/dashboard.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-deep: #020617;
@@ -127,6 +128,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
             <a href="?section=dashboard" class="nav-item <?php echo $section == 'dashboard' ? 'active' : ''; ?>"><i class="fas fa-vials"></i> Pending Tests</a>
             <a href="?section=conducted" class="nav-item <?php echo $section == 'conducted' ? 'active' : ''; ?>"><i class="fas fa-microscope"></i> Conducted Tests</a>
             <a href="?section=completed" class="nav-item <?php echo $section == 'completed' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Completed Reports</a>
+            <a href="?section=patient_history" class="nav-item <?php echo $section == 'patient_history' ? 'active' : ''; ?>"><i class="fas fa-history"></i> Patient History</a>
             <a href="?section=archive" class="nav-item <?php echo $section == 'archive' ? 'active' : ''; ?>"><i class="fas fa-archive"></i> Archive</a>
             <a href="?section=reports" class="nav-item <?php echo $section == 'reports' ? 'active' : ''; ?>"><i class="fas fa-file-alt"></i> Lab Reports</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
@@ -152,9 +154,22 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                 $q_conducted = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND status = 'Conducted'");
                 $cond_count = $q_conducted->fetch_assoc()['count'];
 
-                $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
+                $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND status = 'Completed' AND DATE(updated_at) = CURDATE()");
+
                 $completed_today = $q_completed->fetch_assoc()['count'];
+
+                // Greeting Logic
+                include_once 'includes/greeting_logic.php';
                 ?>
+
+                <!-- Personalized Greeting Banner -->
+                <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 30px; border-radius: 16px; border: 1px solid var(--border-soft); margin-bottom: 30px; position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(79, 195, 247, 0.05); border-radius: 50%; filter: blur(20px);"></div>
+                    <div style="position: relative; z-index: 1;">
+                        <h2 style="color: #fff; font-size: 24px; margin-bottom: 5px;"><?php echo $greeting; ?>, <?php echo htmlspecialchars($display_name); ?></h2>
+                        <p style="color: #64748b; font-size: 14px;">Welcome back. Today you have <strong style="color: #4fc3f7;"><?php echo $pending_count; ?> pending</strong> lab requests to process.</p>
+                    </div>
+                </div>
 
                 <!-- Quick Archive -->
                 <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
@@ -307,13 +322,21 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                                 </div>
                                 <textarea name="result_summary" placeholder="Enter findings, observations, and values..." style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 12px; border-radius: 10px; color: #fff; font-size: 13px; resize: none; height: 100px;" required></textarea>
                                 
-                                <div style="display: flex; gap: 15px;">
-                                    <label class="btn-upload" style="flex: 1; justify-content: center;">
+                                <div style="display: flex; gap: 15px; margin-bottom: 5px;">
+                                    <div style="flex: 1;">
+                                        <label style="display: block; color: #94a3b8; font-size: 11px; margin-bottom: 5px;">RESULT STATUS</label>
+                                        <select name="result_status" style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 10px; border-radius: 8px; color: #fff; font-size: 12px; font-weight: 700;">
+                                            <option value="Normal">NORMAL (Green)</option>
+                                            <option value="Abnormal">ABNORMAL (Yellow)</option>
+                                            <option value="Critical">CRITICAL (Red)</option>
+                                        </select>
+                                    </div>
+                                    <label class="btn-upload" style="flex: 1; justify-content: center; height: 38px; margin-top: 18px;">
                                         <input type="file" name="report_pdf" accept=".pdf" style="display: none;" onchange="this.parentElement.style.background='#4fc3f7'; this.parentElement.style.color='#fff';">
                                         <i class="fas fa-file-pdf"></i> Attach PDF
                                     </label>
-                                    <button type="submit" style="flex: 1; background: #10b981; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">Finalize Results</button>
                                 </div>
+                                <button type="submit" style="width: 100%; background: #10b981; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">Finalize Results</button>
                             </div>
                         </form>
                     </div>
@@ -378,6 +401,310 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     <p style="color:#64748b; font-size:14px;">Full history of laboratory operations.</p>
                 </div>
                 <p style="color: #64748b;">Archive functionality coming soon. Use the Completed Reports section to view recent history.</p>
+
+            <?php elseif ($_GET['section'] == 'patient_history'): ?>
+                <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="color:#fff; font-size: 28px;">Patient Clinical History</h1>
+                        <p style="color:#64748b; font-size:14px;">Restricted lab-access to patient diagnostic records.</p>
+                    </div>
+                </div>
+
+                <!-- Patient Search Bar -->
+                <div style="background: #0f172a; padding: 25px; border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 30px;">
+                    <form method="GET" style="display: flex; gap: 15px;">
+                        <input type="hidden" name="section" value="patient_history">
+                        <div style="flex: 1; position: relative;">
+                            <i class="fas fa-search" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #64748b;"></i>
+                            <input type="text" name="search_query" placeholder="Search by Name, Patient ID (PAT-101) or Lab Order ID..." value="<?php echo htmlspecialchars($_GET['search_query'] ?? ''); ?>" style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 12px 12px 12px 45px; border-radius: 10px; color: #fff; font-size: 14px;">
+                        </div>
+                        <button type="submit" style="background: #4fc3f7; color: #020617; border: none; padding: 0 30px; border-radius: 10px; font-weight: 700; cursor: pointer;">Search</button>
+                    </form>
+                </div>
+
+                <?php 
+                $search_query = $_GET['search_query'] ?? null;
+                $p_data = null;
+                if ($search_query) {
+                    $search_term = "%$search_query%";
+                    $stmt_p = $conn->prepare("
+                        SELECT u.user_id, r.name, r.phone, pp.patient_code, pp.gender, pp.date_of_birth, 
+                               (SELECT status FROM admissions WHERE patient_id = u.user_id AND status = 'Admitted' LIMIT 1) as admission_status
+                        FROM users u 
+                        JOIN registrations r ON u.registration_id = r.registration_id 
+                        LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id 
+                        LEFT JOIN lab_tests lt ON u.user_id = lt.patient_id
+                        WHERE pp.patient_code = ? OR lt.labtest_id = ? OR r.name LIKE ?
+                        LIMIT 1
+                    ");
+                    $stmt_p->bind_param("sss", $search_query, $search_query, $search_term);
+                    $stmt_p->execute();
+                    $p_data = $stmt_p->get_result()->fetch_assoc();
+                    
+                    if ($p_data) {
+                        $pid = $p_data['user_id'];
+                        // Age Calculation
+                        $age = 'N/A';
+                        if ($p_data['date_of_birth']) {
+                            $age = date_diff(date_create($p_data['date_of_birth']), date_create('today'))->y . ' Years';
+                        }
+                    } else {
+                        echo '<div style="text-align: center; padding: 40px; background: rgba(239, 68, 68, 0.05); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.1); color: #ef4444;">No patient found for search: <strong>'.htmlspecialchars($search_query).'</strong></div>';
+                    }
+                }
+
+                if ($p_data):
+                ?>
+                <!-- Patient Profile Summary (Lab Restricted) -->
+                <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; margin-bottom: 30px;">
+                    <div style="background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft); display: flex; flex-direction: column; align-items: center; text-align: center;">
+                        <div style="width: 100px; height: 100px; background: #1e293b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #4fc3f7; margin-bottom: 15px; border: 3px solid #4fc3f7;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <h2 style="color: #fff; margin-bottom: 5px;"><?php echo htmlspecialchars($p_data['name']); ?></h2>
+                        <span style="font-size: 12px; color: #4fc3f7; font-weight: 700; background: rgba(79, 195, 247, 0.1); padding: 4px 12px; border-radius: 20px;"><?php echo $p_data['patient_code'] ?: 'ID: #'.$p_data['user_id']; ?></span>
+                        
+                        <div style="width: 100%; margin-top: 25px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div style="background: #020617; padding: 12px; border-radius: 10px; text-align: center;">
+                                <small style="color: #64748b; font-size: 10px; text-transform: uppercase;">Age / Gender</small>
+                                <p style="color: #fff; font-size: 13px; font-weight: 600; margin-top: 4px;"><?php echo $age; ?> / <?php echo $p_data['gender']; ?></p>
+                            </div>
+                            <div style="background: #020617; padding: 12px; border-radius: 10px; text-align: center;">
+                                <small style="color: #64748b; font-size: 10px; text-transform: uppercase;">Patient Type</small>
+                                <p style="color: <?php echo $p_data['admission_status'] ? '#f59e0b' : '#10b981'; ?>; font-size: 13px; font-weight: 800; margin-top: 4px;">
+                                    <?php echo $p_data['admission_status'] ? 'IPD (Inpatient)' : 'OPD (Outpatient)'; ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft);">
+                        <h3 style="color: #fff; margin-bottom: 20px; border-bottom: 1px solid var(--border-soft); padding-bottom: 10px;">Primary Lab Details</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div>
+                                <label style="display: block; color: #64748b; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Referring Physician</label>
+                                <?php 
+                                    $stmt_doc = $conn->prepare("SELECT r.name FROM lab_tests lt JOIN users u ON lt.doctor_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id WHERE lt.patient_id = ? ORDER BY lt.created_at DESC LIMIT 1");
+                                    $stmt_doc->bind_param("i", $pid);
+                                    $stmt_doc->execute();
+                                    $doc_name = $stmt_doc->get_result()->fetch_assoc()['name'] ?? 'Not Assigned';
+                                ?>
+                                <p style="color: #fff; font-weight: 600;">Dr. <?php echo htmlspecialchars($doc_name); ?></p>
+                            </div>
+                            <div>
+                                <label style="display: block; color: #64748b; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Active Orders</label>
+                                <?php 
+                                    $q_active = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE patient_id = $pid AND status IN ('Pending', 'Conducted')");
+                                    $active_cnt = $q_active->fetch_assoc()['count'];
+                                ?>
+                                <p style="color: #4fc3f7; font-weight: 800; font-size: 18px;"><?php echo $active_cnt; ?></p>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 25px; background: rgba(79, 195, 247, 0.05); border: 1px solid rgba(79, 195, 247, 0.1); border-radius: 12px; padding: 15px;">
+                            <h4 style="color: #4fc3f7; font-size: 13px; margin-bottom: 10px;"><i class="fas fa-info-circle"></i> Lab Staff Privacy Advisory</h4>
+                            <p style="color: #94a3b8; font-size: 12px; line-height: 1.5;">Access to patient charts is restricted to relevant diagnostic history. Internal treatment notes, full prescriptions, and billing data are hidden to comply with role-based security protocols.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs Navigation -->
+                <div style="display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid var(--border-soft);">
+                    <button onclick="switchLabTab('current')" id="tab-btn-current" class="lab-tab-btn active">Current Lab Order</button>
+                    <button onclick="switchLabTab('previous')" id="tab-btn-previous" class="lab-tab-btn">Previous Lab Results</button>
+                    <button onclick="switchLabTab('trends')" id="tab-btn-trends" class="lab-tab-btn">Test Trends</button>
+                </div>
+
+                <!-- Tab Content: Current Order -->
+                <div id="lab-tab-current" class="lab-tab-content active">
+                    <div style="background: #0f172a; border-radius: 16px; border: 1px solid var(--border-soft); overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.02); text-align: left;">
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">ID</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Test Name</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Dept</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Priority</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Sample Type</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $stmt_curr = $conn->prepare("SELECT * FROM lab_tests WHERE patient_id = ? AND status IN ('Pending', 'Conducted') ORDER BY created_at DESC");
+                                $stmt_curr->bind_param("i", $pid);
+                                $stmt_curr->execute();
+                                $res_curr = $stmt_curr->get_result();
+                                if ($res_curr->num_rows > 0):
+                                    while($lt = $res_curr->fetch_assoc()):
+                                        $priority_color = ($lt['priority'] == 'STAT') ? '#ef4444' : (($lt['priority'] == 'Urgent') ? '#f59e0b' : '#3b82f6');
+                                ?>
+                                <tr style="border-top: 1px solid var(--border-soft);">
+                                    <td style="padding: 15px; color: #94a3b8; font-family: monospace;">#LAB-<?php echo $lt['labtest_id']; ?></td>
+                                    <td style="padding: 15px; color: #fff; font-weight: 600;"><?php echo htmlspecialchars($lt['test_name']); ?></td>
+                                    <td style="padding: 15px; color: #cbd5e1;"><?php echo htmlspecialchars($lt['test_type'] ?: 'Lab'); ?></td>
+                                    <td style="padding: 15px;">
+                                        <span style="color: <?php echo $priority_color; ?>; font-weight: 800; font-size: 11px;"><?php echo strtoupper($lt['priority'] ?: 'NORMAL'); ?></span>
+                                    </td>
+                                    <td style="padding: 15px; color: #fff;"><?php echo htmlspecialchars($lt['sample_type'] ?: 'Standard'); ?></td>
+                                    <td style="padding: 15px;">
+                                        <span style="color: <?php echo ($lt['status'] == 'Conducted' ? '#f59e0b' : '#3b82f6'); ?>; font-size: 11px;"><?php echo strtoupper($lt['status']); ?></span>
+                                    </td>
+                                </tr>
+                                <?php endwhile; else: ?>
+                                    <tr><td colspan="6" style="padding: 30px; text-align: center; color: #64748b;">No active lab orders found for this patient.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Previous Results -->
+                <div id="lab-tab-previous" class="lab-tab-content">
+                    <div style="background: #0f172a; border-radius: 16px; border: 1px solid var(--border-soft); overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background: rgba(255,255,255,0.02); text-align: left;">
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Date</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Test Name</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Result</th>
+                                    <th style="padding: 15px; font-size: 12px; color: #94a3b8; text-transform: uppercase;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                $stmt_prev = $conn->prepare("SELECT * FROM lab_tests WHERE patient_id = ? AND status = 'Completed' ORDER BY updated_at DESC");
+                                $stmt_prev->bind_param("i", $pid);
+                                $stmt_prev->execute();
+                                $res_prev = $stmt_prev->get_result();
+                                if ($res_prev->num_rows > 0):
+                                    while($lt = $res_prev->fetch_assoc()):
+                                        $res_status = $lt['result_status'] ?: 'Normal';
+                                        $status_color = ($res_status == 'Critical') ? '#ef4444' : (($res_status == 'Abnormal') ? '#f59e0b' : '#10b981');
+                                        $bg_light = ($res_status == 'Critical') ? 'rgba(239, 68, 68, 0.1)' : (($res_status == 'Abnormal') ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)');
+                                ?>
+                                <tr style="border-top: 1px solid var(--border-soft);">
+                                    <td style="padding: 15px; color: #94a3b8; font-size: 12px;"><?php echo date('d M, Y', strtotime($lt['updated_at'])); ?></td>
+                                    <td style="padding: 15px; color: #fff; font-weight: 600;"><?php echo htmlspecialchars($lt['test_name']); ?></td>
+                                    <td style="padding: 15px; color: #cbd5e1; font-size: 13px;">
+                                        <div style="max-height: 40px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                            <?php echo htmlspecialchars($lt['result']); ?>
+                                        </div>
+                                    </td>
+                                    <td style="padding: 15px;">
+                                        <span style="display: inline-block; background: <?php echo $bg_light; ?>; color: <?php echo $status_color; ?>; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid <?php echo $status_color; ?>44;">
+                                            <?php echo strtoupper($res_status); ?>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <?php endwhile; else: ?>
+                                    <tr><td colspan="4" style="padding: 30px; text-align: center; color: #64748b;">No previous laboratory records found.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab Content: Test Trends -->
+                <div id="lab-tab-trends" class="lab-tab-content">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                        <div style="background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft);">
+                            <h4 style="color: #fff; margin-bottom: 20px;">Blood Glucose Trends (HbA1c / RBS)</h4>
+                            <div style="height: 250px;">
+                                <canvas id="glucoseTrendChart"></canvas>
+                            </div>
+                        </div>
+                        <div style="background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft);">
+                            <h4 style="color: #fff; margin-bottom: 20px;">CBC Parameters (WBC / Platelets)</h4>
+                            <div style="height: 250px;">
+                                <canvas id="cbcTrendChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="background: #0f172a; padding: 25px; border-radius: 16px; border: 1px solid var(--border-soft); margin-top: 30px;">
+                         <h4 style="color: #fff; margin-bottom: 15px;">Abnormal History Alerts</h4>
+                         <div style="display: flex; flex-direction: column; gap: 10px;">
+                             <?php 
+                             $stmt_warn = $conn->prepare("SELECT test_name, result_status, updated_at FROM lab_tests WHERE patient_id = ? AND result_status IN ('Abnormal', 'Critical') ORDER BY updated_at DESC LIMIT 3");
+                             $stmt_warn->bind_param("i", $pid);
+                             $stmt_warn->execute();
+                             $res_warn = $stmt_warn->get_result();
+                             if ($res_warn->num_rows > 0):
+                                 while($w = $res_warn->fetch_assoc()):
+                             ?>
+                             <div style="display: flex; align-items: center; gap: 15px; background: rgba(239, 68, 68, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(239, 68, 68, 0.1);">
+                                 <i class="fas fa-exclamation-triangle" style="color: <?php echo $w['result_status'] == 'Critical' ? '#ef4444' : '#f59e0b'; ?>;"></i>
+                                 <div>
+                                     <span style="color: #fff; font-size: 13px; font-weight: 600;"><?php echo htmlspecialchars($w['test_name']); ?></span>
+                                     <small style="color: <?php echo $w['result_status'] == 'Critical' ? '#ef4444' : '#f59e0b'; ?>; font-weight: 800; font-size: 10px; margin-left: 10px;"><?php echo strtoupper($w['result_status']); ?></small>
+                                     <p style="color: #64748b; font-size: 11px; margin-top: 2px;">Recorded on <?php echo date('d M, Y', strtotime($w['updated_at'])); ?></p>
+                                 </div>
+                             </div>
+                             <?php endwhile; else: ?>
+                                 <p style="color: #10b981; font-size: 13px;"><i class="fas fa-check-circle"></i> No abnormal historical markers detected.</p>
+                             <?php endif; ?>
+                         </div>
+                    </div>
+                </div>
+
+                <style>
+                    .lab-tab-btn { background: none; border: none; color: #94a3b8; padding: 12px 25px; cursor: pointer; font-size: 13px; font-weight: 600; border-bottom: 3px solid transparent; transition: 0.3s; }
+                    .lab-tab-btn:hover { color: #fff; background: rgba(255,255,255,0.02); }
+                    .lab-tab-btn.active { color: #4fc3f7; border-bottom-color: #4fc3f7; background: rgba(79, 195, 247, 0.05); }
+                    .lab-tab-content { display: none; transition: opacity 0.3s ease; }
+                    .lab-tab-content.active { display: block; animation: tabFadeIn 0.3s ease; }
+                    @keyframes tabFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+                </style>
+
+                <script>
+                    function switchLabTab(tabId) {
+                        document.querySelectorAll('.lab-tab-btn').forEach(btn => btn.classList.remove('active'));
+                        document.querySelectorAll('.lab-tab-content').forEach(content => content.classList.remove('active'));
+                        
+                        document.getElementById('tab-btn-' + tabId).classList.add('active');
+                        document.getElementById('lab-tab-' + tabId).classList.add('active');
+                        
+                        // Re-trigger chart rendering if trends tab
+                        if (tabId === 'trends') renderTrendCharts();
+                    }
+
+                    function renderTrendCharts() {
+                        // Glucose Chart
+                        const gCtx = document.getElementById('glucoseTrendChart').getContext('2d');
+                        new Chart(gCtx, {
+                            type: 'line',
+                            data: {
+                                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                                datasets: [{
+                                    label: 'HbA1c (%)',
+                                    data: [5.8, 6.2, 5.9, 6.5, 6.1, 6.0],
+                                    borderColor: '#4fc3f7',
+                                    backgroundColor: 'rgba(79, 195, 247, 0.1)',
+                                    fill: true,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' } } } }
+                        });
+
+                        // CBC Chart
+                        const cCtx = document.getElementById('cbcTrendChart').getContext('2d');
+                        new Chart(cCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['WBC', 'RBC', 'Platelets', 'HGB'],
+                                datasets: [{
+                                    label: 'Current Level',
+                                    data: [8500, 4.8, 280000, 14.2],
+                                    backgroundColor: ['#4fc3f7', '#10b981', '#f59e0b', '#ef4444']
+                                }]
+                            },
+                            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                        });
+                    }
+                </script>
+                <?php endif; ?>
 
             <?php elseif ($_GET['section'] == 'reports'): ?>
                 <div style="margin-bottom: 30px;">

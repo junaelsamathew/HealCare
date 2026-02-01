@@ -446,10 +446,19 @@ while ($row = $notif_res->fetch_assoc()) {
 
         <!-- Main Content Area -->
         <main class="main-content">
-            <div class="dashboard-header">
-                <h1>Patient Dashboard</h1>
-                <p style="font-size: 1.25rem; font-weight: 600; color: #4fc3f7; margin-bottom: 10px;">Hello, <?php echo htmlspecialchars($display_name); ?></p>
-                <p>Welcome back! Here's your real-time health and hospital status.</p>
+            <div class="dashboard-header" style="margin-bottom: 30px;">
+                <?php 
+                include_once 'includes/greeting_logic.php';
+                ?>
+                <div class="greeting-banner" style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+                    <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(79, 195, 247, 0.05); border-radius: 50%; filter: blur(40px);"></div>
+                    <div style="position: relative; z-index: 1;">
+                        <h2 style="color: #fff; font-size: 26px; font-weight: 700; margin-bottom: 5px;"><?php echo $greeting; ?>, <?php echo htmlspecialchars($display_name); ?></h2>
+                        <p style="color: #94a3b8; font-size: 14px;">Welcome back! Here's your real-time health and hospital status.</p>
+                    </div>
+                </div>
+                
+                <h1 style="display: none;">Patient Dashboard</h1>
             </div>
 
             <!-- Enhanced Stats Overview Cards -->

@@ -227,7 +227,14 @@ include 'includes/header.php';
                             ?>
                             <div class="doctor-slide <?php echo $active; ?>" style="display: <?php echo $display; ?>;">
                                 <?php foreach($pair as $doc): 
-                                    $img = $doc['profile_photo'] ? $doc['profile_photo'] : 'images/default-doctor.jpg';
+                                    $img = 'images/doctor_placeholder.png';
+                                    if (!empty($doc['profile_photo'])) {
+                                        if (file_exists($doc['profile_photo'])) {
+                                            $img = $doc['profile_photo'];
+                                        } elseif (file_exists('images/' . $doc['profile_photo'])) {
+                                            $img = 'images/' . $doc['profile_photo'];
+                                        }
+                                    }
                                     $dept = $doc['department'] ? $doc['department'] : $target_doctors[$doc['email']];
                                 ?>
                                 <a href="public_doctor_profile.php?email=<?php echo $doc['email']; ?>" class="doctor-card-link" style="text-decoration: none; color: inherit; display: block;">
