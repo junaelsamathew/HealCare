@@ -320,7 +320,10 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
             $_SESSION['username'] = 'admin';
             $_SESSION['user_id'] = 0; // Fixed Admin ID
             $_SESSION['full_name'] = 'Administrator';
+<<<<<<< HEAD
             $_SESSION['email'] = 'admin@gmail.com';
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             header("Location: admin_dashboard.php");
             exit();
         }
@@ -339,7 +342,10 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
                 $_SESSION['user_role'] = $user['role'];
                 $_SESSION['username'] = $user['username'];
                 $_SESSION['user_id'] = $user['user_id'];
+<<<<<<< HEAD
                 $_SESSION['email'] = $user['email'];
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 
                 // Fetch Real Name from Registrations
                 $reg_id = $user['registration_id'];
@@ -409,7 +415,10 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
             $_SESSION['user_role'] = $user['role'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['user_id'] = $user['user_id'];
+<<<<<<< HEAD
             $_SESSION['email'] = $user['email'];
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             
             // Fetch Name
             $reg_id = $user['registration_id'];
@@ -466,7 +475,10 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
                 $_SESSION['username'] = $uname;
                 $_SESSION['user_id'] = $new_user_id;
                 $_SESSION['full_name'] = $name;
+<<<<<<< HEAD
                 $_SESSION['email'] = $email;
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
                 header("Location: patient_dashboard.php");
                 exit();
@@ -684,7 +696,10 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
             $_SESSION['user_id'] = $user_id;
             $_SESSION['username'] = $user['username'];
             $_SESSION['user_role'] = $user['role'];
+<<<<<<< HEAD
             $_SESSION['email'] = $user['email'];
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             
             // Get Name
             $reg_id = $user['registration_id'];

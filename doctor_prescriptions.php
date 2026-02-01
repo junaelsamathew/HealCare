@@ -31,6 +31,7 @@ $doctor_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username'])
 if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') === false) {
     $doctor_name = "Dr. " . $doctor_name;
 }
+<<<<<<< HEAD
 
 // Fetch Assigned Patients
 $dropdown_patients = [];
@@ -65,6 +66,8 @@ $stmt_hist->bind_param("i", $user_id);
 $stmt_hist->execute();
 $res_hist = $stmt_hist->get_result();
 while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -100,21 +103,32 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
             font-weight: 600;
         }
         .form-group input, .form-group select, .form-group textarea {
+<<<<<<< HEAD
             background: #111d33;
             border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 12px 15px;
             border-radius: 10px;
             color: #ffffff;
+=======
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 15px;
+            border-radius: 10px;
+            color: white;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             font-size: 14px;
             outline: none;
         }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
             border-color: #4fc3f7;
         }
+<<<<<<< HEAD
         select option {
             background-color: #0f172a;
             color: white;
         }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         .medicine-row {
             display: grid;
             grid-template-columns: 2fr 1fr 1fr 1fr 0.5fr;
@@ -189,7 +203,10 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
                 <a href="doctor_dashboard.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="doctor_patients.php" class="nav-link"><i class="fas fa-user-injured"></i> Patients</a>
                 <a href="doctor_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> Appointments</a>
+<<<<<<< HEAD
                 <a href="create_appointment.php" class="nav-link"><i class="fas fa-plus-circle"></i> Create Appointment</a>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="doctor_prescriptions.php" class="nav-link active"><i class="fas fa-file-prescription"></i> Prescriptions</a>
                 <a href="doctor_lab_orders.php" class="nav-link"><i class="fas fa-flask"></i> Lab Orders</a>
                 <a href="doctor_leave.php" class="nav-link"><i class="fas fa-calendar-minus"></i> Apply Leave</a>
@@ -205,6 +222,7 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
 
             <div class="form-container">
                 <h2 style="color: white; margin-bottom: 25px;">Create New Prescription</h2>
+<<<<<<< HEAD
                 <form id="prescriptionForm" method="POST" novalidate>
                     <div class="form-grid">
                         <div class="form-group">
@@ -214,15 +232,31 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
                                 <?php foreach($dropdown_patients as $p): ?>
                                     <option value="<?php echo $p['user_id']; ?>"><?php echo htmlspecialchars($p['name']) . ' (' . ($p['patient_code'] ?? 'ID: '.$p['user_id']) . ')'; ?></option>
                                 <?php endforeach; ?>
+=======
+                <form>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Select Patient</label>
+                            <select>
+                                <option>-- Select Assigned Patient --</option>
+                                <option>Dileep Mathew (HC-P-2026-9901)</option>
+                                <option>Anjali Sharma (HC-P-2026-8842)</option>
+                                <option>Rahul Kumar (HC-P-2026-7215)</option>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Diagnosis / Condition</label>
+<<<<<<< HEAD
                             <input type="text" name="diagnosis" id="diagnosis" placeholder="e.g. Acute Viral Fever" required>
+=======
+                            <input type="text" placeholder="e.g. Acute Viral Fever">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         </div>
                     </div>
 
                     <div style="margin-bottom: 15px;"><label style="font-size: 13px; color: #94a3b8; font-weight: 600;">Medicines & Dosage</label></div>
+<<<<<<< HEAD
                     <div id="medicinesContainer">
                         <div class="medicine-row" data-index="0">
                             <input type="text" name="medicines[0][name]" placeholder="Medicine Name" class="med-input" style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; color: white;" required>
@@ -247,6 +281,29 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
                     </div>
 
                     <button type="submit" id="submitBtn" class="btn-submit">Finalize & Issue Prescription</button>
+=======
+                    <div class="medicine-row">
+                        <input type="text" placeholder="Medicine Name" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; color: white;">
+                        <input type="text" placeholder="Dosage (e.g. 500mg)" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; color: white;">
+                        <select style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; color: white;">
+                            <option>1-0-1</option>
+                            <option>1-1-1</option>
+                            <option>0-0-1</option>
+                            <option>1-0-0</option>
+                        </select>
+                        <input type="text" placeholder="Duration (5 Days)" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px; border-radius: 8px; color: white;">
+                        <button type="button" style="background: none; border: none; color: #ef4444; font-size: 18px;"><i class="fas fa-trash"></i></button>
+                    </div>
+
+                    <button type="button" class="btn-add-medicine">+ Add Another Medicine</button>
+
+                    <div class="form-group" style="margin-bottom: 25px;">
+                        <label>Special Instructions / Notes</label>
+                        <textarea rows="3" placeholder="e.g. Drink plenty of water, Avoid oily food."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-submit">Finalize & Issue Prescription</button>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </form>
             </div>
 
@@ -263,6 +320,7 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
                         </tr>
                     </thead>
                     <tbody>
+<<<<<<< HEAD
                         <?php if (empty($history)): ?>
                             <tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 30px;">No prescriptions issued yet.</td></tr>
                         <?php else: ?>
@@ -282,10 +340,20 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
                             </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
+=======
+                        <tr class="prescription-row">
+                            <td>01 Jan 2026</td>
+                            <td>Dileep Mathew</td>
+                            <td>Hypertension</td>
+                            <td>Amlodipine (5mg)...</td>
+                            <td><a href="#" class="btn-view"><i class="fas fa-file-pdf"></i> View PDF</a></td>
+                        </tr>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </tbody>
                 </table>
             </div>
         </main>
+<<<<<<< HEAD
     </div>
     
     <script>
@@ -440,4 +508,7 @@ while ($row = $res_hist->fetch_assoc()) { $history[] = $row; }
         });
     </script>
 </body>
+=======
+    </div></body>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </html>

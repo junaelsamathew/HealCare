@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 /* Light hospital landing overrides to mirror reference layout */
 :root {
     --heal-blue: #0d3b8a;
@@ -231,7 +234,10 @@ body.landing {
 }
 
 @media (max-width: 720px) {
+<<<<<<< HEAD
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     .topbar-left,
     .topbar-right {
         flex-direction: column;
@@ -245,4 +251,9 @@ body.landing {
     .social-rail {
         display: none;
     }
+<<<<<<< HEAD
 }
+=======
+}
+
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299

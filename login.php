@@ -44,7 +44,11 @@ if (isset($_GET['redirect'])) {
 
         /* Top Bar Header */
         .login-header {
+<<<<<<< HEAD
             height: 100px;
+=======
+            height: 80px;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             background: #ffffff;
             display: flex;
             align-items: center;
@@ -352,6 +356,7 @@ if (isset($_GET['redirect'])) {
         .auth-form { display: none; }
         .auth-form.active { display: block; }
         
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -365,6 +370,8 @@ if (isset($_GET['redirect'])) {
             transform: translateY(0);
         }
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         @media (max-width: 900px) {
             .left-section { display: none; }
         }
@@ -375,17 +382,30 @@ if (isset($_GET['redirect'])) {
 
     <!-- Header -->
     <header class="login-header">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 75px;">
             <span class="animated-brand">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <a href="index.php" class="logo-main">HEALCARE</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="header-info-group">
             <!-- Hidden on mobile usually, but requirement says "Header Requirements" -->
              <div class="header-info-item">
                 <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+<<<<<<< HEAD
                 <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+91) 953 904 5609</span></div>
             </div>
 
+=======
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-clock"></i></div>
+                <div class="info-details"><span class="info-label">WORK HOUR</span><span class="info-value">09:00 - 20:00 Everyday</span></div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div class="header-info-item">
                 <div class="info-icon-circle"><i class="fas fa-map-marker-alt"></i></div>
                 <div class="info-details"><span class="info-label">LOCATION</span><span class="info-value">Kanjirapally, Kottayam</span></div>
@@ -398,7 +418,11 @@ if (isset($_GET['redirect'])) {
         <div class="left-section">
             <div class="bg-image"></div>
             <div class="left-content">
+<<<<<<< HEAD
                 <h1>HealCare Hospital</h1>
+=======
+                <h1>Heal Care</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <div id="loginMessage" class="message-group active">
                     <h2>Welcome Back!</h2>
                     <p>Log in to access appointments, medical records, prescriptions, and personalize your healthcare experience.</p>
@@ -424,7 +448,11 @@ if (isset($_GET['redirect'])) {
                         <!-- Label removed as placeholder serves well for modern UI, but request said "Input fields..." 
                              Usually labels are good for a11y. I'll include them small above. -->
                         <div class="input-wrapper">
+<<<<<<< HEAD
                             <input type="email" name="identity" id="loginIdentity" class="form-input" placeholder="Email Address" required>
+=======
+                            <input type="text" name="identity" id="loginIdentity" class="form-input" placeholder="Username / Email" required>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         </div>
                         <div class="error-msg" id="identityError"></div>
                     </div>
@@ -528,5 +556,9 @@ if (isset($_GET['redirect'])) {
     </div>
 
     <!-- Include Logic Script -->
+<<<<<<< HEAD
     <script src="js/login.js?v=<?php echo time(); ?>"></script></body>
+=======
+    <script src="js/login.js"></script></body>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </html>

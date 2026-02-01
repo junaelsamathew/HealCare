@@ -10,10 +10,15 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'doctor') {
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
 
+<<<<<<< HEAD
 // --- Schema verified ---
 
 // Fetch actual doctor professional info with profile photo
 $stmt = $conn->prepare("SELECT d.*, r.profile_photo FROM doctors d JOIN users u ON d.user_id = u.user_id JOIN registrations r ON u.registration_id = r.registration_id WHERE d.user_id = ?");
+=======
+// Fetch actual doctor professional info
+$stmt = $conn->prepare("SELECT * FROM doctors WHERE user_id = ?");
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -23,13 +28,19 @@ if ($res->num_rows > 0) {
     $specialization = $doctor['specialization'];
     $department = $doctor['department'];
     $designation = $doctor['designation'];
+<<<<<<< HEAD
     $profile_photo = $doctor['profile_photo'];
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 } else {
     // Fallback for demo/manual users without doctor profiles
     $specialization = "General Healthcare / Consultation";
     $department = "General Medicine";
     $designation = "Professional Consultant";
+<<<<<<< HEAD
     $profile_photo = null;
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }
 
 $doctor_name = htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']);
@@ -37,6 +48,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
     $doctor_name = "Dr. " . $doctor_name;
 }
 
+<<<<<<< HEAD
 // Determine Avatar
 $doctor_avatar = 'images/doctor_placeholder.png'; // Default
 if (!empty($profile_photo)) {
@@ -51,6 +63,8 @@ if (!empty($profile_photo)) {
     $doctor_avatar = 'images/dr_june_mary_antony.png';
 }
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 // Handle Status Updates (Accept Appointment)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $appt_id = intval($_POST['appt_id']);
@@ -102,6 +116,7 @@ if (isset($_GET['patient_id'])) {
     while($row = $hist_res->fetch_assoc()) {
         $history_records[] = $row;
     }
+<<<<<<< HEAD
 
     // Fetch Lab Results for this specific appointment
     $current_lab_results = [];
@@ -115,6 +130,8 @@ if (isset($_GET['patient_id'])) {
             $current_lab_results[] = $l_row;
         }
     }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }
 
 // --- Fetch Dynamic Stats for Cards ---
@@ -142,6 +159,7 @@ $stmt_total = $conn->prepare("SELECT COUNT(*) as count FROM appointments WHERE d
 $stmt_total->bind_param("i", $user_id);
 $stmt_total->execute();
 $stats_total = $stmt_total->get_result()->fetch_assoc()['count'];
+<<<<<<< HEAD
 
 // --- Fetch Next Patient Details ---
 $next_patient = null;
@@ -250,6 +268,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
     }
     exit();
 }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -274,7 +294,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
         }
 
         .main-content {
+<<<<<<< HEAD
             padding: 25px 40px !important;
+=======
+            padding: 40px !important;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             gap: var(--section-gap);
             display: flex;
             flex-direction: column;
@@ -401,6 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
         tr:last-child td {
             border-bottom: none;
         }
+<<<<<<< HEAD
         /* Sidebar Profile Style */
         .sidebar-profile {
             padding: 30px 20px;
@@ -636,15 +661,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
         .item-content { flex: 1; }
         .item-title { display: block; color: #fff; font-size: 13px; font-weight: 600; margin-bottom: 2px; }
         .item-desc { display: block; color: #94a3b8; font-size: 11px; }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </style>
 </head>
 <body>
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -652,7 +683,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -667,6 +711,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
         </div>
     </div>
 
+<<<<<<< HEAD
     <header class="secondary-header" style="display: flex; justify-content: flex-end; padding: 15px 40px; background: #0f172a; border-bottom: 1px solid rgba(255,255,255,0.05); align-items: center;">
         <div style="flex: 1;"></div>
         <div class="user-controls" style="display: flex; align-items: center; gap: 25px;">
@@ -760,13 +805,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
 
 
 
+=======
+    <header class="secondary-header">
+        <div class="brand-section">
+            <div class="brand-icon">+</div>
+            <div class="brand-name">HealCare</div>
+            <div style="margin-left: 20px; padding: 4px 12px; background: rgba(79, 195, 247, 0.15); border: 1px solid #4fc3f7; border-radius: 20px; color: #4fc3f7; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                <?php echo $department; ?> DEPT
+            </div>
+        </div>
+        <div class="user-controls">
+            <span class="user-greeting">Welcome, <strong><?php echo $doctor_name; ?></strong></span>
+            <a href="logout.php" class="btn-logout">Sign Out</a>
+        </div>
+    </header>
+
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <div class="dashboard-layout">
         <aside class="sidebar">
             <nav>
                 <a href="doctor_dashboard.php" class="nav-link active"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="doctor_patients.php" class="nav-link"><i class="fas fa-user-injured"></i> Patients</a>
                 <a href="doctor_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> Appointments</a>
+<<<<<<< HEAD
                 <a href="create_appointment.php" class="nav-link"><i class="fas fa-plus-circle"></i> Create Appointment</a>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="doctor_prescriptions.php" class="nav-link"><i class="fas fa-file-prescription"></i> Prescriptions</a>
                 <a href="doctor_lab_orders.php" class="nav-link"><i class="fas fa-flask"></i> Lab Orders</a>
                 <a href="reports_manager.php" class="nav-link"><i class="fas fa-chart-line"></i> Reports</a>
@@ -796,6 +860,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                 </div>
             <?php endif; ?>
 
+<<<<<<< HEAD
             <!-- Personalized Greeting Banner -->
             <div class="greeting-banner">
                 <div style="position: relative; z-index: 1;">
@@ -810,11 +875,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
 
 
             <!-- Stats Grid - Scoped to Department -->
+=======
+
+            <!-- Stats Grid - Scoped to Department -->
+            <!-- Quick Report Upload -->
+            <div style="grid-column: span 3; background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h3 style="color: #fff; margin-bottom: 5px;"><i class="fas fa-file-upload" style="color: #3b82f6;"></i> Need to archive a report?</h3>
+                    <p style="color: #94a3b8; font-size: 13px;">Upload consultation summaries or patient case studies in PDF format.</p>
+                </div>
+                <button onclick="openReportModal()" class="btn-upload" style="background: #3b82f6; color: #fff; text-decoration: none; padding: 12px 25px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 10px; border: none; cursor: pointer;">
+                    <i class="fas fa-upload"></i> Upload PDF Report
+                </button>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
             <div class="doctor-stats-grid">
                 <div class="stat-card">
                     <span class="stat-value"><?php echo str_pad($stats_pending, 2, '0', STR_PAD_LEFT); ?></span>
+<<<<<<< HEAD
                     <span class="stat-label">Pending</span>
+=======
+                    <span class="stat-label">Pending (<?php echo $department; ?>)</span>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
                 <div class="stat-card">
                     <span class="stat-value"><?php echo str_pad($stats_today, 2, '0', STR_PAD_LEFT); ?></span>
@@ -830,6 +913,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                 </div>
             </div>
 
+<<<<<<< HEAD
             <!-- Consultation Statistics (Weekly) -->
             <div class="content-section" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7)) !important; border: 1px solid rgba(59, 130, 246, 0.2) !important;">
                 <div class="section-head" style="display: flex; justify-content: space-between; align-items: center;">
@@ -965,6 +1049,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
             </div>
             <?php endif; ?>
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <!-- Inpatient Rounds Section -->
             <div class="content-section" style="margin-bottom: 30px; border: 1px solid rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05);">
                 <div class="section-head">
@@ -1056,6 +1142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                         <div class="appointment-list">
                             <?php
                             $today = date('Y-m-d');
+<<<<<<< HEAD
                             $stmt = $conn->prepare("
                                 SELECT a.*, 
                                        COALESCE(r.name, a.external_name) as patient_name, 
@@ -1078,12 +1165,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                                     a.appointment_time ASC
                             ");
                             $stmt->bind_param("sis", $today, $user_id, $today);
+=======
+                            // Join with users/registrations to get name. Left join profile for age/gender if available.
+                            // Assuming patient_profiles exists and has data. If not, use defaults.
+                            $stmt = $conn->prepare("
+                                SELECT a.*, r.name as patient_name, r.phone, pp.patient_code, pp.gender, pp.date_of_birth 
+                                FROM appointments a 
+                                JOIN users u ON a.patient_id = u.user_id 
+                                JOIN registrations r ON u.registration_id = r.registration_id 
+                                LEFT JOIN patient_profiles pp ON a.patient_id = pp.user_id 
+                                WHERE a.doctor_id = ? AND a.appointment_date = ? 
+                                ORDER BY a.appointment_time ASC
+                            ");
+                            $stmt->bind_param("is", $user_id, $today);
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             $stmt->execute();
                             $queue_res = $stmt->get_result();
 
                             if ($queue_res->num_rows > 0) {
                                 while ($appt = $queue_res->fetch_assoc()) {
                                     $p_name = htmlspecialchars($appt['patient_name']);
+<<<<<<< HEAD
                                     $p_code = $appt['patient_code'] ?: ($appt['is_external'] ? 'EXTERNAL' : 'N/A');
                                     $p_time = date("h:i A", strtotime($appt['appointment_time']));
                                     $p_phone = htmlspecialchars($appt['phone']);
@@ -1092,6 +1194,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                                     
                                     // Urgency styling
                                     $urgency_class = ($urgency == 'Emergency') ? 'background:#ef4444; color:#fff;' : (($urgency == 'Urgent') ? 'background:#f59e0b; color:#fff;' : 'background:rgba(255,255,255,0.05); color:#94a3b8;');
+=======
+                                    $p_code = $appt['patient_code'] ?: 'N/A';
+                                    $p_time = date("h:i A", strtotime($appt['appointment_time']));
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                     
                                     // Calculate Age
                                     $p_age = '--';
@@ -1101,11 +1207,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                                         $p_age = $now_date->diff($dob_date)->y . ' Yrs';
                                     }
 
+<<<<<<< HEAD
                                     $p_dob = !empty($appt['date_of_birth']) ? date('d M, Y', strtotime($appt['date_of_birth'])) : 'N/A';
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                     $p_gender = $appt['gender'] ?: 'Unknown';
                                     $p_id = $appt['patient_id'];
                                     $a_id = $appt['appointment_id'];
                                     $status = $appt['status'];
+<<<<<<< HEAD
                                     $weight = $appt['weight'] ?: 'N/A';
                                     $height = $appt['height'] ?: 'N/A';
                                     $last_visit = $appt['last_visit'] ? date('d M, Y', strtotime($appt['last_visit'])) : ($appt['is_external'] ? 'Guest Patient' : 'First Visit');
@@ -1156,6 +1266,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                                                         $btn_style = $is_lab ? 'background:#a855f7;' : 'background:#3b82f6;';
                                                         echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult" style="'.$btn_style.' text-align: center;"><i class="fas '.$btn_icon.'"></i> '.$btn_text.'</a>';
                                                     }
+=======
+                                    
+                                    echo '
+                                    <div class="appointment-item" style="border-left: 4px solid '.($status == 'Requested' ? '#fbbf24' : '#3b82f6').';">
+                                        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                            <div class="doc-info">
+                                                <h4 style="font-size: 15px;">'.$p_name.' <span style="font-weight: normal; color: #94a3b8; font-size: 13px;">(ID: '.$p_code.')</span></h4>
+                                                <p style="font-size: 13px; margin-top: 5px;"><i class="fas fa-clock"></i> '.$p_time.' • Age: '.$p_age.' • Sex: '.$p_gender.' • <span class="badge-status-'.$status.'" style="font-weight:600;">'.$status.'</span></p>
+                                            </div>
+                                            <div class="action-btns" style="display:flex; gap:10px;">';
+                                                if($status == 'Requested' || $status == 'Pending') {
+                                                    echo '<form method="POST" style="margin:0;">
+                                                            <input type="hidden" name="update_status" value="1">
+                                                            <input type="hidden" name="appt_id" value="'.$a_id.'">
+                                                            <input type="hidden" name="new_status" value="Approved">
+                                                            <button type="submit" class="btn-consult" style="background:#10b981;"><i class="fas fa-check"></i> Approve</button>
+                                                          </form>';
+                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed' || $status == 'Pending Lab' || $status == 'Lab Completed') {
+                                                    $is_lab = ($status == 'Pending Lab' || $status == 'Lab Completed');
+                                                    $btn_text = $is_lab ? 'Review Lab' : 'Consult';
+                                                    $btn_icon = $is_lab ? 'fa-flask' : 'fa-user-md';
+                                                    $btn_style = $is_lab ? 'background:#a855f7;' : '';
+                                                    echo '<a href="doctor_dashboard.php?patient_id='.$p_id.'&appt_id='.$a_id.'" class="btn-consult" style="'.$btn_style.'"><i class="fas '.$btn_icon.'"></i> '.$btn_text.'</a>';
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                                 }
                                     echo '  </div>
                                         </div>
@@ -1168,9 +1302,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                         </div>
                     </div>
 
+<<<<<<< HEAD
 
                     <!-- ACTIVE CASE: Health Analysis & Medical History -->
                     <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; margin-top: 0px;">
+=======
+                    <!-- ACTIVE CASE: Health Analysis & Medical History -->
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; margin-top: 30px;">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         <!-- Comprehensive Health Analytics -->
                         <div class="content-section">
                             <div class="section-head">
@@ -1482,6 +1621,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                     </div>
 
                     <!-- Past Consultation records -->
+<<<<<<< HEAD
                     <h4 style="margin-bottom: 15px; font-size: 14px; color: #94a3b8;">Lab Reports (Current Appt)</h4>
                     <div style="font-size: 13px; color: #cbd5e1; background: rgba(59, 130, 246, 0.05); padding: 15px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.2); margin-bottom: 25px;">
                         <?php if(!empty($current_lab_results)): ?>
@@ -1499,6 +1639,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
                         <?php endif; ?>
                     </div>
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     <h4 style="margin-bottom: 15px; font-size: 14px; color: #94a3b8;">Past Consultations</h4>
                     <div style="font-size: 13px; color: #cbd5e1; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); max-height: 200px; overflow-y: auto;">
                         <?php if(!empty($history_records)): ?>
@@ -1704,6 +1846,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
             }
         });
 
+<<<<<<< HEAD
         // Weekly Consultation Traffic Chart
         const wctCtx = document.getElementById('weeklyConsultChart').getContext('2d');
         new Chart(wctCtx, {
@@ -1749,6 +1892,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
             }
         });
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         // UI Functions
         let patientVitalsChart = null;
 
@@ -1877,6 +2022,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
     // Set staff_type for the modal
     $staff_type = 'doctor';
     include 'includes/report_upload_modal.php'; 
+<<<<<<< HEAD
     ?>    <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -2078,4 +2224,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_appointment'])
         }
     </script>
 </body>
+=======
+    ?></body>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </html>

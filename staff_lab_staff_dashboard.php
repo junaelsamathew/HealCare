@@ -40,8 +40,11 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles/dashboard.css">
+<<<<<<< HEAD
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <style>
         :root {
             --bg-deep: #020617;
@@ -72,6 +75,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
         .status-dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.1); position: relative; }
         .status-dot.active { background: #4fc3f7; box-shadow: 0 0 10px #4fc3f7; }
         .status-dot.active::after { content: ''; position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #4fc3f7; font-weight: bold; white-space: nowrap; }
+<<<<<<< HEAD
         
         /* Brand Animation */
         .brand-letter {
@@ -84,16 +88,22 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
             opacity: 1;
             transform: translateY(0);
         }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </style>
 </head>
 <body>
 
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -101,10 +111,25 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
                 </div>
             </div>
             
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+                </div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
                     <i class="fas fa-map-marker-alt"></i>
@@ -128,9 +153,13 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
             <a href="?section=dashboard" class="nav-item <?php echo $section == 'dashboard' ? 'active' : ''; ?>"><i class="fas fa-vials"></i> Pending Tests</a>
             <a href="?section=conducted" class="nav-item <?php echo $section == 'conducted' ? 'active' : ''; ?>"><i class="fas fa-microscope"></i> Conducted Tests</a>
             <a href="?section=completed" class="nav-item <?php echo $section == 'completed' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Completed Reports</a>
+<<<<<<< HEAD
             <a href="?section=patient_history" class="nav-item <?php echo $section == 'patient_history' ? 'active' : ''; ?>"><i class="fas fa-history"></i> Patient History</a>
             <a href="?section=archive" class="nav-item <?php echo $section == 'archive' ? 'active' : ''; ?>"><i class="fas fa-archive"></i> Archive</a>
             <a href="?section=reports" class="nav-item <?php echo $section == 'reports' ? 'active' : ''; ?>"><i class="fas fa-file-alt"></i> Lab Reports</a>
+=======
+            <a href="?section=archive" class="nav-item <?php echo $section == 'archive' ? 'active' : ''; ?>"><i class="fas fa-archive"></i> Archive</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
 
@@ -154,6 +183,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                 $q_conducted = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND status = 'Conducted'");
                 $cond_count = $q_conducted->fetch_assoc()['count'];
 
+<<<<<<< HEAD
                 $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE category_id = (SELECT category_id FROM lab_categories WHERE category_name = '$lab_type' LIMIT 1) AND status = 'Completed' AND DATE(updated_at) = CURDATE()");
 
                 $completed_today = $q_completed->fetch_assoc()['count'];
@@ -171,17 +201,29 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                     </div>
                 </div>
 
+=======
+                $q_completed = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE test_type LIKE '$search_pattern' AND status = 'Completed' AND DATE(created_at) = CURRENT_DATE");
+                $completed_today = $q_completed->fetch_assoc()['count'];
+                ?>
+
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <!-- Quick Archive -->
                 <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 25px; border-radius: 12px; border: 1px solid var(--border-soft); margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <h3 style="color: #fff; margin-bottom: 5px; font-size: 16px;"><i class="fas fa-file-upload" style="color: #4fc3f7;"></i> Laboratory Documentation</h3>
                         <p style="color: #64748b; font-size: 12px;">Archive manual test summaries or complex diagnostic reports.</p>
                     </div>
+<<<<<<< HEAD
                     <div style="flex-shrink: 0;">
                         <button onclick="openReportModal()" style="background: #4fc3f7; color: #020617; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 13px; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; box-shadow: 0 4px 12px rgba(79, 195, 247, 0.3);">
                             <i class="fas fa-upload"></i> Upload Report
                         </button>
                     </div>
+=======
+                    <button onclick="openReportModal()" style="background: #4fc3f7; color: #020617; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-weight: 700; font-size: 12px; border: none; cursor: pointer;">
+                        <i class="fas fa-upload"></i> Upload Report
+                    </button>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
 
                 <div class="stats-grid">
@@ -218,12 +260,18 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                             <?php echo htmlspecialchars($lab_type); ?> • ID: #LAB-<?php echo $order['labtest_id']; ?>
                         </span>
                         <h4 style="color:#fff; margin: 10px 0; font-size: 18px;"><?php echo htmlspecialchars($order['test_name']); ?></h4>
+<<<<<<< HEAD
                          <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">
                              Patient: <?php echo htmlspecialchars($order['patient_name']); ?> • Requested by: <?php 
                                 $r_doc = $order['doctor_name'];
                                 echo htmlspecialchars((stripos($r_doc, 'Dr.') === 0) ? $r_doc : 'Dr. ' . $r_doc);
                              ?>
                          </p>
+=======
+                        <p style="font-size: 13px; color: #94a3b8; margin-bottom: 20px;">
+                            Patient: <?php echo htmlspecialchars($order['patient_name']); ?> • Requested by: Dr. <?php echo htmlspecialchars($order['doctor_name']); ?>
+                        </p>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         
                         <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 8px; margin-top: 10px;">
                             <small style="color: #4fc3f7; text-transform: uppercase; font-size: 10px; font-weight: bold;">Doctor Instructions:</small>
@@ -260,6 +308,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                             </div>
 
                             <div id="payment-step-2-<?php echo $order['labtest_id']; ?>" style="display:none; text-align:center;">
+<<<<<<< HEAD
                                 <div style="background: white; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
                                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=upi://pay?pa=augustinejoyaljose@okaxis%26pn=Augustine%20joyal%20Jose%26cu=INR" alt="Hospital UPI QR" style="display: block; width: 180px; height: 180px;">
                                 </div>
@@ -269,6 +318,16 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                                     <input type="hidden" name="order_id" value="<?php echo $order['labtest_id']; ?>">
                                     <button type="button" onclick="verifyPayment(<?php echo $order['labtest_id']; ?>)" style="background: #10b981; color: #fff; border: none; padding: 12px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; transition:0.3s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); width: 100%;">
                                         <i class="fas fa-check-circle" style="margin-right: 8px;"></i> Verify Payment
+=======
+                                <div style="background: white; padding: 10px; border-radius: 12px; display: inline-block; margin-bottom: 20px;">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=HealCare_Lab_Payment_<?php echo $order['labtest_id']; ?>" alt="Payment QR" style="display: block;">
+                                </div>
+                                <p style="color: #64748b; font-size: 12px; margin-bottom: 20px;">Ask patient to scan & pay</p>
+                                <form action="mark_lab_paid.php" method="POST">
+                                    <input type="hidden" name="order_id" value="<?php echo $order['labtest_id']; ?>">
+                                    <button type="submit" style="background: #10b981; color: #fff; border: none; padding: 12px 30px; border-radius: 10px; font-weight: 700; cursor: pointer; transition:0.3s; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                                        <i class="fas fa-check-circle" style="margin-right: 8px;"></i> Payment Done
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                     </button>
                                 </form>
                             </div>
@@ -322,6 +381,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                                 </div>
                                 <textarea name="result_summary" placeholder="Enter findings, observations, and values..." style="width: 100%; background: #020617; border: 1px solid var(--border-soft); padding: 12px; border-radius: 10px; color: #fff; font-size: 13px; resize: none; height: 100px;" required></textarea>
                                 
+<<<<<<< HEAD
                                 <div style="display: flex; gap: 15px; margin-bottom: 5px;">
                                     <div style="flex: 1;">
                                         <label style="display: block; color: #94a3b8; font-size: 11px; margin-bottom: 5px;">RESULT STATUS</label>
@@ -337,6 +397,15 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                                     </label>
                                 </div>
                                 <button type="submit" style="width: 100%; background: #10b981; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">Finalize Results</button>
+=======
+                                <div style="display: flex; gap: 15px;">
+                                    <label class="btn-upload" style="flex: 1; justify-content: center;">
+                                        <input type="file" name="report_pdf" accept=".pdf" style="display: none;" onchange="this.parentElement.style.background='#4fc3f7'; this.parentElement.style.color='#fff';">
+                                        <i class="fas fa-file-pdf"></i> Attach PDF
+                                    </label>
+                                    <button type="submit" style="flex: 1; background: #10b981; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer;">Finalize Results</button>
+                                </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             </div>
                         </form>
                     </div>
@@ -402,6 +471,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                 </div>
                 <p style="color: #64748b;">Archive functionality coming soon. Use the Completed Reports section to view recent history.</p>
 
+<<<<<<< HEAD
             <?php elseif ($_GET['section'] == 'patient_history'): ?>
                 <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -706,6 +776,8 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                 </script>
                 <?php endif; ?>
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <?php elseif ($_GET['section'] == 'reports'): ?>
                 <div style="margin-bottom: 30px;">
                     <h1 style="color:#fff; font-size: 28px;">Laboratory Reports</h1>
@@ -796,6 +868,7 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
                 document.getElementById('payment-step-2-'+id).style.display = 'block';
             }, 1000); // 1 second delay
         }
+<<<<<<< HEAD
 
         function verifyPayment(id) {
             Swal.fire({
@@ -876,6 +949,8 @@ $display_name = $name_row['name'] ?? ($_SESSION['full_name'] ?? $_SESSION['usern
             
             initBrandAnimation();
         });
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </script>
 </body>
 </html>

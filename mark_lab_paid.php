@@ -57,7 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $bill_date = date('Y-m-d');
             
             $stmt_bill = $conn->prepare("INSERT INTO billing (patient_id, doctor_id, appointment_id, reference_id, bill_type, total_amount, payment_status, payment_mode, bill_date) VALUES (?, ?, ?, ?, ?, ?, 'Paid', 'Cash/QR Offline', ?)");
+<<<<<<< HEAD
             $stmt_bill->bind_param("iiiisds", $patient_id, $doctor_id, $appt_id, $order_id, $bill_type, $cost, $bill_date);
+=======
+            $stmt_bill->bind_param("iiiiisd", $patient_id, $doctor_id, $appt_id, $order_id, $bill_type, $cost, $bill_date);
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             $stmt_bill->execute();
         }
 

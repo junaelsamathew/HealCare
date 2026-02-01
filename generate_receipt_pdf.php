@@ -240,6 +240,7 @@ $txn_id = $data['transaction_id'] ?? 'CASH-' . rand(10000,99999);
             <tbody>
                 <tr>
                     <td>
+<<<<<<< HEAD
                         <strong><?php echo htmlspecialchars(($data['bill_type'] === '0' || empty($data['bill_type'])) ? 'Lab Test' : $data['bill_type']); ?> Bill</strong><br>
                         <span style="font-size: 12px; color: #475569; display: block; margin-top: 5px;"><?php echo htmlspecialchars(($data['description'] ?? '') ?: 'Professional medical services'); ?></span>
                     </td>
@@ -247,6 +248,12 @@ $txn_id = $data['transaction_id'] ?? 'CASH-' . rand(10000,99999);
                         $rc_doc = $data['doctor_name'];
                         echo htmlspecialchars((stripos($rc_doc, 'Dr.') === 0) ? $rc_doc : 'Dr. ' . $rc_doc);
                     ?><br><span style="font-size: 10px; color: #94a3b8;"><?php echo htmlspecialchars($data['specialization']); ?></span></td>
+=======
+                        <strong><?php echo htmlspecialchars($data['bill_type']); ?> Bill</strong><br>
+                        <span style="font-size: 12px; color: #475569; display: block; margin-top: 5px;"><?php echo htmlspecialchars(($data['description'] ?? '') ?: 'Professional medical services'); ?></span>
+                    </td>
+                    <td>Dr. <?php echo htmlspecialchars($data['doctor_name']); ?><br><span style="font-size: 10px; color: #94a3b8;"><?php echo htmlspecialchars($data['specialization']); ?></span></td>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     <td style="text-align: right; font-weight: 600;">₹<?php echo number_format($data['total_amount'], 2); ?></td>
                 </tr>
             </tbody>

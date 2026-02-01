@@ -8,7 +8,11 @@ $dept_filter = isset($_GET['dept']) ? mysqli_real_escape_string($conn, $_GET['de
 $is_logged_in = isset($_SESSION['user_id']);
 
 // Base Query
+<<<<<<< HEAD
 $sql = "SELECT r.name, r.email, r.profile_photo, d.department, d.specialization, d.qualification, d.experience, d.bio, d.consultation_fee, u.user_id 
+=======
+$sql = "SELECT r.name, r.profile_photo, d.department, d.specialization, d.qualification, d.experience, d.bio, d.consultation_fee, u.user_id 
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         FROM registrations r 
         JOIN users u ON r.registration_id = u.registration_id 
         LEFT JOIN doctors d ON u.user_id = d.user_id 
@@ -200,6 +204,7 @@ include 'includes/header.php';
             <?php while($row = $result->fetch_assoc()): ?>
                 <div class="doctor-card-premium">
                     <div class="doctor-thumb">
+<<<<<<< HEAD
                         <?php 
                         $img = 'images/doctor_placeholder.png';
                         if (!empty($row['profile_photo'])) {
@@ -211,6 +216,15 @@ include 'includes/header.php';
                         }
                         ?>
                         <img src="<?php echo $img; ?>" alt="<?php echo $row['name']; ?>">
+=======
+                        <?php if(!empty($row['profile_photo']) && file_exists($row['profile_photo'])): ?>
+                            <img src="<?php echo $row['profile_photo']; ?>" alt="<?php echo $row['name']; ?>">
+                        <?php else: ?>
+                            <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #eef7ff; color: #1e90ff; font-size: 60px;">
+                                <i class="fas fa-user-md"></i>
+                            </div>
+                        <?php endif; ?>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                     <div class="result-dept"><?php echo htmlspecialchars($row['department'] ?? 'General Medicine'); ?></div>
                     <h3><?php echo htmlspecialchars($row['name']); ?></h3>
@@ -221,7 +235,21 @@ include 'includes/header.php';
                         <span><i class="fas fa-user-clock"></i> <?php echo htmlspecialchars($row['experience'] ?? '5+'); ?> Exp</span>
                         <span><i class="fas fa-check-circle"></i> Verified</span>
                     </div>
+<<<<<<< HEAD
                     <a href="public_doctor_profile.php?email=<?php echo urlencode($row['email']); ?>" class="btn-book-now" style="background: transparent; border: 1px solid #0c2d6a; color: #0c2d6a; margin-right: 10px; display: inline-block;">View Profile</a>
+=======
+                    <button class="btn-book-now" onclick='openProfile(<?php echo htmlspecialchars(json_encode([
+                        "id" => $row["user_id"],
+                        "name" => $row["name"],
+                        "dept" => $row["department"],
+                        "spec" => $row["specialization"],
+                        "qual" => $row["qualification"],
+                        "exp" => $row["experience"],
+                        "bio" => $row["bio"] ?? "No biography available.",
+                        "fee" => $row["consultation_fee"] ?? "500",
+                        "photo" => $row["profile_photo"]
+                    ], JSON_HEX_APOS | JSON_HEX_QUOT), ENT_QUOTES, 'UTF-8'); ?>)' style="background: transparent; border: 1px solid #0c2d6a; color: #0c2d6a; margin-right: 10px;">View Profile</button>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     
                     <?php 
                     $redirect_url = urlencode("appointment_form.php?doctor_id=" . $row['user_id']);

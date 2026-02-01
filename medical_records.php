@@ -16,9 +16,13 @@ $username = $_SESSION['username'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Medical Records - HealCare</title>
+<<<<<<< HEAD
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+=======
+    <link rel="stylesheet" href="styles/dashboard.css">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <style>
         .record-card {
             background: rgba(255,255,255,0.03); border: 1px solid var(--border-color);
@@ -29,6 +33,7 @@ $username = $_SESSION['username'];
             background: rgba(59, 130, 246, 0.1); color: var(--primary-blue);
             padding: 8px 15px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600;
         }
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -74,12 +79,30 @@ $username = $_SESSION['username'];
 
     <header class="secondary-header">
         <div style="flex: 1;"></div>
+=======
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
     </header>
 
     <div class="dashboard-layout">
         <aside class="sidebar">
             <nav>
+<<<<<<< HEAD
                 <a href="patient_dashboard.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="book_appointment.php" class="nav-link"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
                 <a href="my_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> My Appointments</a>
@@ -89,6 +112,15 @@ $username = $_SESSION['username'];
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
+=======
+                <a href="patient_dashboard.php" class="nav-link">Dashboard</a>
+                <a href="book_appointment.php" class="nav-link">Book Appointment</a>
+                <a href="my_appointments.php" class="nav-link">My Appointments</a>
+                <a href="medical_records.php" class="nav-link active"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
@@ -117,10 +149,14 @@ $username = $_SESSION['username'];
                     <div>
                         <h4 style="margin-bottom: 5px;"><?php echo htmlspecialchars($row['diagnosis']); ?></h4>
                         <p style="color: var(--text-gray); font-size: 13px;">
+<<<<<<< HEAD
                             Consulted with <?php 
                                 $mr_doc = $row['doctor_name'];
                                 echo htmlspecialchars((stripos($mr_doc, 'Dr.') === 0) ? $mr_doc : 'Dr. ' . $mr_doc); 
                             ?> • 
+=======
+                            Consulted with <?php echo htmlspecialchars($row['doctor_name']); ?> • 
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             <?php echo date('M d, Y', strtotime($row['created_at'])); ?>
                         </p>
                     </div>
@@ -164,10 +200,14 @@ $username = $_SESSION['username'];
                             <h4 style="margin-bottom: 5px;"><?php echo htmlspecialchars($lab_row['test_name']); ?></h4>
                             <p style="color: var(--text-gray); font-size: 13px;">
                                 <span style="color: var(--primary-blue); font-weight:600;"><?php echo htmlspecialchars($lab_row['test_type']); ?></span> • 
+<<<<<<< HEAD
                                 <?php 
                                     $lr_doc = $lab_row['doctor_name'];
                                     echo htmlspecialchars((stripos($lr_doc, 'Dr.') === 0) ? $lr_doc : 'Dr. ' . $lr_doc);
                                 ?> • 
+=======
+                                Dr. <?php echo htmlspecialchars($lab_row['doctor_name']); ?> • 
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                 <?php echo date('M d, Y', strtotime($lab_row['updated_at'])); ?>
                             </p>
                         </div>
@@ -187,6 +227,7 @@ $username = $_SESSION['username'];
             </div>
         </main>
     </div>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -242,5 +283,7 @@ $username = $_SESSION['username'];
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"></body>
 </html>

@@ -9,6 +9,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'staff') {
 
 $user_id = $_SESSION['user_id'];
 
+<<<<<<< HEAD
 // Determine staff type
 $staff_type = '';
 
@@ -48,6 +49,24 @@ if (!$staff_type) {
         if ($check_canteen->num_rows > 0) $staff_type = 'canteen_staff';
     }
 }
+=======
+// Determine staff type by checking sub-tables
+$staff_type = '';
+$check_nurse = $conn->query("SELECT * FROM nurses WHERE user_id = $user_id");
+if ($check_nurse->num_rows > 0) $staff_type = 'nurse';
+
+$check_lab = $conn->query("SELECT * FROM lab_staff WHERE user_id = $user_id");
+if ($check_lab->num_rows > 0) $staff_type = 'lab_staff';
+
+$check_pharm = $conn->query("SELECT * FROM pharmacists WHERE user_id = $user_id");
+if ($check_pharm->num_rows > 0) $staff_type = 'pharmacist';
+
+$check_reception = $conn->query("SELECT * FROM receptionists WHERE user_id = $user_id");
+if ($check_reception->num_rows > 0) $staff_type = 'receptionist';
+
+$check_canteen = $conn->query("SELECT * FROM canteen_staff WHERE user_id = $user_id");
+if ($check_canteen->num_rows > 0) $staff_type = 'canteen_staff';
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
 // Redirect to specific dashboard
 if ($staff_type) {

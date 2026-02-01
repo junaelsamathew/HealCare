@@ -12,7 +12,11 @@ include 'includes/header.php';
         
         <div class="container hero-container">
             <div class="hero-content">
+<<<<<<< HEAD
                 <span class="welcome-text">WELCOME TO HEALCARE HOSPITAL</span>
+=======
+                <span class="welcome-text">WELCOME TO HEALCARE</span>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <h1>A Great Place to Receive Care</h1>
                 <p>"Caring for you, digitally and compassionately — HealCare is health made simple."</p>
                 
@@ -181,8 +185,15 @@ include 'includes/header.php';
                         <h2 class="doctors-title">Meet your doctor</h2>
                         <p class="doctors-description">
                             HealCare Hospital, a team of around 30 consultant doctors with Experience, Expertise and Academic along with Technology cater to serve the needy with quality care and excellence in medication with an affordable price and uncompromising Nursing Care. 
+<<<<<<< HEAD
                             HealCare Hospital is a small hospital which offers comprehensive medical care in specialized departments including General Medicine / Cardiovascular,Pediatrics, Gynecology, Orthopedics (Bones), ENT, Ophthalmology, and Dermatology.
                             We have a vast pool of dexterous and experienced team of doctor. 
+=======
+                            HealCare Hospital is a small hospital which offers comprehensive medical care in specialized departments including General Medicine / Cardiovascular, Gynecology, Orthopedics (Bones), ENT, Ophthalmology, and Dermatology.
+                            We have a vast pool of dexterous and experienced team of doctors, who are further supported by a team of highly qualified, experienced & dedicated support staff & cutting edge technology. 
+                            More than 50 consultants and 40 employees work together to manage over 15000 patients every year. The hospital has an infrastructure comprising of 100 beds.
+                        </p>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                     <div class="team-cta">
                         <a href="find_doctor.php" style="text-decoration: none;">
@@ -227,6 +238,7 @@ include 'includes/header.php';
                             ?>
                             <div class="doctor-slide <?php echo $active; ?>" style="display: <?php echo $display; ?>;">
                                 <?php foreach($pair as $doc): 
+<<<<<<< HEAD
                                     $img = 'images/doctor_placeholder.png';
                                     if (!empty($doc['profile_photo'])) {
                                         if (file_exists($doc['profile_photo'])) {
@@ -250,6 +262,22 @@ include 'includes/header.php';
                                         </div>
                                     </div>
                                 </a>
+=======
+                                    $img = $doc['profile_photo'] ? $doc['profile_photo'] : 'images/default-doctor.jpg';
+                                    $dept = $doc['department'] ? $doc['department'] : $target_doctors[$doc['email']];
+                                ?>
+                                <div class="doctor-profile-card">
+                                    <div class="profile-image-container">
+                                        <div class="profile-image-circle">
+                                            <img src="<?php echo $img; ?>" alt="<?php echo $doc['name']; ?>" style="width:100%; height:100%; object-fit:cover;">
+                                        </div>
+                                    </div>
+                                    <div class="profile-info">
+                                        <h3><?php echo $doc['name']; ?></h3>
+                                        <p class="profile-specialty"><?php echo $dept; ?></p>
+                                    </div>
+                                </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                 <?php endforeach; ?>
                             </div>
                             <?php endforeach; ?>
@@ -275,7 +303,11 @@ include 'includes/header.php';
                     <div class="care-content">
                         <h3>Diagnostic Center</h3>
                         <p>Our state-of-the-art diagnostic center offers a comprehensive range of laboratory and imaging services for accurate and rapid diagnosis.</p>
+<<<<<<< HEAD
                         <a href="diagnostic_center.php" class="know-more">KNOW MORE <span>&rarr;</span></a>
+=======
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                 </div>
 
@@ -285,7 +317,11 @@ include 'includes/header.php';
                     <div class="care-content">
                         <h3>Health Packages</h3>
                         <p>Don't ignore the signals from your body before it's too late. Take the step toward preventive health with our comprehensive packages.</p>
+<<<<<<< HEAD
                         <a href="health_packages.php" class="know-more">KNOW MORE <span>&rarr;</span></a>
+=======
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                 </div>
 
@@ -295,7 +331,11 @@ include 'includes/header.php';
                     <div class="care-content">
                         <h3>Home Care</h3>
                         <p>HealCare Hospital aims at bringing personalized and quality healthcare services to the comfort of your home.</p>
+<<<<<<< HEAD
                         <a href="home_care.php" class="know-more">KNOW MORE <span>&rarr;</span></a>
+=======
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                 </div>
 
@@ -305,7 +345,11 @@ include 'includes/header.php';
                     <div class="care-content">
                         <h3>Community Clinics</h3>
                         <p>We believe in making healthcare accessible. Visit our community clinics for affordable, high-quality primary care near you.</p>
+<<<<<<< HEAD
                         <a href="community_clinics.php" class="know-more">KNOW MORE <span>&rarr;</span></a>
+=======
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                 </div>
 
@@ -315,7 +359,11 @@ include 'includes/header.php';
                     <div class="care-content">
                         <h3>Emergency</h3>
                         <p>Our Emergency Department is geared to meet all medical and surgical emergencies, including pediatric and trauma care 24/7.</p>
+<<<<<<< HEAD
                         <a href="emergency.php" class="know-more">KNOW MORE <span>&rarr;</span></a>
+=======
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                 </div>
 
@@ -325,7 +373,11 @@ include 'includes/header.php';
                     <div class="care-content">
                         <h3>24x7 Pharmacy</h3>
                         <p>Accessible round the clock, our well-stocked pharmacy ensures that the medicines you need are always available.</p>
+<<<<<<< HEAD
                         <a href="pharmacy.php" class="know-more">KNOW MORE <span>&rarr;</span></a>
+=======
+                        <a href="#" class="know-more">KNOW MORE <span>&rarr;</span></a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                 </div>
             </div>
@@ -418,7 +470,11 @@ include 'includes/header.php';
                     </div>
                     <h3>EMERGENCY</h3>
                     <p class="contact-details">
+<<<<<<< HEAD
                         +91 9539045609<br>
+=======
+                        +91 7177831464<br>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                        
                     </p>
                 </div>
@@ -465,6 +521,7 @@ include 'includes/header.php';
         </div>
     </section>
 
+<<<<<<< HEAD
 
 
     <!-- Floating Action Buttons -->
@@ -473,6 +530,22 @@ include 'includes/header.php';
             <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
         </a>
         <a href="tel:+919539045609" class="float-btn call-btn">
+=======
+    <!-- Floating Social Bar -->
+    <div class="social-side-bar">
+        <a href="#" class="social-side-item fb"><i class="fab fa-facebook-f"></i></a>
+        <a href="#" class="social-side-item tw"><i class="fab fa-twitter"></i></a>
+        <a href="#" class="social-side-item yt"><i class="fab fa-youtube"></i></a>
+        <a href="#" class="social-side-item ig"><i class="fab fa-instagram"></i></a>
+    </div>
+
+    <!-- Floating Action Buttons -->
+    <div class="floating-actions">
+        <a href="https://wa.me/254717783146" class="float-btn whatsapp-btn" target="_blank">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        </a>
+        <a href="tel:+254717783146" class="float-btn call-btn">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
         </a>
     </div>
@@ -565,7 +638,10 @@ include 'includes/header.php';
                 doctorSlides[currentDoctorSlide].classList.add('active');
                 doctorSlides[currentDoctorSlide].style.display = 'grid';
             }
+<<<<<<< HEAD
             
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
             setInterval(showNextDoctors, 3000);
         });

@@ -37,8 +37,13 @@ if ($generated_signature == $signature) {
             $appt_id = $bill_data['appointment_id'];
 
             if ($appt_id) {
+<<<<<<< HEAD
                  // Mark appointment as Requested
                  $conn->query("UPDATE appointments SET status = 'Requested' WHERE appointment_id = $appt_id AND status = 'Pending'");
+=======
+                 // Mark appointment as Confirmed
+                 $conn->query("UPDATE appointments SET status = 'Confirmed' WHERE appointment_id = $appt_id AND status = 'Pending'");
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             }
 
             // 3. Handle Inpatient/Pharmacy/Lab Redirection
@@ -61,12 +66,19 @@ if ($generated_signature == $signature) {
         // 4. Redirect to Success Page
         // Re-using the logic from test_payment_success to find details
         $res = $conn->query("SELECT b.*, a.queue_number, a.appointment_date, a.appointment_time, 
+<<<<<<< HEAD
                              COALESCE(rd.name, ud.username) as doc_name, 
                              COALESCE(pp.name, rp.name, p.username) as pat_name, p.email
                              FROM billing b 
                              LEFT JOIN appointments a ON b.appointment_id = a.appointment_id
                              LEFT JOIN users ud ON b.doctor_id = ud.user_id
                              LEFT JOIN registrations rd ON ud.registration_id = rd.registration_id
+=======
+                             ud.username as doc_name, COALESCE(pp.name, rp.name, p.username) as pat_name
+                             FROM billing b 
+                             LEFT JOIN appointments a ON b.appointment_id = a.appointment_id
+                             LEFT JOIN users ud ON b.doctor_id = ud.user_id
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                              LEFT JOIN users p ON b.patient_id = p.user_id
                              LEFT JOIN patient_profiles pp ON b.patient_id = pp.user_id
                              LEFT JOIN registrations rp ON p.registration_id = rp.registration_id
@@ -76,12 +88,17 @@ if ($generated_signature == $signature) {
             $row = $res->fetch_assoc();
             $bk_id = "BK-" . $row['appointment_id'];
             $token = $row['queue_number'] ?? '00';
+<<<<<<< HEAD
             $raw_doc_p = $row['doc_name'];
             $doc = (stripos($raw_doc_p, 'Dr.') === 0) ? $raw_doc_p : 'Dr. ' . $raw_doc_p;
+=======
+            $doc = $row['doc_name'];
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             $date = $row['appointment_date'];
             $time = $row['appointment_time'];
             $pat = $row['pat_name'];
             $fee = $row['total_amount'];
+<<<<<<< HEAD
             $pat_email = $row['email'];
 
             // --- SEND CONFIRMATION EMAIL ---
@@ -164,6 +181,8 @@ if ($generated_signature == $signature) {
                 $mail->send();
                 } catch (Exception $e) { /* Log error if needed */ }
             }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             
             header("Location: booking_success.php?booking_id=$bk_id&token=$token&doctor=$doc&date=$date&time=$time&patient=$pat&fee=$fee&paid=1");
         } else {

@@ -53,7 +53,11 @@ include 'includes/header.php';
                         </div>
                     <?php endwhile; else: ?>
                         <div style="grid-column: 1/-1; text-align: center; padding: 20px;">
+<<<<<<< HEAD
                             <p style="font-size: 14px; font-weight: bold; color: #cc0000; margin: 0;">HOTLINE: (+91) 953 904 5609</p>
+=======
+                            <p style="font-size: 14px; font-weight: bold; color: #cc0000; margin: 0;">HOTLINE: (+254) 717 783 146</p>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             <small style="color: #777;">No individual ambulance contacts currently listed.</small>
                         </div>
                     <?php endif; ?>

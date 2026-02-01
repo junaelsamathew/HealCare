@@ -183,7 +183,10 @@ sort($available_tests);
                 <a href="doctor_dashboard.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="doctor_patients.php" class="nav-link"><i class="fas fa-user-injured"></i> Patients</a>
                 <a href="doctor_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> Appointments</a>
+<<<<<<< HEAD
                 <a href="create_appointment.php" class="nav-link"><i class="fas fa-plus-circle"></i> Create Appointment</a>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="doctor_prescriptions.php" class="nav-link"><i class="fas fa-file-prescription"></i> Prescriptions</a>
                 <a href="doctor_lab_orders.php" class="nav-link active"><i class="fas fa-flask"></i> Lab Orders</a>
                 <a href="doctor_leave.php" class="nav-link"><i class="fas fa-calendar-minus"></i> Apply Leave</a>
@@ -199,11 +202,19 @@ sort($available_tests);
 
             <div class="order-form">
                 <h2 style="color: white; margin-bottom: 20px; font-size: 1.2rem;">Create Lab Test Request</h2>
+<<<<<<< HEAD
                 <form id="labRequestForm" method="POST" novalidate>
                     <div class="order-grid">
                         <div>
                             <label class="form-label">Select Patient</label>
                             <select class="form-input" name="patient_id" id="patient_id" required>
+=======
+                <form>
+                    <div class="order-grid">
+                        <div>
+                            <label class="form-label">Select Patient</label>
+                            <select class="form-input" name="patient_id" required>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                 <option value="">-- Select Patient --</option>
                                 <?php foreach($dropdown_patients as $p): ?>
                                     <option value="<?php echo $p['user_id']; ?>">
@@ -214,7 +225,11 @@ sort($available_tests);
                         </div>
                         <div>
                             <label class="form-label">Test Type</label>
+<<<<<<< HEAD
                             <select class="form-input" name="test_type" id="test_type" required>
+=======
+                            <select class="form-input" name="test_type" required>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                 <option value="">-- Select Test --</option>
                                 <?php foreach($available_tests as $test): ?>
                                     <option value="<?php echo htmlspecialchars($test); ?>"><?php echo htmlspecialchars($test); ?></option>
@@ -223,17 +238,29 @@ sort($available_tests);
                         </div>
                         <div>
                             <label class="form-label">Priority</label>
+<<<<<<< HEAD
                             <select class="form-input" name="priority" id="priority">
                                 <option value="Normal">Normal</option>
                                 <option value="Urgent">Urgent / STAT</option>
+=======
+                            <select class="form-input">
+                                <option value="normal">Normal</option>
+                                <option value="urgent">Urgent / STAT</option>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             </select>
                         </div>
                     </div>
                     <div style="margin-bottom: 20px;">
                         <label class="form-label">Reason / Clinical Details</label>
+<<<<<<< HEAD
                         <textarea class="form-input" name="reason" id="reason" rows="2" placeholder="e.g. For pre-surgical screening..."></textarea>
                     </div>
                     <button type="submit" id="submitBtn" style="background: #1e40af; color: #fff; width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">Send Request to Lab</button>
+=======
+                        <textarea class="form-input" rows="2" placeholder="e.g. For pre-surgical screening..."></textarea>
+                    </div>
+                    <button type="submit" style="background: #1e40af; color: #fff; width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer;">Send Request to Lab</button>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </form>
             </div>
 
@@ -361,6 +388,7 @@ sort($available_tests);
             
             document.getElementById('resultModal').style.display = 'flex';
         }
+<<<<<<< HEAD
 
         // Lab Request Form Submission
         document.getElementById('labRequestForm').addEventListener('submit', function(e) {
@@ -426,5 +454,7 @@ sort($available_tests);
                 submitBtn.innerText = 'Send Request to Lab';
             });
         });
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </script></body>
 </html>

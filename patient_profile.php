@@ -9,6 +9,10 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
 
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'];
+<<<<<<< HEAD
+=======
+$email_display = $_SESSION['email'];
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
 // Fetch detailed profile
 $stmt = $conn->prepare("SELECT p.*, r.name, r.email, r.phone, r.address, r.profile_photo, u.username 
@@ -21,9 +25,12 @@ $stmt->execute();
 $res = $stmt->get_result();
 $profile = $res->fetch_assoc();
 
+<<<<<<< HEAD
 // Determine Display Name for Header
 $display_name = $profile['name'] ?? $_SESSION['full_name'] ?? $username;
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 // Handle profile update
 $msg = "";
 $error = "";
@@ -37,6 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
     $allergies = $_POST['allergies'];
     $med_history = $_POST['medical_history'];
 
+<<<<<<< HEAD
     // Handle Profile Picture Upload
     $profile_photo_path = $profile['profile_photo']; // Default to existing
     
@@ -79,6 +87,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
 
     // Update/Insert Patient Profile Table (DOB, Gender, BloodGroup, History)
     $check = $conn->query("SELECT patient_id FROM patient_profiles WHERE user_id = $user_id");
+=======
+    // Update Registration Table
+    $up1 = $conn->prepare("UPDATE registrations SET phone = ?, address = ? WHERE registration_id = (SELECT registration_id FROM users WHERE user_id = ?)");
+    $up1->bind_param("ssi", $phone, $address, $user_id);
+    $up1->execute();
+
+    // Update/Insert Patient Profile Table
+    // Check if exists
+    $check = $conn->query("SELECT profile_id FROM patient_profiles WHERE user_id = $user_id");
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     if($check->num_rows > 0) {
         $up2 = $conn->prepare("UPDATE patient_profiles SET date_of_birth = ?, gender = ?, blood_group = ?, allergies = ?, medical_history = ? WHERE user_id = ?");
         $up2->bind_param("sssssi", $dob, $gender, $blood_group, $allergies, $med_history, $user_id);
@@ -89,13 +107,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
         $up2->bind_param("issssss", $user_id, $p_code, $dob, $gender, $blood_group, $allergies, $med_history);
     }
     
+<<<<<<< HEAD
     if ($up2->execute() && empty($error)) {
+=======
+    if ($up2->execute()) {
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         $msg = "Profile updated successfully!";
         // Refresh data
         $stmt->execute();
         $profile = $stmt->get_result()->fetch_assoc();
     } else {
+<<<<<<< HEAD
         $error .= "Failed to update profile details.";
+=======
+        $error = "Failed to update profile.";
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     }
 }
 ?>
@@ -105,6 +131,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Profile - HealCare</title>
+<<<<<<< HEAD
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -116,6 +143,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
     <style>
         /* Specific Profile Styles */
         .profile-header-card {
+=======
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <style>
+        .profile-header {
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             padding: 40px;
             border-radius: 20px;
@@ -125,6 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
             gap: 30px;
             color: white;
             box-shadow: 0 10px 30px rgba(37, 99, 235, 0.3);
+<<<<<<< HEAD
             position: relative;
             overflow: hidden;
         }
@@ -149,6 +184,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
 
         .form-section {
             background: #1e293b;
+=======
+        }
+        .profile-img-container {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid rgba(255,255,255,0.3);
+            overflow: hidden;
+            background: #fff;
+        }
+        .profile-img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-info h1 { margin: 0; font-size: 2rem; font-weight: 700; }
+        .profile-info p { margin: 5px 0 0; opacity: 0.9; }
+        
+        .form-section {
+            background: rgba(30, 41, 59, 0.4);
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             border: 1px solid rgba(255,255,255,0.05);
             border-radius: 20px;
             padding: 35px;
@@ -161,7 +213,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
             margin-bottom: 25px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             padding-bottom: 15px;
+<<<<<<< HEAD
             font-weight: 600;
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         }
         
         .form-grid {
@@ -180,7 +235,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
         
         .form-control {
             width: 100%;
+<<<<<<< HEAD
             background: #0f172a;
+=======
+            background: rgba(255,255,255,0.03);
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 10px;
             padding: 12px 15px;
@@ -193,7 +252,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
             border-color: #3b82f6;
             background: rgba(255,255,255,0.05);
         }
+<<<<<<< HEAD
         .form-control[readonly] { opacity: 0.7; cursor: not-allowed; }
+=======
+        .form-control[readonly] { opacity: 0.6; cursor: not-allowed; }
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         
         .btn-update {
             background: #10b981;
@@ -206,9 +269,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
             cursor: pointer;
             margin-top: 30px;
             transition: 0.3s;
+<<<<<<< HEAD
             width: 100%; /* Full width on mobile, auto on desk */
             max-width: 250px;
             display: block;
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         }
         .btn-update:hover { background: #059669; }
         
@@ -220,6 +286,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
         }
         .alert-success { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
         .alert-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+<<<<<<< HEAD
 
         /* File Input Styling */
         .file-input-wrapper {
@@ -324,6 +391,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
 
         <!-- Main Content -->
         <main class="main-content">
+=======
+    </style>
+</head>
+<body>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" style="width: 280px; background: #0f172a; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column;">
+            <div class="logo-container" style="padding: 30px;">
+                <h2 style="color: #fff; margin: 0;">HEALCARE</h2>
+            </div>
+            <nav style="flex: 1; padding: 0 15px;">
+                <a href="patient_dashboard.php" class="nav-link"><i class="fas fa-home"></i> Dashboard</a>
+                <a href="my_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> My Appointments</a>
+                <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical"></i> Medical Records</a>
+                <a href="patient_lab_results.php" class="nav-link"><i class="fas fa-flask"></i> Lab Results</a>
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="patient_profile.php" class="nav-link active" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;"><i class="fas fa-user"></i> My Profile</a>
+                <a href="logout.php" class="nav-link" style="color: #ef4444; margin-top: 20px;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="flex: 1; padding: 40px; background: #020617; overflow-y: auto;">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             
             <?php if($msg): ?>
                 <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?php echo $msg; ?></div>
@@ -332,6 +422,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
                 <div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> <?php echo $error; ?></div>
             <?php endif; ?>
 
+<<<<<<< HEAD
             <div class="profile-header-card">
                 <div class="profile-img-wrapper">
                     <img src="<?php echo !empty($profile['profile_photo']) ? $profile['profile_photo'] : 'assets/images/default_user.png'; ?>" class="profile-img-display" onerror="this.src='https://ui-avatars.com/api/?name=<?php echo urlencode($profile['name']); ?>&background=random'">
@@ -360,6 +451,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
                         </div>
                     </div>
 
+=======
+            <div class="profile-header">
+                <div class="profile-img-container">
+                    <img src="<?php echo !empty($profile['profile_photo']) ? $profile['profile_photo'] : 'assets/images/default_user.png'; ?>" class="profile-img" onerror="this.src='https://ui-avatars.com/api/?name=<?php echo urlencode($profile['name']); ?>&background=random'">
+                </div>
+                <div class="profile-info">
+                    <h1><?php echo htmlspecialchars($profile['name']); ?></h1>
+                    <p><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($profile['email']); ?> &nbsp;•&nbsp; <i class="fas fa-id-card"></i> <?php echo htmlspecialchars($profile['patient_code'] ?? 'PENDING'); ?></p>
+                </div>
+            </div>
+
+            <form method="POST" class="form-section">
+                <h3 class="section-title">Personal Details</h3>
+                <div class="form-grid">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     <div class="form-group">
                         <label>Full Name</label>
                         <input type="text" class="form-control" value="<?php echo htmlspecialchars($profile['name']); ?>" readonly>
@@ -412,6 +518,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
             </form>
 
         </main>
+<<<<<<< HEAD
     </div>
 
     <script>
@@ -479,4 +586,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
         });
     </script>
 </body>
+=======
+    </div></body>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </html>

@@ -55,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['request_nurse_dash']))
         exit();
     }
 }
+<<<<<<< HEAD
 
 // Fetch real notifications
 $notifications_db = [];
@@ -72,13 +73,19 @@ while ($row = $notif_res->fetch_assoc()) {
     $row['unread'] = (bool)$row['unread'];
     $notifications_db[] = $row;
 }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
     <title>Dashboard - <?php echo htmlspecialchars($display_name); ?></title>
+=======
+    <title>Patient Dashboard - HealCare</title>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -135,7 +142,10 @@ while ($row = $notif_res->fetch_assoc()) {
             padding: 25px;
             border-radius: 20px;
             border: 1px solid var(--border-color);
+<<<<<<< HEAD
             margin-bottom: 30px;
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         }
         
         /* Override chatbot position for patient dashboard - position at bottom */
@@ -152,6 +162,7 @@ while ($row = $notif_res->fetch_assoc()) {
                 bottom: 20px !important;
             }
         }
+<<<<<<< HEAD
         
         /* Dashboard Card Enhancements */
         .content-section {
@@ -207,6 +218,10 @@ while ($row = $notif_res->fetch_assoc()) {
             gap: 12px;
         }
 
+=======
+            margin-top: 30px;
+        }
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         .canteen-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
@@ -244,6 +259,7 @@ while ($row = $notif_res->fetch_assoc()) {
         .status-Approved, .status-Confirmed { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
         .status-Completed, .status-Checked { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+<<<<<<< HEAD
         
         /* Notification System */
         .notification-wrapper {
@@ -363,15 +379,21 @@ while ($row = $notif_res->fetch_assoc()) {
             opacity: 1;
             transform: translateY(0);
         }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </style>
 </head>
 <body>
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -379,7 +401,20 @@ while ($row = $notif_res->fetch_assoc()) {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -396,6 +431,7 @@ while ($row = $notif_res->fetch_assoc()) {
 
     <!-- Secondary Navy Header -->
     <header class="secondary-header">
+<<<<<<< HEAD
         <div style="flex: 1;"></div>
         <div class="user-controls" style="position: relative; display: flex; align-items: center; gap: 25px;">
             <!-- Notification Bell -->
@@ -418,11 +454,22 @@ while ($row = $notif_res->fetch_assoc()) {
                 </div>
             </div>
 
+=======
+        <div class="brand-section">
+            <div class="brand-icon">+</div>
+            <div class="brand-name">HealCare</div>
+        </div>
+        <div class="user-controls">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <?php 
             // Use name from profile if available, else session, else username
             $display_name = $profile['name'] ?? $_SESSION['full_name'] ?? $username;
             ?>
+<<<<<<< HEAD
             <span class="user-greeting"><strong><?php echo htmlspecialchars($display_name); ?></strong></span>
+=======
+            <span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($display_name); ?></strong></span>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <a href="logout.php" class="btn-logout">Log Out</a>
         </div>
     </header>
@@ -439,13 +486,17 @@ while ($row = $notif_res->fetch_assoc()) {
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+<<<<<<< HEAD
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
 
         <!-- Main Content Area -->
         <main class="main-content">
+<<<<<<< HEAD
             <div class="dashboard-header" style="margin-bottom: 30px;">
                 <?php 
                 include_once 'includes/greeting_logic.php';
@@ -459,6 +510,11 @@ while ($row = $notif_res->fetch_assoc()) {
                 </div>
                 
                 <h1 style="display: none;">Patient Dashboard</h1>
+=======
+            <div class="dashboard-header">
+                <h1>Patient Dashboard</h1>
+                <p>Welcome back! Here's your real-time health and hospital status.</p>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             </div>
 
             <!-- Enhanced Stats Overview Cards -->
@@ -520,6 +576,7 @@ while ($row = $notif_res->fetch_assoc()) {
 
             <!-- Health Trends Chart -->
             <div class="chart-container">
+<<<<<<< HEAD
                 <div class="section-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
                     <h3>Health Analysis Trends</h3>
                     <select id="timeRange" style="background:rgba(255,255,255,0.1); color:white; border:1px solid rgba(255,255,255,0.2); padding:5px 10px; border-radius:5px; cursor:pointer;" onchange="updateChartTime(this.value)">
@@ -556,6 +613,12 @@ while ($row = $notif_res->fetch_assoc()) {
                 <div style="height: 300px;">
                     <canvas id="healthChart"></canvas>
                 </div>
+=======
+                <div class="section-head">
+                    <h3>Health Analysis Trends</h3>
+                </div>
+                <canvas id="healthChart" height="100"></canvas>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             </div>
 
             <!-- Two Column Layout: Main Ops & Side Info -->
@@ -581,10 +644,17 @@ while ($row = $notif_res->fetch_assoc()) {
                 
                 $est_bill = $adm_days * $w_rate; 
             ?>
+<<<<<<< HEAD
             <div class="content-section" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); border-color: rgba(16, 185, 129, 0.3);">
                 <div class="section-head" style="margin-bottom: 20px;">
                     <h3 style="color: #10b981;"><i class="fas fa-bed"></i> YOUR CURRENT ADMISSION</h3>
                     <span class="badge" style="background:#10b981; color:white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">INPATIENT ACTIVE</span>
+=======
+            <div class="content-section" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05)); border: 1px solid rgba(16, 185, 129, 0.2);">
+                <div class="section-head" style="margin-bottom: 15px;">
+                    <h3 style="color: #10b981;"><i class="fas fa-bed"></i> Current Admission Status</h3>
+                    <span class="badge status-check" style="background:#10b981; color:white; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Inpatient</span>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
                     <div>
@@ -628,10 +698,17 @@ while ($row = $notif_res->fetch_assoc()) {
                  if($pend_res && $pend_res->num_rows > 0) {
                      $pend = $pend_res->fetch_assoc();
             ?>
+<<<<<<< HEAD
             <div class="content-section" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); border-color: rgba(245, 158, 11, 0.3);">
                 <div class="section-head" style="margin-bottom: 20px;">
                     <h3 style="color: #f59e0b;"><i class="fas fa-clock"></i> ADMISSION REQUEST PENDING</h3>
                     <span class="badge" style="background:#f59e0b; color:white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">PROCESSING</span>
+=======
+            <div class="content-section" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05)); border: 1px solid rgba(245, 158, 11, 0.2);">
+                <div class="section-head" style="margin-bottom: 15px;">
+                    <h3 style="color: #f59e0b;"><i class="fas fa-procedures"></i> Admission Request Pending</h3>
+                    <span class="badge status-check" style="background:#f59e0b; color:white; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Processing</span>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
                     <div>
@@ -640,11 +717,15 @@ while ($row = $notif_res->fetch_assoc()) {
                     </div>
                     <div>
                         <small style="color: #94a3b8;">Recommending Doctor</small>
+<<<<<<< HEAD
                         <?php 
                             $adm_doc = $pend['doctor_name'];
                             $display_adm_doc = (stripos($adm_doc, 'Dr.') === 0) ? $adm_doc : 'Dr. ' . $adm_doc;
                         ?>
                         <h4 style="margin: 0; font-size: 16px; color: white;"><?php echo htmlspecialchars($display_adm_doc); ?></h4>
+=======
+                        <h4 style="margin: 0; font-size: 16px; color: white;">Dr. <?php echo htmlspecialchars($pend['doctor_name']); ?></h4>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                     <div>
                         <small style="color: #94a3b8;">Request Date</small>
@@ -655,6 +736,7 @@ while ($row = $notif_res->fetch_assoc()) {
             </div>
             <?php } } ?>
 
+<<<<<<< HEAD
             <!-- Main Dashboard Grid -->
             <div style="display: grid; grid-template-columns: 1.6fr 1.1fr; gap: 30px; margin-top: 30px; align-items: start;">
                 
@@ -749,11 +831,94 @@ while ($row = $notif_res->fetch_assoc()) {
                         <?php else: ?>
                             <div class="dash-item" style="text-align: center; padding: 30px;">
                                 <p style="color: #64748b;">No medical visit history available yet.</p>
+=======
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; margin-top: 30px;">
+                
+                <!-- Appointments & Medical History -->
+                <div class="content-section">
+                    <div class="section-head">
+                        <h3>Next Appointment</h3>
+                    </div>
+                    <div class="appointment-list">
+                        <?php
+                        // Fetch next upcoming appointment
+                        $today_dt = date('Y-m-d H:i:s');
+                        $appt_sql = "SELECT a.*, d.specialization, u.username as doc_name, r.name as real_doc_name 
+                                     FROM appointments a 
+                                     LEFT JOIN users u ON a.doctor_id = u.user_id 
+                                     LEFT JOIN doctors d ON u.user_id = d.user_id 
+                                     LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                                     WHERE a.patient_id = $user_id AND a.status IN ('Scheduled', 'Approved', 'Pending', 'Requested', 'Confirmed', 'Pending Lab') AND a.appointment_date >= '$today_dt'
+                                     ORDER BY a.appointment_date ASC LIMIT 1";
+                        
+                        $appt_res = $conn->query($appt_sql);
+                        
+                        if ($appt_res && $appt_res->num_rows > 0):
+                            $appt = $appt_res->fetch_assoc();
+                            $doc_display_name = $appt['real_doc_name'] ?? ('Dr. ' . $appt['doc_name']);
+                            $appt_time = date('M d, Y \a\t h:i A', strtotime($appt['appointment_date']));
+                            $specialty = $appt['specialization'] ?? $appt['department'] ?? 'General';
+                        ?>
+                        <div class="appointment-item">
+                            <div class="doc-info">
+                                <h4><?php echo htmlspecialchars($doc_display_name); ?> <span class="status-badge status-<?php echo $appt['status']; ?>"><?php echo htmlspecialchars($appt['status']); ?></span></h4>
+                                <p><?php echo htmlspecialchars($specialty); ?> • <?php echo $appt_time; ?></p>
+                                <p style="font-size: 12px; margin-top: 5px;"><i class="fas fa-info-circle"></i> Token: <?php echo htmlspecialchars($appt['queue_number'] ?? 'N/A'); ?></p>
+                            </div>
+                            <div style="text-align: right;">
+                                <a href="my_appointments.php" style="display: block; font-size: 13px; color: #4fc3f7; text-decoration: none; margin-bottom: 10px;">View All</a>
+                                <a href="cancel_booking.php?id=<?php echo $appt['appointment_id']; ?>" class="action-cancel">Cancel</a>
+                            </div>
+                        </div>
+                        <?php else: ?>
+                            <div style="padding: 20px; text-align: center; color: #aaa;">
+                                <p>No upcoming appointments.</p>
+                                <a href="appointment_form.php" style="color: #4fc3f7; text-decoration: none; font-size: 13px; font-weight: 600;">Book Now</a>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                <!-- Lab Reports Download -->
+                <div style="margin-top: 40px;">
+                    <div class="section-head"><h3>Recent Lab Reports</h3></div>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <?php
+                        $lab_sql = "SELECT * FROM lab_tests WHERE patient_id = $user_id AND status = 'Completed' ORDER BY created_at DESC LIMIT 3";
+                        $lab_res = $conn->query($lab_sql);
+                        if ($lab_res && $lab_res->num_rows > 0):
+                            while ($lab_order = $lab_res->fetch_assoc()):
+                        ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+                                <div>
+                                    <span style="display: block; font-size: 14px; font-weight: 600;"><i class="fas fa-flask" style="margin-right: 10px; color: #4fc3f7;"></i> <?php echo htmlspecialchars($lab_order['test_name']); ?></span>
+                                    <small style="color: #94a3b8; font-size: 11px;"><?php echo date('M d, Y', strtotime($lab_order['created_at'])); ?> • <?php echo htmlspecialchars($lab_order['test_type']); ?></small>
+                                </div>
+                                <?php if ($lab_order['status'] == 'Completed'): ?>
+                                    <?php if (!empty($lab_order['report_path'])): ?>
+                                        <a href="<?php echo htmlspecialchars($lab_order['report_path']); ?>" target="_blank" style="color: #4fc3f7; font-size: 13px; text-decoration: none; font-weight: 600;"><i class="fas fa-file-pdf"></i> Download Result</a>
+                                    <?php else: ?>
+                                        <span style="color: #10b981; font-size: 11px; font-weight: 600;"><i class="fas fa-check-circle"></i> Completed</span>
+                                    <?php endif; ?>
+                                <?php elseif ($lab_order['status'] == 'Processing'): ?>
+                                    <span style="color: #f59e0b; font-size: 11px;">Processing...</span>
+                                <?php elseif (($lab_order['status'] == 'Pending' || $lab_order['status'] == 'Requested') && ($lab_order['payment_status'] ?? 'Pending') == 'Paid'): ?>
+                                    <button onclick="showAuthQR(<?php echo $lab_order['labtest_id']; ?>, '<?php echo htmlspecialchars($lab_order['test_name']); ?>')" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; padding: 5px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer;">
+                                        <i class="fas fa-qrcode"></i> View Auth Code
+                                    </button>
+                                <?php else: ?>
+                                    <span style="color: #f59e0b; font-size: 11px;"><i class="fas fa-coins"></i> Payment Pending</span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endwhile; else: ?>
+                            <div style="text-align: center; padding: 20px; color: #64748b; font-size: 13px; background: rgba(255,255,255,0.01); border-radius: 10px;">
+                                No lab reports available yet.
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
 
+<<<<<<< HEAD
                 <!-- Right Column (Secondary Info) -->
                 <div style="display: flex; flex-direction: column; gap: 30px;">
                     
@@ -765,12 +930,114 @@ while ($row = $notif_res->fetch_assoc()) {
                         </div>
                         <?php
                         $latest_canteen = $conn->query("SELECT co.*, cm.item_name FROM canteen_orders co JOIN canteen_menu cm ON co.menu_id = cm.menu_id WHERE co.patient_id = $user_id ORDER BY co.created_at DESC LIMIT 1");
+=======
+                <!-- Visit History & Advice Section -->
+                <div style="margin-top: 40px;">
+                    <div class="section-head"><h3>Visit History & Doctor's Advice</h3></div>
+                    <?php if(!empty($medical_records)): ?>
+                        <?php foreach($medical_records as $record): ?>
+                            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 20px; border-radius: 15px; margin-bottom: 20px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                                    <div>
+                                        <h4 style="color: #4fc3f7; margin-bottom: 5px;"><?php echo htmlspecialchars($record['diagnosis']); ?></h4>
+                                        <p style="font-size: 12px; color: #94a3b8;">Consulted with <?php echo htmlspecialchars($record['doctor_name']); ?> • <?php echo date('M d, Y', strtotime($record['created_at'])); ?></p>
+                                    </div>
+                                    <span class="status-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; align-self: flex-start;">Visit Completed</span>
+                                </div>
+                                
+                                <?php if(!empty($record['special_notes'])): ?>
+                                    <div style="background: rgba(59, 130, 246, 0.05); border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                                        <strong style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #3b82f6; margin-bottom: 5px;">Special Advice for you:</strong>
+                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;"><?php echo nl2br(htmlspecialchars($record['special_notes'])); ?></p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if(!empty($record['prescription'])): ?>
+                                    <div style="background: rgba(16, 185, 129, 0.05); border-left: 4px solid #10b981; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                                        <strong style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #10b981; margin-bottom: 5px;"><i class="fas fa-pills"></i> Prescribed Medication:</strong>
+                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5; margin-bottom: 15px;"><?php echo nl2br(htmlspecialchars($record['prescription'])); ?></p>
+                                        
+                                        <div style="border-top: 1px solid rgba(16, 185, 129, 0.2); padding-top: 10px; display:flex; gap:10px;">
+                                            <?php if($record['bill_id']): ?>
+                                                <?php if($record['bill_status'] == 'Paid'): ?>
+                                                    <a href="generate_receipt_pdf.php?bill_id=<?php echo $record['bill_id']; ?>" target="_blank" style="padding: 8px 15px; background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; color: #10b981; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration:none;">
+                                                        <i class="fas fa-download"></i> <?php echo (strpos($record['type_of_bill'], 'Services') !== false) ? 'Download Combined Receipt' : 'Download Receipt'; ?>
+                                                    </a>
+                                                    <span style="padding: 8px 0; color: #10b981; font-size: 12px; font-weight: 600;"><i class="fas fa-check-circle"></i> Paid</span>
+                                                <?php else: ?>
+                                                    <a href="payment_gateway.php?bill_id=<?php echo $record['bill_id']; ?>" style="padding: 8px 15px; background: #f59e0b; color: #000; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration:none;">
+                                                        <i class="fas fa-credit-card"></i> Pay Bill (₹<?php echo number_format($record['bill_amount']); ?>)
+                                                    </a>
+                                                <?php endif; ?>
+                                                <?php 
+                                                // Bill generation is now handled by the Pharmacist
+                                                $chk_ref = intval($record['prescription_id']);
+                                                $chk_bill = null;
+                                                if($chk_ref > 0) {
+                                                    $chk_bill = $conn->query("SELECT bill_id, payment_status FROM billing WHERE reference_id = $chk_ref AND (bill_type LIKE 'Pharmacy%')");
+                                                }
+                                                
+                                                if($chk_bill && $chk_bill->num_rows > 0) {
+                                                     $b_data = $chk_bill->fetch_assoc();
+                                                     if($b_data['payment_status'] == 'Pending') {
+                                                         echo '<a href="payment_gateway.php?bill_id='.$b_data['bill_id'].'" style="padding: 10px 20px; background: #f59e0b; color: #000; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration:none;"><i class="fas fa-credit-card"></i> Pay Medicine Bill</a>';
+                                                     } elseif($b_data['payment_status'] == 'Paid') {
+                                                         echo '<span style="font-size:12px; color:#10b981;"><i class="fas fa-check-circle"></i> Bill Paid - Visit Pharmacy for Pickup</span>';
+                                                     } else {
+                                                         echo '<span style="font-size:12px; color:#4fc3f7;"><i class="fas fa-pills"></i> Medicines Dispensed & Received</span>';
+                                                     }
+                                                } else {
+                                                    echo '<div style="font-size:12px; color:#94a3b8; padding: 10px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 8px;">
+                                                            <i class="fas fa-hourglass-half"></i> Pharmacist is calculating your medicine bill...
+                                                          </div>';
+                                                }
+                                                ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <?php if(!empty($record['lab_tests'])): ?>
+                                    <div style="background: rgba(79, 195, 247, 0.05); border-left: 4px solid #4fc3f7; padding: 15px; border-radius: 4px; margin-top: 10px;">
+                                        <strong style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #4fc3f7; margin-bottom: 5px;"><i class="fas fa-flask"></i> Requested Lab Tests:</strong>
+                                        <p style="font-size: 13.5px; color: #cbd5e1; line-height: 1.5;"><?php echo htmlspecialchars($record['lab_tests']); ?></p>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div style="padding: 20px; text-align: center; color: #aaa;">
+                            <p>No medical visit history available yet.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+                <!-- Canteen & Notifications -->
+                <div style="display: flex; flex-direction: column; gap: 30px;">
+                    <!-- Canteen Status Card -->
+                    <div style="background: var(--card-bg); border: 1px solid var(--border-color); padding: 25px; border-radius: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="font-size: 16px; font-weight: 700;">Local Canteen</h3>
+                            <a href="canteen.php" style="font-size: 12px; color: #4fc3f7; text-decoration: none;">Order Food</a>
+                        </div>
+                        
+                        <?php
+                        $latest_canteen = $conn->query("
+                            SELECT co.*, cm.item_name 
+                            FROM canteen_orders co
+                            JOIN canteen_menu cm ON co.menu_id = cm.menu_id
+                            WHERE co.patient_id = $user_id
+                            ORDER BY co.created_at DESC LIMIT 1
+                        ");
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         if ($latest_canteen && $latest_canteen->num_rows > 0):
                             $c_order = $latest_canteen->fetch_assoc();
                             $c_progress = 20;
                             if($c_order['order_status'] == 'Preparing') $c_progress = 60;
                             if($c_order['order_status'] == 'Delivered') $c_progress = 100;
                         ?>
+<<<<<<< HEAD
                             <div class="dash-item">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
                                     <span style="font-weight: 600;"><?php echo htmlspecialchars($c_order['item_name']); ?></span>
@@ -784,10 +1051,27 @@ while ($row = $notif_res->fetch_assoc()) {
                         <?php else: ?>
                             <div class="dash-item" style="text-align: center; padding: 20px;">
                                 <p style="color: #64748b; font-size: 13px;">No active food orders.</p>
+=======
+                            <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid rgba(79, 195, 247, 0.1);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                    <span style="font-size: 13px; color: #fff; font-weight: 600;"><?php echo htmlspecialchars($c_order['item_name']); ?></span>
+                                    <span class="status-badge status-<?php echo $c_order['order_status']; ?>" style="font-size: 10px;"><?php echo strtoupper($c_order['order_status']); ?></span>
+                                </div>
+                                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; margin-bottom: 8px;">
+                                    <div style="width: <?php echo $c_progress; ?>%; height: 100%; background: #4fc3f7; box-shadow: 0 0 10px rgba(79, 195, 247, 0.4);"></div>
+                                </div>
+                                <p style="font-size: 11px; color: #94a3b8; margin: 0;">Last updated: <?php echo date('h:i A', strtotime($c_order['created_at'])); ?></p>
+                            </div>
+                        <?php else: ?>
+                            <div style="text-align: center; padding: 20px; color: #64748b; font-size: 13px;">
+                                <i class="fas fa-utensils" style="font-size: 24px; margin-bottom: 10px; display: block; opacity: 0.3;"></i>
+                                No active food orders.
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             </div>
                         <?php endif; ?>
                     </div>
 
+<<<<<<< HEAD
                     <!-- Recent Lab Reports Card -->
                     <div class="content-section">
                         <div class="section-head">
@@ -820,6 +1104,9 @@ while ($row = $notif_res->fetch_assoc()) {
                             <?php endif; ?>
                         </div>
                     </div>
+=======
+                    <a href="#" style="padding: 10px 20px; background: rgba(79, 195, 247, 0.1); border: 1px solid #4fc3f7; border-radius: 8px; color: #4fc3f7; text-decoration: none; font-size: 13px; font-weight: 600; text-align: center;">Submit Feedback</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
             </div>
 
@@ -854,6 +1141,7 @@ while ($row = $notif_res->fetch_assoc()) {
     </script>
     <!-- Chatbot Widget -->
     <?php include 'includes/chatbot_widget.php'; ?>
+<<<<<<< HEAD
 
     <!-- Health Chart Script -->
     <script>
@@ -1121,5 +1409,7 @@ while ($row = $notif_res->fetch_assoc()) {
         // Initialize
         renderNotifications();
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </body>
 </html>

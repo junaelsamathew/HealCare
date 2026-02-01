@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 /* ===== DASHBOARD GENERAL STYLES ===== */
 :root {
     --primary-blue: #3b82f6;
@@ -15,11 +18,14 @@
     --border-color: rgba(255, 255, 255, 0.05);
 }
 
+<<<<<<< HEAD
 select option {
     background-color: #111d33;
     color: #ffffff;
 }
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 * {
     margin: 0;
     padding: 0;
@@ -98,9 +104,14 @@ body {
     background: var(--sidebar-bg);
     padding: 15px 40px;
     display: flex;
+<<<<<<< HEAD
     justify-content: flex-end;
     align-items: center;
     width: 100%;
+=======
+    justify-content: space-between;
+    align-items: center;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -133,7 +144,10 @@ body {
     display: flex;
     align-items: center;
     gap: 25px;
+<<<<<<< HEAD
     margin-left: auto;
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }
 
 .user-greeting {

@@ -14,6 +14,7 @@ $user_id = $_SESSION['user_id'] ?? 0;
 // Identify specific staff type for staff role
 $staff_type = '';
 if ($role == 'staff') {
+<<<<<<< HEAD
     // 1. Check registrations table as primary source of truth
     $st_res = $conn->query("SELECT r.staff_type FROM users u JOIN registrations r ON u.registration_id = r.registration_id WHERE u.user_id = $user_id");
     if($st_res && $st_row = $st_res->fetch_assoc()) {
@@ -50,6 +51,10 @@ if ($role == 'staff') {
             if ($check_canteen && $check_canteen->num_rows > 0) $staff_type = 'canteen_staff';
         }
     }
+=======
+    $c = $conn->query("SELECT 'nurse' as t FROM nurses WHERE user_id=$user_id UNION SELECT 'lab_staff' FROM lab_staff WHERE user_id=$user_id UNION SELECT 'pharmacist' FROM pharmacists WHERE user_id=$user_id UNION SELECT 'receptionist' FROM receptionists WHERE user_id=$user_id UNION SELECT 'canteen_staff' FROM canteen_staff WHERE user_id=$user_id");
+    if($c && $r = $c->fetch_assoc()) $staff_type = $r['t'];
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }
 
 // Map roles for RBAC checks
@@ -388,6 +393,7 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                                            WHERE (a.appointment_date IS NULL OR a.appointment_date BETWEEN '$start_date' AND '$end_date') $doc_filter
                                            GROUP BY d.doctor_id";
                                  break;
+<<<<<<< HEAD
                             case 'lab_revenue':
                                  $headers = ['Date', 'Bill ID', 'Price', 'Tax (5%)', 'Total', 'Patient'];
                                  $query = "SELECT bill_date, bill_id, total_amount*0.95 as net, total_amount*0.05 as tax, total_amount, patient_id FROM billing WHERE bill_type = 'Lab Test' AND bill_date BETWEEN '$start_date' AND '$end_date'";
@@ -400,6 +406,8 @@ $end_date = $_POST['end_date'] ?? date('Y-m-d');
                                            JOIN users ud ON l.doctor_id = ud.user_id JOIN registrations rd ON ud.registration_id = rd.registration_id
                                            WHERE DATE(l.created_at) BETWEEN '$start_date' AND '$end_date'";
                                  break;
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             case 'dept_revenue':
                                  $headers = ['Department', 'Services Count', 'Revenue'];
                                  $query = "SELECT specialization, COUNT(appointment_id), SUM(consultation_fee) FROM appointments a JOIN doctors d ON a.doctor_id = d.doctor_id WHERE a.status = 'Completed' AND a.appointment_date BETWEEN '$start_date' AND '$end_date' GROUP BY specialization";

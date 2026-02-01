@@ -1,6 +1,9 @@
 <?php
 $servername = "127.0.0.1";
+<<<<<<< HEAD
 date_default_timezone_set('Asia/Kolkata');
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 $username = "root";
 $password = "";
 $dbname = "healcare";
@@ -36,10 +39,13 @@ try {
         include_once __DIR__ . '/db_setup_logic.php';
     }
 */
+<<<<<<< HEAD
     // Auto-cancel logic: If appointment date is passed and status is still 'Confirmed' or 'Pending', cancel it.
     $today_cancel = date('Y-m-d');
     $conn->query("UPDATE appointments SET status = 'Cancelled' WHERE appointment_date < '$today_cancel' AND status IN ('Confirmed', 'Pending', 'Scheduled')");
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 } catch (Exception $e) {
     die("Database Connection Error: " . $e->getMessage());
 }

@@ -101,6 +101,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
     </style>
 </head>
 <body>
+<<<<<<< HEAD
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
@@ -134,6 +135,33 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
         <div class="user-controls" style="display: flex; align-items: center; gap: 20px;">
             <span class="user-greeting" style="color: #cbd5e1; font-size: 14px;">Welcome, <strong style="color: #fff;"><?php echo $doctor_name; ?></strong></span>
             <a href="logout.php" class="btn-logout" style="padding: 6px 15px; background: transparent; border: 1px solid #3b82f6; color: #fff; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.3s;">Sign Out</a>
+=======
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-calendar-alt"></i></div>
+                <div class="info-details"><span class="info-label">DATE</span><span class="info-value"><?php echo date('d M Y'); ?></span></div>
+            </div>
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-bell"></i></div>
+                <div class="info-details"><span class="info-label">NOTIFICATIONS</span><span class="info-value">5 New Consults</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section">
+            <div class="brand-icon">+</div>
+            <div class="brand-name">HealCare</div>
+            <div style="margin-left: 20px; padding: 4px 12px; background: rgba(79, 195, 247, 0.15); border: 1px solid #4fc3f7; border-radius: 20px; color: #4fc3f7; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                <?php echo $department; ?> DEPT
+            </div>
+        </div>
+        <div class="user-controls">
+            <span class="user-greeting">Welcome, <strong><?php echo $doctor_name; ?></strong></span>
+            <a href="logout.php" class="btn-logout">Sign Out</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         </div>
     </header>
 
@@ -143,7 +171,10 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 <a href="doctor_dashboard.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="doctor_patients.php" class="nav-link active"><i class="fas fa-user-injured"></i> Patients</a>
                 <a href="doctor_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> Appointments</a>
+<<<<<<< HEAD
                 <a href="create_appointment.php" class="nav-link"><i class="fas fa-plus-circle"></i> Create Appointment</a>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="doctor_prescriptions.php" class="nav-link"><i class="fas fa-file-prescription"></i> Prescriptions</a>
                 <a href="doctor_lab_orders.php" class="nav-link"><i class="fas fa-flask"></i> Lab Orders</a>
                 <a href="doctor_leave.php" class="nav-link"><i class="fas fa-calendar-minus"></i> Apply Leave</a>

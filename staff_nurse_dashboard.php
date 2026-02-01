@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_vitals'])) {
         $error = "Update failed: " . $conn->error;
     }
 }
+<<<<<<< HEAD
 
 // Handle Note Submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
@@ -58,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
         $error = "Note addition failed: " . $conn->error;
     }
 }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 ?>
 
 <!DOCTYPE html>
@@ -130,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
             padding: 12px; border-radius: 10px; color: #fff; font-size: 14px; outline: none; transition: 0.3s;
         }
         .form-group-staff input:focus { border-color: #4fc3f7; background: rgba(79, 195, 247, 0.05); }
+<<<<<<< HEAD
         
         /* Brand Animation */
         .brand-letter {
@@ -142,16 +146,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
             opacity: 1;
             transform: translateY(0);
         }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </style>
 </head>
 <body>
 
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -159,10 +169,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
                 </div>
             </div>
             
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+                </div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
                     <i class="fas fa-map-marker-alt"></i>
@@ -194,6 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
         <main class="main-ops">
             <?php if (!isset($_GET['section']) || $_GET['section'] == 'dashboard' || $_GET['section'] == 'patients'): ?>
                 <div style="margin-bottom: 30px;">
+<<<<<<< HEAD
                     <?php 
                     include_once 'includes/greeting_logic.php';
                     $nurse_display_name = $_SESSION['full_name'] ?? $_SESSION['username'];
@@ -213,6 +239,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                             <p style="color:#64748b; font-size:14px;">Monitor assigned patients and update vital signs.</p>
                         </div>
                     </div>
+=======
+                    <h1 style="color:#fff; font-size: 28px;">Ward Management - <?php echo $department; ?></h1>
+                    <p style="color:#64748b; font-size:14px;">Monitor assigned patients and update vital signs.</p>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
 
                 <div class="stats-grid">
@@ -289,10 +319,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                                     <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">ID: HC-P-<?php echo $req['patient_id']; ?></p>
                                     
                                     <div style="background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; font-size: 13px; color: #cbd5e1;">
+<<<<<<< HEAD
                                         <p style="margin-bottom: 5px;">
                                             <i class="fas fa-bed" style="width:20px;"></i> 
                                             <?php echo htmlspecialchars(($req['ward_name'] ?? 'Unassigned') . ' - Room ' . ($req['room_number'] ?? 'N/A')); ?>
                                         </p>
+=======
+                                        <p style="margin-bottom: 5px;"><i class="fas fa-bed" style="width:20px;"></i> <?php echo htmlspecialchars($req['ward_name'] ?? 'Ward') . ' - ' . htmlspecialchars($req['room_number'] ?? 'N/A'); ?></p>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                         <p><i class="fas fa-user-md" style="width:20px;"></i> Req. by: Dr. <?php echo htmlspecialchars($req['doctor_name']); ?></p>
                                         <p style="font-size:11px; color:#94a3b8; margin-top:5px;"><i class="fas fa-clock"></i> Requested: <?php echo date('h:i A', strtotime($req['request_date'])); ?></p>
                                     </div>
@@ -417,6 +451,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                 </div>
                 <div class="stat-card-new">
                     <h3 style="color:#fff; margin-bottom:20px;">Select Patient</h3>
+<<<<<<< HEAD
                     <select name="patient_id" style="width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border-soft); color: #fff; border-radius: 8px;">
                         <option value="">-- Select Patient --</option>
                         <?php
@@ -466,6 +501,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                         </div>
                         <button type="submit" name="update_vitals" style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Log Vitals</button>
                     </form>
+=======
+                    <select style="width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border-soft); color: #fff; border-radius: 8px;">
+                        <option>Ravi Sharma (HC-P-2026-1025) - Ward B/15</option>
+                        <option>Sneha Gupta (HC-P-2026-1026) - Waiting</option>
+                    </select>
+                    
+                    <div class="vital-inputs" style="margin-top: 20px;">
+                        <div class="form-group-staff"><label>Heart Rate (BPM)</label><input type="text" placeholder="--"></div>
+                        <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" placeholder="--/--"></div>
+                        <div class="form-group-staff"><label>Temp (°F)</label><input type="text" placeholder="--"></div>
+                        <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" placeholder="--"></div>
+                        <div class="form-group-staff"><label>Resp. Rate</label><input type="text" placeholder="--"></div>
+                    </div>
+                    <button style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Log Vitals</button>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
 
             <?php elseif ($_GET['section'] == 'notes'): ?>
@@ -474,6 +524,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                     <p style="color:#64748b; font-size:14px;">Clinical observations and care notes.</p>
                 </div>
                 <div class="stat-card-new">
+<<<<<<< HEAD
                      <form method="POST">
                          <div class="form-group-staff" style="margin-bottom: 20px;">
                             <label>Patient</label>
@@ -521,6 +572,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                         </div>
                         <button type="submit" name="add_note" style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Save Note</button>
                     </form>
+=======
+                     <div class="form-group-staff" style="margin-bottom: 20px;">
+                        <label>Patient</label>
+                        <select style="width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border-soft); color: #fff; border-radius: 8px;">
+                            <option value="">-- Select Patient --</option>
+                            <?php
+                            $today_notes = date('Y-m-d');
+                            $sql_notes_pt = "SELECT u.user_id as patient_id, r.name 
+                                             FROM appointments a
+                                             JOIN users u ON a.patient_id = u.user_id
+                                             JOIN registrations r ON u.registration_id = r.registration_id
+                                             WHERE a.appointment_date = '$today_notes' 
+                                             AND a.status IN ('Approved', 'Checked-In', 'Admitted', 'In-Treatment')
+                                             ORDER BY r.name ASC";
+                            $res_notes_pt = $conn->query($sql_notes_pt);
+                            
+                            if ($res_notes_pt && $res_notes_pt->num_rows > 0) {
+                                while ($npt = $res_notes_pt->fetch_assoc()) {
+                                    echo '<option value="'.$npt['patient_id'].'">' . htmlspecialchars($npt['name']) . ' (HC-P-'.$npt['patient_id'].')</option>';
+                                }
+                            } else {
+                                echo '<option disabled>No active patients found today</option>';
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <div class="form-group-staff">
+                        <label>Note Content</label>
+                        <textarea rows="6" placeholder="Detailed nursing notes..."></textarea>
+                    </div>
+                    <button style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Save Note</button>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </div>
 
             <?php elseif ($_GET['section'] == 'medication'): ?>
@@ -607,6 +690,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
     $staff_type = 'nurse';
     include 'includes/report_upload_modal.php'; 
     ?>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -662,5 +746,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </body>
 </html>

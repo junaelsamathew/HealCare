@@ -41,7 +41,11 @@ session_start();
 
         /* Top Bar Header */
         .login-header {
+<<<<<<< HEAD
             height: 100px;
+=======
+            height: 80px;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             background: #ffffff;
             display: flex;
             align-items: center;
@@ -366,6 +370,7 @@ session_start();
         }
 
 
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -379,6 +384,8 @@ session_start();
             transform: translateY(0);
         }
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         @media (max-width: 900px) {
             .left-section { display: none; }
             .login-card { padding: 15px; }
@@ -390,6 +397,7 @@ session_start();
 
     <!-- Header -->
     <header class="login-header">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 75px;">
             <span class="animated-brand">HEALCARE HOSPITAL</span>
@@ -400,6 +408,18 @@ session_start();
                 <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+91) 953 904 5609</span></div>
             </div>
 
+=======
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-clock"></i></div>
+                <div class="info-details"><span class="info-label">WORK HOUR</span><span class="info-value">09:00 - 20:00 Everyday</span></div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div class="header-info-item">
                 <div class="info-icon-circle"><i class="fas fa-map-marker-alt"></i></div>
                 <div class="info-details"><span class="info-label">LOCATION</span><span class="info-value">Kanjirapally, Kottayam</span></div>
@@ -412,7 +432,11 @@ session_start();
         <div class="left-section">
             <div class="bg-image"></div>
             <div class="left-content">
+<<<<<<< HEAD
                 <h1>HealCare Hospital</h1>
+=======
+                <h1>Heal Care</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <p>Create your Heal Care account to manage appointments, view medical records, and receive personalized healthcare services.</p>
             </div>
         </div>
@@ -513,6 +537,7 @@ session_start();
     </div>
 
     <!-- Reusing existing script logic but custom inline validation below -->
+<<<<<<< HEAD
     <script src="js/login.js?v=<?php echo time(); ?>"></script> 
     <script>
         // Ensure brand animation runs if not caught by login.js DOMContentLoaded
@@ -522,6 +547,10 @@ session_start();
             }
         });
 
+=======
+    <script src="js/login.js"></script> 
+    <script>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         function togglePass(btn) {
             const input = btn.previousElementSibling;
             if (input.type === "password") {

@@ -18,7 +18,11 @@ $patient_name = "Valued Patient";
 $service_name = "Service";
 
 if ($bill_id > 0) {
+<<<<<<< HEAD
     $res = $conn->query("SELECT b.*, r.name as patient_name, r.email as patient_email 
+=======
+    $res = $conn->query("SELECT b.*, r.name as patient_name 
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                          FROM billing b 
                          JOIN users u ON b.patient_id = u.user_id 
                          JOIN registrations r ON u.registration_id = r.registration_id 
@@ -26,8 +30,12 @@ if ($bill_id > 0) {
     if ($res && $res->num_rows > 0) {
         $bill = $res->fetch_assoc();
         $patient_name = $bill['patient_name'];
+<<<<<<< HEAD
         $patient_email = $bill['patient_email'];
         $service_name = ($bill['bill_type'] == 'Canteen') ? 'Canteen Order' : ($bill['bill_type'] ?: 'Medical Service');
+=======
+        $service_name = ($bill['bill_type'] == 'Canteen') ? 'Canteen Order' : 'Consultation';
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     }
 }
 
@@ -75,7 +83,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($bill_type == 'Consultation') {
             $appt_id = $bill['appointment_id'];
             if ($appt_id) {
+<<<<<<< HEAD
                 $stmt = $conn->prepare("UPDATE appointments SET payment_status = 'Paid', status = 'Requested' WHERE appointment_id = ?");
+=======
+                $stmt = $conn->prepare("UPDATE appointments SET payment_status = 'Paid' WHERE appointment_id = ?");
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 $stmt->bind_param("i", $appt_id);
                 $stmt->execute();
             }
@@ -103,8 +115,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     $doc_name = "Doctor";
                     $q_doc = $conn->query("SELECT name FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE u.user_id = $doc_id");
                     if ($q_doc && $q_doc->num_rows > 0) {
+<<<<<<< HEAD
                         $raw_doc_name = $q_doc->fetch_assoc()['name'];
                         $doc_name = (stripos($raw_doc_name, 'Dr.') === 0) ? $raw_doc_name : 'Dr. ' . $raw_doc_name;
+=======
+                        $doc_name = $q_doc->fetch_assoc()['name'];
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     }
 
                     // 3. Get Patient Details (Name & Email)
@@ -143,6 +159,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $mail->addAddress($pat_email, $pat_name);
 
                         $email_booking_number = date('Y', strtotime($date_str)) . "/" . str_pad($appt_id, 6, '0', STR_PAD_LEFT);
+<<<<<<< HEAD
                         $display_date = date('d M, Y', strtotime($date_str));
                         $display_time = date('h:i A', strtotime($appt_row['appointment_time'] ?? '09:00:00'));
                         $bk_id = "BK-" . $appt_id;
@@ -200,6 +217,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $mail->Subject = 'Confirmed: Appointment with ' . $doc_name . ' - HealCare Hospital';
                         $mail->Body = $email_body;
                         $mail->AltBody = "Hello $pat_name, Your appointment with $doc_name is confirmed for $display_date at $display_time. Token: $token_num. Booking ID: $bk_id.";
+=======
+
+                        $email_body = "
+                        <p>Greetings from HealCare Hospital</p>
+                        <p>Hello <strong>" . strtoupper(htmlspecialchars($pat_name)) . "</strong>,</p>
+                        <p>Your appointment with <strong>" . htmlspecialchars($doc_name) . "</strong> is confirmed on <strong>" . htmlspecialchars($date_str) . "</strong>.</p>
+                        <p>Token Number: <strong>" . htmlspecialchars($token_num) . "</strong></p>
+                        <p>The token time may change according to the emergency.</p>
+                        <p>Booking number: <strong>" . $email_booking_number . "</strong></p>
+                        <p>For Bookings contact us at 04828-201300, 04828-201400 or visit us at<br>
+                        </p>
+                        <br>
+                        <p>Thank you for trusting HealCare Hospital.</p>
+                        ";
+
+                        $mail->isHTML(true);
+                        $mail->Subject = 'Appointment Confirmation - HealCare Hospital';
+                        $mail->Body = $email_body;
+                        $mail->AltBody = strip_tags($email_body);
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         $mail->send();
                         file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - Email SENT Successfully.\n", FILE_APPEND);
                     } else {
@@ -292,6 +329,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <!-- Payment Options -->
         <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+<<<<<<< HEAD
             <div onclick="document.getElementById('rzp-button1').click()" style="padding: 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; background: #f0f7ff; transition:0.3s;" onmouseover="this.style.background='#e0efff'" onmouseout="this.style.background='#f0f7ff'">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <img src="https://cdn.iconscout.com/icon/free/png-256/free-razorpay-1649771-1399875.png" height="30" alt="Razorpay">
@@ -304,6 +342,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
                 </div>
                 <i class="fas fa-chevron-right" style="color: #3b82f6;"></i>
+=======
+            <div onclick="document.getElementById('rzp-button1').click()" style="padding: 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; transition:0.3s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <img src="https://cdn.iconscout.com/icon/free/png-256/free-razorpay-1649771-1399875.png" height="30" alt="Razorpay">
+                    <div>
+                        <div style="font-weight: 600; color: #0f172a;">Pay Online</div>
+                        <div style="font-size: 12px; color: #64748b;">UPI, Cards, NetBanking</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right" style="color: #cbd5e1;"></i>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             </div>
             <!-- Test Mode (For Dev Only) -->
             <form action="payment_process.php" method="POST" id="testForm">
@@ -364,7 +413,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 data-description="Payment for <?php echo $service_name; ?>"
                 data-image="assets/images/logo.png"
                 data-prefill.name="<?php echo htmlspecialchars($patient_name); ?>"
+<<<<<<< HEAD
                 data-prefill.email="<?php echo htmlspecialchars($patient_email ?? 'patient@example.com'); ?>"
+=======
+                data-prefill.email="patient@example.com"
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 data-theme.color="#3b82f6"
             ></script>
             <input type="hidden" custom="Hidden Element" name="hidden">

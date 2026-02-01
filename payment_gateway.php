@@ -32,8 +32,12 @@ if ($res->num_rows == 0) {
 $bill = $res->fetch_assoc();
 $invoice_id = "INV-" . str_pad($bill['bill_id'], 4, '0', STR_PAD_LEFT);
 $patient_display = $bill['patient_name'] ?? $bill['patient_username'] ?? 'Guest';
+<<<<<<< HEAD
 $service_raw = $bill['bill_type'] ?? 'Consultation';
 $service = ($service_raw === '0' || $service_raw === 0) ? 'Lab Test / Medical Service' : $service_raw;
+=======
+$service = ($bill['bill_type'] ?? 'Consultation');
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 $amount = number_format($bill['total_amount'], 2);
 
 ?>

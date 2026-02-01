@@ -132,6 +132,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -177,6 +178,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     <header class="secondary-header">
         <div style="flex: 1;"></div>
+=======
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
     </header>
 
@@ -219,6 +237,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </main>
     </div>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -274,5 +293,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </body>
 </html>

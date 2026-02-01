@@ -16,15 +16,20 @@ $username = $_SESSION['username'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Billing & Payments - HealCare</title>
+<<<<<<< HEAD
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+=======
+    <link rel="stylesheet" href="styles/dashboard.css">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <style>
         .bill-table { width: 100%; border-collapse: collapse; }
         .bill-table th { text-align: left; padding: 15px; border-bottom: 1px solid var(--border-color); color: var(--text-gray); font-size: 13px; }
         .bill-table td { padding: 15px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
         .status-paid { color: #10b981; font-weight: 600; }
         .status-pending { color: #f59e0b; font-weight: 600; }
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -70,6 +75,23 @@ $username = $_SESSION['username'];
 
     <header class="secondary-header">
         <div style="flex: 1;"></div>
+=======
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
     </header>
 
@@ -80,11 +102,17 @@ $username = $_SESSION['username'];
                 <a href="book_appointment.php" class="nav-link"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
                 <a href="my_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> My Appointments</a>
                 <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+<<<<<<< HEAD
                 <a href="patient_lab_results.php" class="nav-link"><i class="fas fa-flask"></i> Lab Reports</a>
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
+=======
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
@@ -197,11 +225,17 @@ $username = $_SESSION['username'];
                                     $service_desc = 'Hospital Stay - Final Settlement';
                                     $bill_icon = 'fa-bed';
                                 } else {
+<<<<<<< HEAD
                                     $service_desc = ($bill['bill_type'] === '0' || empty($bill['bill_type'])) ? 'Lab Test' : $bill['bill_type'];
                                 }
                                 
                                 $b_date_raw = $bill['bill_date'];
                                 $display_date = ($b_date_raw && $b_date_raw != '0000-00-00') ? date('M d, Y', strtotime($b_date_raw)) : 'Pending';
+=======
+                                    $service_desc = $bill['bill_type'];
+                                }
+                                
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                 $status_class = strtolower($bill['payment_status']);
                                 $badges = "";
                                 if ($is_inpatient && strpos($bill['bill_type'], 'Inpatient') === false) {
@@ -210,17 +244,25 @@ $username = $_SESSION['username'];
                         ?>
                         <tr>
                             <td>#<?php echo $invoice_no; ?></td>
+<<<<<<< HEAD
                             <td><?php echo $display_date; ?></td>
+=======
+                            <td><?php echo date('M d, Y', strtotime($bill['bill_date'])); ?></td>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             <td>
                                 <div style="display:flex; align-items:center;">
                                     <strong><i class="fas <?php echo $bill_icon; ?>" style="margin-right: 8px; color: #4fc3f7; width:20px; text-align:center;"></i><?php echo htmlspecialchars($service_desc); ?></strong>
                                     <?php echo $badges; ?>
                                 </div>
+<<<<<<< HEAD
                                 <?php 
                                     $d_name = $bill['doctor_name'] ?? 'Hospital Staff';
                                     $display_d_name = (stripos($d_name, 'Dr.') === 0) ? $d_name : 'Dr. ' . $d_name;
                                 ?>
                                 <small style="color: #94a3b8;"><?php echo htmlspecialchars($display_d_name); ?></small>
+=======
+                                <small style="color: #94a3b8;">Dr. <?php echo htmlspecialchars($bill['doctor_name'] ?? 'Hospital Staff'); ?></small>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             </td>
                             <td>₹<?php echo number_format($bill['total_amount'], 2); ?></td>
                             <td><span class="status-<?php echo $status_class; ?>"><?php echo $bill['payment_status']; ?></span></td>
@@ -245,6 +287,7 @@ $username = $_SESSION['username'];
             </div>
         </main>
     </div>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -300,5 +343,7 @@ $username = $_SESSION['username'];
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"></body>
 </html>

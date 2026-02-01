@@ -15,15 +15,22 @@ $appt_id = str_replace('BK-', '', $booking_id);
 if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
     // If details are missing, fetch them from DB using Appointment ID
     $stmt = $conn->prepare("SELECT a.*, d.consultation_fee, u_doc.username as doc_username, 
+<<<<<<< HEAD
                             r_doc.name as doc_realname, r_pat.name as pat_realname,
                             b.bill_id, b.payment_status as bill_status
+=======
+                            r_doc.name as doc_realname, r_pat.name as pat_realname 
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             FROM appointments a 
                             LEFT JOIN users u_doc ON a.doctor_id = u_doc.user_id 
                             LEFT JOIN registrations r_doc ON u_doc.registration_id = r_doc.registration_id
                             LEFT JOIN users u_pat ON a.patient_id = u_pat.user_id 
                             LEFT JOIN registrations r_pat ON u_pat.registration_id = r_pat.registration_id
                             LEFT JOIN doctors d ON a.doctor_id = d.user_id
+<<<<<<< HEAD
                             LEFT JOIN billing b ON a.appointment_id = b.appointment_id AND b.bill_type = 'Consultation'
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             WHERE a.appointment_id = ?");
     $stmt->bind_param("i", $appt_id);
     $stmt->execute();
@@ -43,8 +50,11 @@ if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
         $time = date('h:i A', strtotime($appt_data['appointment_time'])); // Format time
         $patient_name = $appt_data['pat_realname'] ?? 'Valued Patient';
         $fee = $appt_data['consultation_fee'] ?? 200;
+<<<<<<< HEAD
         $db_bill_id = $appt_data['bill_id'];
         $db_bill_status = $appt_data['bill_status'];
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         
     } else {
         $doctor_name = "Unknown";
@@ -85,7 +95,11 @@ $username = $_SESSION['username'] ?? 'User';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo (isset($_GET['paid']) || (isset($_GET['from']) && $_GET['from'] == 'payment')) ? 'Payment Confirmed' : 'Booking Confirmed'; ?> - HealCare</title>
+<<<<<<< HEAD
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+=======
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles/dashboard.css">
     <style>
@@ -183,6 +197,7 @@ $username = $_SESSION['username'] ?? 'User';
             h2, p { color: black; }
             .btn-print, .payment-box a { display: none; }
         }
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -228,6 +243,23 @@ $username = $_SESSION['username'] ?? 'User';
 
     <header class="secondary-header">
         <div style="flex: 1;"></div>
+=======
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
     </header>
 
@@ -266,6 +298,7 @@ $username = $_SESSION['username'] ?? 'User';
                     <?php if(isset($_GET['paid'])): ?>
                         <div class="row"><strong>Status:</strong> <span style="color:#10b981; font-weight:bold;">PAID</span></div>
                     <?php else: ?>
+<<<<<<< HEAD
                         <div class="row"><strong>Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PAY LATER (AT PHARMACY)</span></div>
                     <?php endif; ?>
                 </div>
@@ -284,6 +317,16 @@ $username = $_SESSION['username'] ?? 'User';
                     <div class="payment-box" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.4);">
                         <p style="margin: 0 0 15px; color: #3b82f6; font-weight: 500; font-size:0.95rem;">You can pay your consultation fees later along with your pharmacy medicines.</p>
                         <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Slip</button>
+=======
+                        <div class="row"><strong>Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PENDING</span></div>
+                    <?php endif; ?>
+                </div>
+
+                <?php if(!isset($_GET['paid']) && isset($_GET['bill_id'])): ?>
+                    <div class="payment-box">
+                        <p style="margin: 0 0 15px; color: #f59e0b; font-weight: 500; font-size:0.95rem;">Please complete your payment to finalize the slot.</p>
+                        <a href="payment_gateway.php?bill_id=<?php echo $_GET['bill_id']; ?>" class="btn-print">Proceed to Payment</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     </div>
                 <?php else: ?>
                     <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Details</button>
@@ -294,6 +337,7 @@ $username = $_SESSION['username'] ?? 'User';
             </div>
         </main>
     </div>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -349,5 +393,7 @@ $username = $_SESSION['username'] ?? 'User';
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </body>
 </html>

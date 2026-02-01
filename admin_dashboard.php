@@ -643,6 +643,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         } else {
             $error_msg = "Error updating appointment: " . $conn->error;
         }
+<<<<<<< HEAD
     } elseif ($action == 'delete_feedback') {
         $fid = (int)$_POST['feedback_id'];
         if ($conn->query("DELETE FROM patient_feedback WHERE feedback_id = $fid")) {
@@ -652,6 +653,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     }
 
+=======
+    }
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }
 
 // Fetch statistics with error handling
@@ -809,6 +813,7 @@ try {
     $stat_total_appts = $stat_pending_appts = $stat_completed_appts = $stat_today_appts = 0;
 }
 
+<<<<<<< HEAD
 // Leave Management Statistics
 try {
     $stat_pending_leaves = $conn->query("SELECT COUNT(*) as count FROM doctor_leaves WHERE status = 'Pending'")->fetch_assoc()['count'];
@@ -816,6 +821,8 @@ try {
     $stat_pending_leaves = 0;
 }
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
 // Fetch data based on section
 $pending_requests = $conn->query("SELECT * FROM registrations WHERE status = 'Pending' ORDER BY registered_date DESC");
@@ -859,14 +866,22 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
         /* Sidebar */
         .sidebar {
             width: 280px;
+<<<<<<< HEAD
             height: calc(100vh - 80px);
+=======
+            height: 100vh;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             background: var(--darker-blue);
             border-right: 1px solid var(--border-color);
             padding: 30px 0;
             position: fixed;
+<<<<<<< HEAD
             top: 80px;
             overflow-y: auto;
             z-index: 100;
+=======
+            overflow-y: auto;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         }
 
         .logo {
@@ -1596,6 +1611,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
         }
     </style>
 
+<<<<<<< HEAD
     <style>
     /* Brand Animation */
     .brand-letter {
@@ -1618,6 +1634,13 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+</head>
+<body>
+    <!-- Universal Header -->
+    <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; box-sizing: border-box;">
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -1625,10 +1648,25 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
                 </div>
             </div>
             
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+                </div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
                     <i class="fas fa-map-marker-alt"></i>
@@ -1642,6 +1680,10 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
     </div>
     <!-- Sidebar -->
     <aside class="sidebar">
+<<<<<<< HEAD
+=======
+        <a href="admin_dashboard.php" class="logo">HEALCARE ADMIN</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         
         <div class="nav-section">
             <div class="nav-section-title">Overview</div>
@@ -1706,9 +1748,12 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <a href="?section=complaints" class="nav-link <?php echo $section == 'complaints' ? 'active' : ''; ?>">
                 <i class="fas fa-exclamation-triangle"></i> Complaint Logs
             </a>
+<<<<<<< HEAD
             <a href="?section=view-feedback" class="nav-link <?php echo $section == 'view-feedback' ? 'active' : ''; ?>">
                 <i class="fas fa-comments"></i> Patient Feedback
             </a>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         </div>
 
         <div class="nav-section">
@@ -1720,6 +1765,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
     <!-- Main Content -->
     <main class="main-content">
+<<<<<<< HEAD
         <?php if ($section == 'view-feedback'): ?>
             <div class="top-bar">
                 <div class="page-title">
@@ -1860,6 +1906,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
         <?php endif; ?>
 
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <?php if ($success_msg): ?>
             <div class="alert alert-success">
                 <i class="fas fa-check-circle"></i>
@@ -1876,6 +1924,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
         <?php if ($section == 'dashboard'): ?>
             <!-- Dashboard Overview -->
+<<<<<<< HEAD
             <?php 
             include_once 'includes/greeting_logic.php';
             $admin_display_name = $_SESSION['full_name'] ?? 'Administrator';
@@ -1889,6 +1938,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             </div>
 
             <div class="top-bar" style="display: none;"> <!-- Hide old top bar -->
+=======
+            <div class="top-bar">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <div class="page-title">
                     <h1>Dashboard Overview</h1>
                     <p>Welcome back, <?php echo htmlspecialchars($_SESSION['full_name'] ?? 'Admin'); ?>. Here's what's happening today.</p>
@@ -1900,7 +1952,11 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         <?php 
                         $notif_count = $pending_requests->num_rows; 
                         $total_pharmacy = ($pharmacy_alerts > 0 ? 1 : 0) + ($expiry_alerts > 0 ? 1 : 0);
+<<<<<<< HEAD
                         $total_notifs = $notif_count + $total_pharmacy + $stat_pending_leaves;
+=======
+                        $total_notifs = $notif_count + $total_pharmacy;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         if ($total_notifs > 0): 
                         ?>
                             <span class="notification-badge"><?php echo $total_notifs; ?></span>
@@ -1913,6 +1969,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             <span style="font-size: 11px; color: var(--primary-blue); cursor: pointer;">Mark all as read</span>
                         </div>
                         <div style="max-height: 400px; overflow-y: auto;">
+<<<<<<< HEAD
                             <?php if ($stat_pending_leaves > 0): ?>
                                 <a href="?section=leaves" class="notification-item">
                                     <i class="fas fa-calendar-minus" style="color: #f59e0b;"></i>
@@ -1923,6 +1980,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                 </a>
                             <?php endif; ?>
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                             <?php if ($notif_count > 0): ?>
                                 <a href="?section=pending-requests" class="notification-item">
                                     <i class="fas fa-user-plus"></i>
@@ -2032,6 +2091,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     <div class="stat-card-value" style="color: var(--accent-red);"><?php echo $pharmacy_alerts; ?></div>
                     <div class="stat-card-subtitle">Low stock items • Click to view</div>
                 </div>
+<<<<<<< HEAD
 
                 <div class="stat-card" style="cursor: pointer;" onclick="window.location.href='?section=leaves'">
                     <div class="stat-card-header">
@@ -2043,6 +2103,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     <div class="stat-card-value" style="color: var(--accent-orange);"><?php echo $stat_pending_leaves; ?></div>
                     <div class="stat-card-subtitle">Doctors awaiting approval</div>
                 </div>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             </div>
 
             <div class="chart-container">
@@ -4849,6 +4911,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
     });
     <?php endif; ?>
     </script>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -4904,5 +4967,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </body>
 </html>

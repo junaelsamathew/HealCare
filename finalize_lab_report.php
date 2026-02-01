@@ -5,7 +5,10 @@ include 'includes/db_connect.php';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id'])) {
     $order_id = intval($_POST['order_id']);
     $result_summary = $_POST['result_summary'];
+<<<<<<< HEAD
     $result_status = $_POST['result_status'] ?? 'Normal';
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     $staff_id = $_SESSION['user_id'];
     
     // File Upload Handling
@@ -46,8 +49,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_SESSION['user_id'])) {
     }
 
     // Update Database
+<<<<<<< HEAD
     $stmt = $conn->prepare("UPDATE lab_tests SET status = 'Completed', result = ?, result_status = ?, report_path = ?, labstaff_id = ?, report_date = CURDATE(), updated_at = NOW() WHERE labtest_id = ?");
     $stmt->bind_param("sssii", $result_summary, $result_status, $report_path, $staff_id, $order_id);
+=======
+    $stmt = $conn->prepare("UPDATE lab_tests SET status = 'Completed', result = ?, report_path = ?, labstaff_id = ?, report_date = CURDATE(), updated_at = NOW() WHERE labtest_id = ?");
+    $stmt->bind_param("ssii", $result_summary, $report_path, $staff_id, $order_id);
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     
     if ($stmt->execute()) {
         // Update Appointment Status if linked

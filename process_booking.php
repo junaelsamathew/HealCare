@@ -139,7 +139,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // Convert to 24h format for safety
         $appt_time = date("H:i", strtotime($time_slot));
         
+<<<<<<< HEAD
         $stmt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, appointment_time, appointment_type, status, queue_number, consultation_fee, reason) VALUES (?, ?, ?, ?, ?, 'Walk-in', 'Requested', ?, ?, ?)");
+=======
+        $stmt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, appointment_time, appointment_type, status, queue_number, consultation_fee, reason) VALUES (?, ?, ?, ?, ?, 'Walk-in', 'Pending', ?, ?, ?)");
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         $stmt->bind_param("iisssids", $patient_id, $doctor_id, $department, $date, $appt_time, $token, $doc_fee, $reason);
         $stmt->execute();
         
@@ -162,7 +166,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $conn->commit();
         
+<<<<<<< HEAD
         // Redirect to Payment Gateway for Online Consultation Fee Payment
+=======
+        // Redirect to Success with Bill ID
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         header("Location: payment_gateway.php?bill_id=$bill_id");
         exit();
 

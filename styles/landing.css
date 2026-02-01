@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 /* ===== RESET & BASE ===== */
 * {
     margin: 0;
@@ -52,12 +55,15 @@ body {
     font-weight: 700;
 }
 
+<<<<<<< HEAD
 .logo-img {
     height: 65px;
     width: auto;
     object-fit: contain;
 }
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 .top-info {
     display: flex;
     gap: 40px;
@@ -621,7 +627,11 @@ body {
 .doctors-layout {
     display: flex;
     gap: 50px;
+<<<<<<< HEAD
     align-items: center;
+=======
+    align-items: flex-start;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }
 
 .doctors-left {
@@ -1410,6 +1420,7 @@ body {
     .doctors-title {
         font-size: 32px;
     }
+<<<<<<< HEAD
 }
 
 /* Brand Animation */
@@ -1423,4 +1434,6 @@ body {
 .brand-letter.visible {
     opacity: 1;
     transform: translateY(0);
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }

@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="HealCare - A Great Place to Receive Care. Caring for you, digitally and compassionately. Health made simple.">
     <title>HealCare - A Great Place to Receive Care</title>
+<<<<<<< HEAD
     <link rel="stylesheet" href="styles/landing.css?v=<?php echo time(); ?>">
+=======
+    <link rel="stylesheet" href="styles/landing.css">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -15,7 +19,11 @@
         <div class="container">
             <div class="top-bar-content">
                 <a href="index.php" class="logo">
+<<<<<<< HEAD
                     <img src="images/healcare_logo.jpg?v=<?php echo time(); ?>" alt="HealCare Logo" class="logo-img" style="height: 65px; width: auto;"> <span class="animated-brand">HEALCARE HOSPITAL</span>
+=======
+                    <span class="logo-icon">+</span> HEALCARE
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 </a>
                 <div class="top-info">
                     <div class="info-item">
@@ -26,10 +34,28 @@
                         </div>
                         <div class="info-text">
                             <span class="info-label">EMERGENCY</span>
+<<<<<<< HEAD
                             <span class="info-value">(+91) 953 904 5609</span>
                         </div>
                     </div>
 
+=======
+                            <span class="info-value">(+254) 717 783 146</span>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                        </div>
+                        <div class="info-text">
+                            <span class="info-label">WORK HOUR</span>
+                            <span class="info-value">09:00 - 20:00 Everyday</span>
+                        </div>
+                    </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     <div class="info-item">
                         <div class="info-icon">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

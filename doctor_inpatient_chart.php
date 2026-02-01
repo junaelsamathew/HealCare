@@ -13,8 +13,13 @@ $doctor_id = $_SESSION['user_id'];
 // Fetch Admission & Patient Info
 $sql = "SELECT a.*, r.room_number, w.ward_name, w.ward_type, reg.name, pp.gender, pp.date_of_birth
         FROM admissions a 
+<<<<<<< HEAD
         LEFT JOIN rooms r ON a.room_id = r.room_id 
         LEFT JOIN wards w ON r.ward_id = w.ward_id
+=======
+        JOIN rooms r ON a.room_id = r.room_id 
+        JOIN wards w ON r.ward_id = w.ward_id
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         JOIN users u ON a.patient_id = u.user_id
         JOIN registrations reg ON u.registration_id = reg.registration_id
         LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
@@ -85,12 +90,16 @@ $vitals = $conn->query("SELECT * FROM patient_vitals WHERE patient_id = $pid ORD
         <div class="header">
             <div>
                 <h1 style="font-size: 24px;">Inpatient Chart: <?php echo htmlspecialchars($adm['name']); ?></h1>
+<<<<<<< HEAD
                 <p style="color: #94a3b8;">
                     <?php 
                         $location = ($adm['ward_name'] ?? 'Unknown Ward') . " - Room " . ($adm['room_number'] ?? 'Unassigned');
                         echo htmlspecialchars($location); 
                     ?>
                 </p>
+=======
+                <p style="color: #94a3b8;"><?php echo htmlspecialchars($adm['ward_name'] . " - Room " . $adm['room_number']); ?></p>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             </div>
             <a href="doctor_dashboard.php" style="color: #cbd5e1; text-decoration: none;"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>

@@ -36,6 +36,7 @@ $result = $conn->query($sql);
 
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
+<<<<<<< HEAD
         $img_path = 'images/doctor_placeholder.png'; // Default
         if (!empty($row['img'])) {
             if (file_exists($row['img'])) {
@@ -45,6 +46,11 @@ if ($result && $result->num_rows > 0) {
             }
         }
         $row['img'] = $img_path;
+=======
+        if(empty($row['img'])) {
+            $row['img'] = 'images/doctor-' . (rand(1, 10)) . '.jpg'; 
+        }
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         $doctors[] = $row;
     }
 }
@@ -63,6 +69,7 @@ if ($pre_doc_id) {
     }
 }
 
+<<<<<<< HEAD
 // Calculate actual token number based on existing appointments for selected doctor and date
 $appt_date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 $token_number = 1; // Default
@@ -74,6 +81,10 @@ if ($selected_doc) {
         $token_number = intval($row['last_token']) + 1;
     }
 }
+=======
+// Fixed Token Number for Demo (Or Random)
+$token_number = rand(10, 50);
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
 // Fetch Logged-in User Data
 $user_data = [];
@@ -97,7 +108,11 @@ if(isset($_SESSION['user_id'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking Details - HealCare</title>
+<<<<<<< HEAD
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+=======
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="styles/dashboard.css">
     <style>
@@ -245,6 +260,7 @@ if(isset($_SESSION['user_id'])) {
 
         .hidden { display: none; }
         .required { color: #ef4444; }
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -290,6 +306,23 @@ if(isset($_SESSION['user_id'])) {
 
     <header class="secondary-header">
         <div style="flex: 1;"></div>
+=======
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
     </header>
 
@@ -319,7 +352,11 @@ if(isset($_SESSION['user_id'])) {
             </div>
 
             <div class="booking-wrapper">
+<<<<<<< HEAD
                 <form action="process_booking.php" method="POST">
+=======
+                <form action="process_booking.php" method="POST" onsubmit="return validateCaptcha()">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     <input type="hidden" name="token" value="<?php echo $token_number; ?>">
                     <input type="hidden" name="doctor_name" value="<?php echo $selected_doc ? htmlspecialchars($selected_doc['name']) : ''; ?>">
                     
@@ -345,10 +382,14 @@ if(isset($_SESSION['user_id'])) {
                                 <?php if (!empty($doctors)): ?>
                                     <?php foreach($doctors as $d): ?>
                                         <option value="<?php echo $d['id']; ?>" <?php echo ($pre_doc_id == $d['id']) ? 'selected' : ''; ?>>
+<<<<<<< HEAD
                                             <?php 
                                                 $dropdown_name = $d['name'];
                                                 echo htmlspecialchars((stripos($dropdown_name, 'Dr.') === 0) ? $dropdown_name : 'Dr. ' . $dropdown_name);
                                             ?>
+=======
+                                            <?php echo $d['name']; ?>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                         </option>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -358,7 +399,11 @@ if(isset($_SESSION['user_id'])) {
                         </div>
                         <div class="filter-group">
                             <label>Date</label>
+<<<<<<< HEAD
                             <input type="date" name="date" class="filter-control" value="<?php echo $appt_date; ?>" min="<?php echo date('Y-m-d'); ?>" onchange="window.location.href='?doctor_id=<?php echo $pre_doc_id; ?>&dept=<?php echo urlencode($pre_dept); ?>&date='+this.value">
+=======
+                            <input type="date" name="date" class="filter-control" value="<?php echo date('Y-m-d'); ?>" min="<?php echo date('Y-m-d'); ?>">
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                         </div>
                     </div>
 
@@ -386,7 +431,11 @@ if(isset($_SESSION['user_id'])) {
                                 </thead>
                                 <tbody>
                                     <tr>
+<<<<<<< HEAD
                                         <td>10 AM - 12 PM</td><td>10 AM - 12 PM</td><td>10 AM - 12 PM</td><td>10 AM - 12 PM</td><td>10 AM - 12 PM</td><td>4 PM - 5 PM</td>
+=======
+                                        <td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>16 - 17</td>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                     </tr>
                                 </tbody>
                             </table>
@@ -450,7 +499,15 @@ if(isset($_SESSION['user_id'])) {
                                 <div style="font-size:0.8rem; color:var(--text-gray); margin-top:5px;">Minimum 10 characters required.</div>
                             </div>
 
+<<<<<<< HEAD
 
+=======
+                            <div class="captcha-box">
+                                <label style="display:block; margin-bottom:5px; color:var(--text-gray); font-size:0.85rem;">Security Check <span class="required">*</span></label>
+                                <span class="captcha-img">5692</span>
+                                <input type="text" id="captchaInput" placeholder="Code" style="padding:10px; width:100px; border:1px solid var(--border-color); background:#0f172a; color:white; border-radius:4px;">
+                            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
                             <div style="margin-top:20px; color:var(--text-gray); font-size:0.9rem;">
                                 <input type="checkbox" required id="terms" checked> <label for="terms">I agree to the Hospital Terms & Conditions.</label>
@@ -477,8 +534,14 @@ if(isset($_SESSION['user_id'])) {
             el.classList.add('selected');
             document.getElementById('selectedTimeSlot').value = el.innerText;
             
+<<<<<<< HEAD
             // The token is now pre-calculated based on today's appointments for this doctor.
             let token = <?php echo $token_number; ?>;
+=======
+            // Generate a random token number to satisfy non-chronological requirement
+            // Range 10 to 150 to simulate a busy queue
+            let token = Math.floor(Math.random() * 140) + 10;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
             // Update UI
             document.querySelector('.token-number').innerText = token;
@@ -491,6 +554,7 @@ if(isset($_SESSION['user_id'])) {
             // Smooth Scroll
             document.getElementById('tokenMsg').scrollIntoView({behavior: 'smooth'});
         }
+<<<<<<< HEAD
 
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -545,5 +609,15 @@ if(isset($_SESSION['user_id'])) {
             
             initBrandAnimation();
         });
+=======
+        function validateCaptcha() {
+            var val = document.getElementById('captchaInput').value;
+            if(val !== '5692') {
+                alert('Invalid Captcha Code!');
+                return false;
+            }
+            return true;
+        }
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </script></body>
 </html>

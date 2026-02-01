@@ -232,6 +232,7 @@ $calendar_result = $conn->query($cal_sql);
         .form-group-staff { margin-bottom: 15px; }
         .form-group-staff label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
         .form-group-staff input, .form-group-staff select { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); padding: 10px; border-radius: 8px; color: #fff; }
+<<<<<<< HEAD
         
         /* Brand Animation */
         .brand-letter {
@@ -244,6 +245,8 @@ $calendar_result = $conn->query($cal_sql);
             opacity: 1;
             transform: translateY(0);
         }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </style>
 </head>
 <body>
@@ -251,10 +254,14 @@ $calendar_result = $conn->query($cal_sql);
     <!-- Top Bar -->
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -262,10 +269,25 @@ $calendar_result = $conn->query($cal_sql);
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
                 </div>
             </div>
             
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+                </div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
                     <i class="fas fa-map-marker-alt"></i>
@@ -308,6 +330,7 @@ $calendar_result = $conn->query($cal_sql);
 
             <?php if (!isset($_GET['section']) || $_GET['section'] == 'dashboard'): ?>
                 <div style="margin-bottom: 30px;">
+<<<<<<< HEAD
                     <?php 
                     include_once 'includes/greeting_logic.php';
                     ?>
@@ -320,6 +343,8 @@ $calendar_result = $conn->query($cal_sql);
                         </div>
                     </div>
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                     <h1 style="color:#fff; font-size: 28px;">Reception Dashboard</h1>
                     <p style="color:#64748b; font-size:14px;">Manage patient flow and appointments.</p>
                 </div>
@@ -774,6 +799,7 @@ $calendar_result = $conn->query($cal_sql);
     $staff_type = 'receptionist';
     include 'includes/report_upload_modal.php'; 
     ?>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -829,5 +855,7 @@ $calendar_result = $conn->query($cal_sql);
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </body>
 </html>

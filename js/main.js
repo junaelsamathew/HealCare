@@ -9,7 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initAuthModal();
     initChatWidget();
     initCarousel();
+<<<<<<< HEAD
     initBrandAnimation();
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 });
 
 function initNavigation() {
@@ -527,6 +530,7 @@ function initDoctorsCarousel() {
         }, 250);
     });
 
+<<<<<<< HEAD
     filterByDepartment('all');
 }
 
@@ -581,3 +585,8 @@ function initBrandAnimation() {
     // Start animation
     animate();
 }
+=======
+    // Initialize
+    filterByDepartment('all');
+}
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299

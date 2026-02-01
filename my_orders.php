@@ -93,6 +93,7 @@ $result = $stmt->get_result();
             font-size: 15px;
         }
         
+<<<<<<< HEAD
         
         /* Brand Animation */
         .brand-letter {
@@ -105,15 +106,21 @@ $result = $stmt->get_result();
             opacity: 1;
             transform: translateY(0);
         }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </style>
 </head>
 <body>
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -121,10 +128,25 @@ $result = $stmt->get_result();
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
                 </div>
             </div>
             
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+                </div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
                     <i class="fas fa-map-marker-alt"></i>
@@ -139,7 +161,14 @@ $result = $stmt->get_result();
 
     <!-- Secondary Navy Header -->
     <header class="secondary-header">
+<<<<<<< HEAD
         <div style="flex: 1;"></div>
+=======
+        <div class="brand-section">
+            <div class="brand-icon">+</div>
+            <div class="brand-name">HealCare</div>
+        </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls">
             <span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($user_name); ?></strong></span>
             <a href="logout.php" class="btn-logout">Log Out</a>
@@ -207,6 +236,7 @@ $result = $stmt->get_result();
             <?php endif; ?>
 
         </main>
+<<<<<<< HEAD
     </div>    <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -263,4 +293,7 @@ $result = $stmt->get_result();
         });
     </script>
 </body>
+=======
+    </div></body>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </html>

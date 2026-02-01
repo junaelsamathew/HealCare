@@ -26,7 +26,11 @@ try {
     if ($check->num_rows > 0) {
         $appt_id = $check->fetch_assoc()['appointment_id'];
         if ($appt_id) {
+<<<<<<< HEAD
              $conn->query("UPDATE appointments SET status = 'Requested' WHERE appointment_id = $appt_id AND status = 'Pending'");
+=======
+             $conn->query("UPDATE appointments SET status = 'Confirmed' WHERE appointment_id = $appt_id AND status = 'Pending'");
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         }
     }
 

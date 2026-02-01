@@ -19,7 +19,10 @@ $username = $_SESSION['username'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Appointment - HealCare</title>
+<<<<<<< HEAD
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     <link rel="stylesheet" href="styles/dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -71,6 +74,7 @@ $username = $_SESSION['username'];
             font-weight: 600;
             color: var(--text-light);
         }
+<<<<<<< HEAD
         /* Brand Animation */
         .brand-letter {
             display: inline-block;
@@ -116,12 +120,30 @@ $username = $_SESSION['username'];
 
     <header class="secondary-header">
         <div style="flex: 1;"></div>
+=======
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-phone-alt"></i></div>
+                <div class="info-details"><span class="info-label">EMERGENCY</span><span class="info-value">(+254) 717 783 146</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section"><div class="brand-icon">+</div><div class="brand-name">HealCare</div></div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
     </header>
 
     <div class="dashboard-layout">
         <aside class="sidebar">
             <nav>
+<<<<<<< HEAD
                 <a href="patient_dashboard.php" class="nav-link"><i class="fas fa-th-large"></i> Dashboard</a>
                 <a href="book_appointment.php" class="nav-link active"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
                 <a href="my_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> My Appointments</a>
@@ -131,6 +153,15 @@ $username = $_SESSION['username'];
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
+=======
+                <a href="patient_dashboard.php" class="nav-link">Dashboard</a>
+                <a href="book_appointment.php" class="nav-link active">Book Appointment</a>
+                <a href="my_appointments.php" class="nav-link">My Appointments</a>
+                <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
@@ -161,6 +192,7 @@ $username = $_SESSION['username'];
                 </a>
             </div>
         </main>
+<<<<<<< HEAD
     </div>
     <script>
         // Brand Animation
@@ -218,4 +250,7 @@ $username = $_SESSION['username'];
         });
     </script>
 </body>
+=======
+    </div></body>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 </html>

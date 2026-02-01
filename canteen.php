@@ -256,6 +256,7 @@ $menu_items = null; // Placeholder
             border-radius: 50%;
             display: <?php echo $cart_count > 0 ? 'inline-block' : 'none'; ?>;
         }
+<<<<<<< HEAD
 
         /* Brand Animation */
         .brand-letter {
@@ -268,15 +269,21 @@ $menu_items = null; // Placeholder
             opacity: 1;
             transform: translateY(0);
         }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </style>
 </head>
 <body>
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+<<<<<<< HEAD
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
             <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
             <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
         </a>
+=======
+        <h1 style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">+ HEALCARE</h1>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div style="display: flex; gap: 40px; align-items: center;">
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
@@ -284,10 +291,25 @@ $menu_items = null; // Placeholder
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+<<<<<<< HEAD
                     <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
                 </div>
             </div>
             
+=======
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WORK HOUR</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">09:00 - 20:00 Everyday</span>
+                </div>
+            </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
                     <i class="fas fa-map-marker-alt"></i>
@@ -302,7 +324,14 @@ $menu_items = null; // Placeholder
 
     <!-- Secondary Navy Header -->
     <header class="secondary-header">
+<<<<<<< HEAD
         <div style="flex: 1;"></div>
+=======
+        <div class="brand-section">
+            <div class="brand-icon">+</div>
+            <div class="brand-name">HealCare</div>
+        </div>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         <div class="user-controls">
             <!-- Cart Icon in Header -->
             <a href="cart.php" class="cart-btn-header" id="nav-cart">
@@ -324,11 +353,17 @@ $menu_items = null; // Placeholder
                 <a href="book_appointment.php" class="nav-link"><i class="fas fa-calendar-plus"></i> Book Appointment</a>
                 <a href="my_appointments.php" class="nav-link"><i class="fas fa-calendar-check"></i> My Appointments</a>
                 <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+<<<<<<< HEAD
                 <a href="patient_lab_results.php" class="nav-link"><i class="fas fa-flask"></i> Lab Reports</a>
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link active"><i class="fas fa-utensils"></i> Canteen</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
+=======
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link active"><i class="fas fa-utensils"></i> Canteen</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
         </aside>
@@ -492,6 +527,7 @@ $menu_items = null; // Placeholder
         toast.style.display = 'block';
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
+<<<<<<< HEAD
 
     // Brand Animation
     document.addEventListener('DOMContentLoaded', function() {
@@ -546,5 +582,7 @@ $menu_items = null; // Placeholder
         
         initBrandAnimation();
     });
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </script></body>
 </html>

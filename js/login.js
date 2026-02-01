@@ -80,9 +80,12 @@ window.postGoogleLogin = function (email, name) {
 
 // 2. DOM Content Loaded Events
 document.addEventListener('DOMContentLoaded', () => {
+<<<<<<< HEAD
     // Initialize Brand Animation
     initBrandAnimation();
 
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     // Auth Mode Toggling (Login vs Signup vs Forgot)
     const toggleLinks = document.querySelectorAll('.toggle-auth');
     const authForms = document.querySelectorAll('.auth-form');
@@ -157,6 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return /^[a-zA-Z0-9]/.test(val);
     }
 
+<<<<<<< HEAD
     // 1. Identity Validation (Login) -> Now strictly Email
     function validateIdentityField() {
         const val = loginIdentity.value.trim();
@@ -166,6 +170,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (!validateEmail(val)) {
             showError(loginIdentity, 'identityError', 'Please enter a valid email address.');
+=======
+    // 1. Identity Validation (Login)
+    function validateIdentityField() {
+        const val = loginIdentity.value.trim();
+        if (!val) {
+            showError(loginIdentity, 'identityError', 'Username or email is required.');
+            return false;
+        }
+        if (!validateAlphanumericStart(val)) {
+            showError(loginIdentity, 'identityError', 'Must start with a letter or number.');
+            return false;
+        }
+        if (val.includes('@') && !validateEmail(val)) {
+            showError(loginIdentity, 'identityError', 'Please enter a valid email format.');
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
             return false;
         }
         clearError(loginIdentity, 'identityError');
@@ -351,8 +370,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Initialize password toggles
 window.togglePasswordVisibility = function (btn) {
+<<<<<<< HEAD
     const input = btn.previousElementSibling;
     if (!input || input.tagName !== 'INPUT') return;
+=======
+    const wrapper = btn.closest('.password-relative-group');
+    const input = wrapper.querySelector('input');
+
+    if (!input) return;
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 
     const isPassword = input.getAttribute('type') === 'password';
 
@@ -360,7 +386,26 @@ window.togglePasswordVisibility = function (btn) {
     input.setAttribute('type', isPassword ? 'text' : 'password');
 
     // Toggle Icon
+<<<<<<< HEAD
     btn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+=======
+    if (isPassword) {
+        // Switched to Text -> Show 'Eye Off' (Slash)
+        btn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+            </svg>
+        `;
+    } else {
+        // Switched to Password -> Show 'Eye'
+        btn.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+        `;
+    }
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
 }
 
 // Fix: Remove annoying "Minimize" tooltip if present (e.g. from extensions or browser features)
@@ -379,6 +424,7 @@ document.addEventListener('DOMContentLoaded', function () {
         attributeFilter: ['title']
     });
 });
+<<<<<<< HEAD
 
 /* -------------------------------------------------------------------------- */
 /*                                BRAND ANIMATION                             */
@@ -431,3 +477,5 @@ function initBrandAnimation() {
     // Start animation
     animate();
 }
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299

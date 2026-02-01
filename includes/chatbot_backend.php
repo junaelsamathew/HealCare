@@ -23,7 +23,11 @@ function getBotResponse($msg) {
     $emergency_words = ['emergency', 'chest pain', 'heart attack', 'bleeding', 'unconscious', 'breathing', 'severe', 'urgent', 'ambulance', 'stroke', 'dying'];
     foreach ($emergency_words as $word) {
         if (strpos($msg, $word) !== false) {
+<<<<<<< HEAD
             return "⚠️ **EMERGENCY ALERT**: If this is a medical emergency, please call **911** or your local emergency number immediately. \n\nHealCare Emergency Hotline: **(+91) 953 904 5609**.\n\nDo not rely on this chat for critical situations.";
+=======
+            return "⚠️ **EMERGENCY ALERT**: If this is a medical emergency, please call **911** or your local emergency number immediately. \n\nHealCare Emergency Hotline: **(+254) 717 783 146**.\n\nDo not rely on this chat for critical situations.";
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         }
     }
 
@@ -67,7 +71,11 @@ function getBotResponse($msg) {
 
     // 9. Contact / Location
     if (preg_match('/\b(contact|phone|email|address|location|where)\b/', $msg)) {
+<<<<<<< HEAD
         return "🏥 **HealCare Hospital**\n📍 Kanjirapally, Kottayam\n📞 Phone: (+91) 953 904 5609\n📧 Email: support@healcare.com\n⏰ Open 24/7 for Emergencies.";
+=======
+        return "🏥 **HealCare Hospital**\n📍 Kanjirapally, Kottayam\n📞 Phone: (+254) 717 783 146\n📧 Email: support@healcare.com\n⏰ Open 24/7 for Emergencies.";
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     }
 
     // 10. Default Fallback

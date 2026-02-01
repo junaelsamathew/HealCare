@@ -118,6 +118,7 @@ $vitals = $stmt_v->get_result()->fetch_assoc();
             font-size: 12px;
             color: #94a3b8;
         }
+<<<<<<< HEAD
 
         /* Brand Animation */
         .brand-letter {
@@ -166,6 +167,13 @@ $vitals = $stmt_v->get_result()->fetch_assoc();
             <span class="user-greeting" style="color: #cbd5e1; font-size: 14px;">Welcome, <strong style="color: #fff;"><?php echo $doctor_username; ?></strong></span>
             <a href="logout.php" class="btn-logout" style="padding: 6px 15px; background: transparent; border: 1px solid #3b82f6; color: #fff; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.3s;">Sign Out</a>
         </div>
+=======
+    </style>
+</head>
+<body>
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </header>
 
     <div class="dashboard-layout">
@@ -264,6 +272,7 @@ $vitals = $stmt_v->get_result()->fetch_assoc();
             <?php endif; ?>
 
         </main>
+<<<<<<< HEAD
     <script>
         // Brand Animation
         document.addEventListener('DOMContentLoaded', function() {
@@ -319,5 +328,7 @@ $vitals = $stmt_v->get_result()->fetch_assoc();
             initBrandAnimation();
         });
     </script>
+=======
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
     </div></body>
 </html>

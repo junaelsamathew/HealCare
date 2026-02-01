@@ -113,6 +113,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
     </style>
 </head>
 <body>
+<<<<<<< HEAD
     <!-- Universal Header -->
     <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
         <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
@@ -146,6 +147,26 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
         <div class="user-controls" style="display: flex; align-items: center; gap: 20px;">
             <span class="user-greeting" style="color: #cbd5e1; font-size: 14px;">Welcome, <strong style="color: #fff;"><?php echo $doctor_name; ?></strong></span>
             <a href="logout.php" class="btn-logout" style="padding: 6px 15px; background: transparent; border: 1px solid #3b82f6; color: #fff; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.3s;">Sign Out</a>
+=======
+    <header class="top-header">
+        <a href="index.php" class="logo-main">HEALCARE</a>
+        <div class="header-info-group">
+            <div class="header-info-item">
+                <div class="info-icon-circle"><i class="fas fa-user-cog"></i></div>
+                <div class="info-details"><span class="info-label">PROFILE</span><span class="info-value">Management</span></div>
+            </div>
+        </div>
+    </header>
+
+    <header class="secondary-header">
+        <div class="brand-section">
+            <div class="brand-icon">+</div>
+            <div class="brand-name">HealCare</div>
+        </div>
+        <div class="user-controls">
+            <span class="user-greeting">Welcome, <strong><?php echo $doctor_name; ?></strong></span>
+            <a href="logout.php" class="btn-logout">Sign Out</a>
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
         </div>
     </header>
 
@@ -187,6 +208,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                             <div class="form-group" style="margin-bottom: 25px; display: flex; align-items: center; gap: 20px;">
                                 <div style="width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: #eee; border: 2px solid rgba(255,255,255,0.2);">
                                     <?php 
+<<<<<<< HEAD
                                         $photo_path = 'images/doctor_placeholder.png'; // Default
                                         if (!empty($reg_data['profile_photo'])) {
                                             if (file_exists($reg_data['profile_photo'])) {
@@ -195,6 +217,10 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                                                 $photo_path = 'images/' . $reg_data['profile_photo'];
                                             }
                                         }
+=======
+                                        $photo_path = $reg_data['profile_photo'] ?? 'assets/images/default_doctor.png';
+                                        if (empty($photo_path) || !file_exists($photo_path)) $photo_path = 'assets/images/default_doctor.png';
+>>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                                     ?>
                                     <img src="<?php echo $photo_path; ?>" style="width: 100%; height: 100%; object-fit: cover;">
                                 </div>
