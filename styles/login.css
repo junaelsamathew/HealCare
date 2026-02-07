@@ -1,0 +1,470 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+/* ===== LOGIN PAGE CSS ===== */
+:root {
+    --primary-blue: #1e40af;
+    --accent-blue: #3b82f6;
+    --dark-blue: #0a192f;
+    --text-dark: #1f2937;
+    --text-light: #f3f4f6;
+    --white: #ffffff;
+    --border-light: rgba(255, 255, 255, 0.1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    background-color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- Header --- */
+.login-header {
+    background: var(--white);
+    padding: 20px 0;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.header-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo a {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--dark-blue);
+    text-decoration: none;
+    letter-spacing: 1px;
+}
+
+.header-info {
+    display: flex;
+    gap: 40px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.info-icon {
+    color: var(--accent-blue);
+}
+
+.info-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-text .label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dark);
+}
+
+.info-text .value {
+    font-size: 13px;
+    color: var(--accent-blue);
+    font-weight: 500;
+}
+
+/* --- Main Layout --- */
+.login-main {
+    flex: 1;
+    display: flex;
+}
+
+.login-visual {
+    flex: 1.2;
+    position: relative;
+    padding: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.visual-content {
+    position: relative;
+    z-index: 2;
+    max-width: 500px;
+    color: var(--dark-blue);
+}
+
+.brand-name {
+    font-size: 5rem;
+    font-weight: 800;
+    margin-bottom: 30px;
+    line-height: 1;
+}
+
+.message-group {
+    display: none;
+}
+
+.message-group.active {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+.message-group h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.message-group p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--text-dark);
+}
+
+.visual-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('../images/bgimg.jpg');
+    /* Using existing bgimg */
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    z-index: 1;
+}
+
+.login-form-area {
+    flex: 0.8;
+    background-color: var(--dark-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+}
+
+.form-container {
+    width: 100%;
+    max-width: 450px;
+    color: var(--white);
+}
+
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+    animation: slideRight 0.5s ease;
+}
+
+.auth-form h3 {
+    font-size: 3rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.form-subtitle {
+    font-size: 1rem;
+    color: var(--text-light);
+    margin-bottom: 40px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.form-subtitle span {
+    font-weight: 700;
+}
+
+/* --- Inputs --- */
+.input-row-group {
+    margin-bottom: 5px;
+}
+
+.input-row-group .input-row {
+    margin-bottom: 0px;
+}
+
+.input-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.input-row label {
+    flex: 0.4;
+    font-size: 1rem;
+    color: var(--text-light);
+}
+
+.input-light {
+    flex: 0.6;
+    padding: 12px 15px;
+    background-color: var(--white);
+    border: none;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    color: var(--dark-blue);
+    outline: none;
+}
+
+select.input-light {
+    cursor: pointer;
+}
+
+/* --- Buttons & Links --- */
+.btn-submit-new {
+    width: 100%;
+    padding: 15px;
+    background-color: #2563eb;
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.3s;
+}
+
+.btn-submit-new:hover {
+    background-color: #1d4ed8;
+}
+
+.form-footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    margin-top: 30px;
+    font-size: 0.9rem;
+}
+
+.link-light {
+    color: var(--white);
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.link-light:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.separator {
+    color: var(--text-light);
+    opacity: 0.5;
+}
+
+/* --- Google Auth Section --- */
+.google-auth-container {
+    margin-top: 40px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding-left: 55px;
+    /* Nudge right to account for left labels */
+}
+
+.google-auth-container::before {
+    content: "Or";
+    display: block;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: var(--white);
+    text-align: center;
+    width: calc(100% - 55px);
+    /* Center the text relative to the button area */
+}
+
+.g_id_signin {
+    width: auto;
+}
+
+/* --- Animations --- */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* --- Login Footer Links & Divider --- */
+.login-footer-links {
+    margin-top: 25px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    font-size: 0.95rem;
+}
+
+.or-divider {
+    color: var(--text-light);
+    opacity: 0.5;
+    font-weight: 400;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+}
+
+.status-check-footer {
+    margin-top: 25px;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 20px;
+}
+
+.status-check-footer span {
+    display: block;
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin-bottom: 8px;
+}
+
+.status-link {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.1rem;
+    position: relative;
+    padding-bottom: 2px;
+}
+
+.status-link::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    bottom: 0;
+    left: 0;
+    background-color: var(--accent-blue);
+    transition: width 0.3s;
+}
+
+.status-link:hover::after {
+    width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .login-visual {
+        display: none;
+    }
+
+    .login-form-area {
+        flex: 1;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-info {
+        display: none;
+    }
+
+    .login-form-area {
+        padding: 30px;
+    }
+
+    .auth-form h3 {
+        font-size: 2.5rem;
+    }
+}
+
+/* Password Toggle Styles */
+.password-relative-group {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.password-relative-group input {
+    width: 100%;
+    padding-right: 40px !important;
+    /* Make room for the eye icon */
+}
+
+.toggle-eye-icon {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6b7280;
+    /* Gray-500 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: color 0.2s;
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.toggle-eye-icon:hover {
+    color: #374151;
+    /* Gray-700 */
+}
+
+.toggle-eye-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* Validation Styles */
+.error-msg {
+    color: #ff4d4d;
+    font-size: 0.82rem;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    display: block;
+    text-align: right;
+    width: 100%;
+    margin-left: 0;
+    padding-left: 5px;
+    min-height: 1.2rem;
+    opacity: 0;
+    transform: translateY(-5px);
+    transition: all 0.3s ease;
+    pointer-events: none;
+}
+
+.error-msg.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.input-light.invalid {
+    border: 2px solid #ff4d4d !important;
+    background-color: #fff0f0 !important;
+}

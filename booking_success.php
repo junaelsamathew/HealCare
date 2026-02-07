@@ -1,0 +1,372 @@
+<?php
+session_start();
+include 'includes/db_connect.php';
+// Support both POST (direct) and GET (redirect)
+$token = $_REQUEST['token'] ?? null;
+$doctor_input = $_REQUEST['doctor'] ?? null;
+$date = $_REQUEST['date'] ?? null;
+$time = $_REQUEST['time'] ?? null;
+$patient_name = $_REQUEST['patient'] ?? null;
+$fee = $_REQUEST['fee'] ?? null;
+
+$booking_id = $_REQUEST['booking_id'] ?? '';
+$appt_id = str_replace('BK-', '', $booking_id);
+
+if ((empty($token) || $token == '00') && is_numeric($appt_id)) {
+    // If details are missing, fetch them from DB using Appointment ID
+    $stmt = $conn->prepare("SELECT a.*, d.consultation_fee, u_doc.username as doc_username, 
+                            r_doc.name as doc_realname, r_pat.name as pat_realname,
+                            b.bill_id, b.payment_status as bill_status
+                            FROM appointments a 
+                            LEFT JOIN users u_doc ON a.doctor_id = u_doc.user_id 
+                            LEFT JOIN registrations r_doc ON u_doc.registration_id = r_doc.registration_id
+                            LEFT JOIN users u_pat ON a.patient_id = u_pat.user_id 
+                            LEFT JOIN registrations r_pat ON u_pat.registration_id = r_pat.registration_id
+                            LEFT JOIN doctors d ON a.doctor_id = d.user_id
+                            LEFT JOIN billing b ON a.appointment_id = b.appointment_id AND b.bill_type = 'Consultation'
+                            WHERE a.appointment_id = ?");
+    $stmt->bind_param("i", $appt_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if ($res && $res->num_rows > 0) {
+        $appt_data = $res->fetch_assoc();
+        
+        $token = $appt_data['queue_number'] ?? $appt_data['token_no'] ?? '00';
+        $doctor_name = $appt_data['doc_realname'] ?? $appt_data['doc_username'] ?? 'Doctor';
+        // Ensure Dr. prefix
+        if (!preg_match('/^Dr\./i', $doctor_name)) {
+            $doctor_name = "Dr. " . ucwords(str_replace('.', ' ', $doctor_name));
+        }
+        
+        $date = date('Y-m-d', strtotime($appt_data['appointment_date']));
+        $time = date('h:i A', strtotime($appt_data['appointment_time'])); // Format time
+        $patient_name = $appt_data['pat_realname'] ?? 'Valued Patient';
+        $fee = $appt_data['consultation_fee'] ?? 200;
+        $db_bill_id = $appt_data['bill_id'];
+        $db_bill_status = $appt_data['bill_status'];
+        
+    } else {
+        $doctor_name = "Unknown";
+        $token = "00";
+    }
+} else {
+    // Legacy/Direct handling
+    $token = $token ?? '00';
+    $time = $time ?? '00:00';
+    
+    if (is_numeric($doctor_input)) {
+        // Fetch doctor name if ID passed
+        $doc_q = $conn->query("SELECT r.name FROM users u JOIN registrations r ON u.registration_id = r.registration_id WHERE u.user_id = '$doctor_input'");
+        if ($doc_q && $doc_q->num_rows > 0) {
+            $doctor_name = $doc_q->fetch_assoc()['name'];
+        } else {
+            $doctor_name = "Doctor";
+        }
+    } else {
+        $doctor_name = $doctor_input ?: "Doctor";
+    }
+
+    // Ensure Dr. prefix for legacy too
+    if (!preg_match('/^Dr\./i', $doctor_name)) {
+        $doctor_name = "Dr. " . ucwords(str_replace('.', ' ', $doctor_name));
+    }
+    
+    if(!$patient_name) $patient_name = 'Valued Patient';
+    if(!$fee) $fee = 200;
+}
+
+$user_id = $_SESSION['user_id'] ?? 0;
+$username = $_SESSION['username'] ?? 'User';
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo (isset($_GET['paid']) || (isset($_GET['from']) && $_GET['from'] == 'payment')) ? 'Payment Confirmed' : 'Booking Confirmed'; ?> - HealCare</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+    <style>
+        .success-card {
+            background: #0f172a;
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .success-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+        .success-icon { 
+            color: #10b981; 
+            font-size: 3.5rem; 
+            margin-bottom: 20px; 
+            background: rgba(16, 185, 129, 0.1);
+            width: 80px; height: 80px;
+            display: inline-flex;
+            align-items: center; justify-content: center;
+            border-radius: 50%;
+        }
+        h2 { color: white; margin-bottom: 10px; font-weight: 600; }
+        p { color: var(--text-gray); margin-bottom: 30px; }
+
+        .details-grid {
+            text-align: left;
+            margin: 30px 0;
+            background: rgba(255,255,255,0.03);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 12px 0; 
+            border-bottom: 1px solid var(--border-color); 
+            color: var(--text-light);
+            font-size: 0.95rem;
+        }
+        .row:last-child { border-bottom: none; }
+        .row strong { color: var(--text-gray); font-weight: 500; }
+        
+        .btn-print {
+            background: var(--primary-blue);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: 0.3s;
+        }
+        .btn-print:hover { background: #2563eb; }
+
+        .payment-box {
+            background: rgba(245, 158, 11, 0.1);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px dashed rgba(245, 158, 11, 0.4);
+            margin-bottom: 25px;
+        }
+
+        @media print {
+            body { background: white; color: black; }
+            .sidebar, .top-header, .secondary-header { display: none; }
+            .dashboard-layout { padding: 0; height: auto; }
+            .main-content { overflow: visible; }
+            .success-card { 
+                box-shadow: none; 
+                border: 1px solid #ddd; 
+                background: white; 
+                color: black;
+                width: 100%;
+                max-width: 100%;
+            }
+            .success-card::before { display: none; }
+            .details-grid { background: #fff; border: 1px solid #eee; color: black; }
+            .row { border-color: #eee; color: black; }
+            .row strong { color: #555; }
+            h2, p { color: black; }
+            .btn-print, .payment-box a { display: none; }
+        }
+        /* Brand Animation */
+        .brand-letter {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .brand-letter.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- Universal Header -->
+    <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
+        <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
+            <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
+            <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
+        </a>
+        <div style="display: flex; gap: 40px; align-items: center;">
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-phone-alt"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                </div>
+            </div>
+            
+             <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">LOCATION</span>
+                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">Kanjirapally, Kottayam</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <header class="secondary-header">
+        <div style="flex: 1;"></div>
+        <div class="user-controls"><span class="user-greeting">Hello, <strong><?php echo htmlspecialchars($username); ?></strong></span><a href="logout.php" class="btn-logout">Log Out</a></div>
+    </header>
+
+    <div class="dashboard-layout">
+        <aside class="sidebar">
+            <nav>
+                <a href="patient_dashboard.php" class="nav-link">Dashboard</a>
+                <a href="book_appointment.php" class="nav-link active">Book Appointment</a>
+                <a href="my_appointments.php" class="nav-link">My Appointments</a>
+                <a href="medical_records.php" class="nav-link"><i class="fas fa-file-medical-alt"></i> Medical Records</a>
+                <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
+                <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
+                <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Settings</a>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="display: flex; align-items: center; justify-content: center;">
+            <div class="success-card">
+                <div class="success-icon"><i class="fas fa-check"></i></div>
+                <?php if(isset($_GET['paid']) || (isset($_GET['from']) && $_GET['from'] == 'payment')): ?>
+                    <h2>Appointment Booked Successfully!</h2>
+                    <p>Your consultation payment has been successfully processed.</p>
+                <?php else: ?>
+                    <h2>Appointment Booked Successfully!</h2>
+                    <p>Your request has been successfully submitted.</p>
+                <?php endif; ?>
+                
+                <div class="details-grid">
+                    <div class="row"><strong>Booking ID:</strong> <span style="font-family:monospace;"><?php echo $booking_id; ?></span></div>
+                    <div class="row"><strong>Token Number:</strong> <span style="font-size:1.1rem; font-weight:700; color:#f59e0b;"><?php echo $token; ?></span></div>
+                    <div class="row"><strong>Doctor:</strong> <span><?php echo $doctor_name; ?></span></div>
+                    <div class="row"><strong>Date / Time:</strong> <span><?php echo date('M d, Y', strtotime($date)); ?> &bull; <?php echo $time; ?></span></div>
+                    <div class="row"><strong>Patient:</strong> <span><?php echo htmlspecialchars($patient_name); ?></span></div>
+                    <div class="row"><strong>Consultation Fees:</strong> <span>₹<?php echo number_format($fee, 0); ?></span></div>
+                    <?php if(isset($_GET['paid'])): ?>
+                        <div class="row"><strong>Status:</strong> <span style="color:#10b981; font-weight:bold;">PAID</span></div>
+                    <?php else: ?>
+                        <div class="row"><strong>Status:</strong> <span style="color:#f59e0b; font-weight:bold;">PAY LATER (AT PHARMACY)</span></div>
+                    <?php endif; ?>
+                </div>
+
+                <?php 
+                $payment_needed = !isset($_GET['paid']) && (isset($_GET['bill_id']) || (isset($db_bill_id) && $db_bill_status != 'Paid'));
+                $target_bill_id = $_GET['bill_id'] ?? ($db_bill_id ?? null);
+                
+                if($payment_needed && $target_bill_id): 
+                ?>
+                    <div class="payment-box">
+                        <p style="margin: 0 0 15px; color: #f59e0b; font-weight: 500; font-size:0.95rem;">Please complete your online payment to finalize the slot.</p>
+                        <a href="payment_gateway.php?bill_id=<?php echo $target_bill_id; ?>" class="btn-print">Proceed to Payment (Razorpay)</a>
+                    </div>
+                <?php elseif(!isset($_GET['paid'])): ?>
+                    <div class="payment-box" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.4);">
+                        <p style="margin: 0 0 15px; color: #3b82f6; font-weight: 500; font-size:0.95rem;">You can pay your consultation fees later along with your pharmacy medicines.</p>
+                        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Slip</button>
+                    </div>
+                <?php else: ?>
+                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Details</button>
+                    <div style="margin-top: 20px;">
+                        <a href="my_appointments.php" style="color: var(--text-gray); font-size: 0.9rem;">View My Appointments</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </main>
+    </div>
+    <script>
+        // Brand Animation
+        document.addEventListener('DOMContentLoaded', function() {
+            function initBrandAnimation() {
+                const brandElement = document.querySelector('.animated-brand');
+                if (!brandElement) return;
+
+                const text = brandElement.textContent.trim();
+                brandElement.textContent = ''; // Clear text
+
+                // Create spans
+                const letters = [];
+                for (let char of text) {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.classList.add('brand-letter');
+                    if (char === ' ') {
+                        span.style.width = '0.3em'; // Space
+                        span.style.display = 'inline-block';
+                    }
+                    brandElement.appendChild(span);
+                    letters.push(span);
+                }
+
+                function animate() {
+                    // Show sequence
+                    letters.forEach((letter, index) => {
+                        setTimeout(() => {
+                            letter.classList.add('visible');
+                        }, index * 100); // 100ms staggering
+                    });
+
+                    // Hide sequence (after full text is shown + delay)
+                    const totalTime = (letters.length * 100) + 2000; // 2s pause
+
+                    setTimeout(() => {
+                        letters.forEach((letter, index) => {
+                            setTimeout(() => {
+                                letter.classList.remove('visible');
+                            }, index * 50); // Faster fade out
+                        });
+                    }, totalTime);
+
+                    const cycleTime = totalTime + (letters.length * 50) + 500; // time to hide + pause
+
+                    setTimeout(animate, cycleTime);
+                }
+
+                // Start animation
+                animate();
+            }
+            
+            initBrandAnimation();
+        });
+    </script>
+
+    <style>
+        /* Override chatbot position for patient pages - position at bottom */
+        .chatbot-toggler {
+            bottom: 30px !important;
+        }
+        
+        .chatbot {
+            bottom: 110px !important;
+        }
+        
+        @media (max-width: 490px) {
+            .chatbot-toggler {
+                bottom: 20px !important;
+            }
+        }
+    </style>
+    <!-- Chatbot Widget -->
+    <?php include 'includes/chatbot_widget.php'; ?>
+</body>
+</html>

@@ -1,0 +1,14 @@
+report_id - int(11)
+user_id - int(11)
+patient_id - int(11)
+user_role - varchar(50)
+department - varchar(100)
+report_title - varchar(255)
+file_path - varchar(255)
+report_date - date
+created_at - timestamp
+report_type - varchar(100)
+report_category - varchar(100)
+file_size - int(11)
+status - varchar(20)
+admin_notes - text

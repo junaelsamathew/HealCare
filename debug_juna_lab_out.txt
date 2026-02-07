@@ -1,0 +1,10 @@
+LAB TESTS for PID 38:
+{"labtest_id":"8","test_name":"Blood test","status":"Completed","report_path":"uploads\/reports\/LAB_8_1768577772.pdf"}
+{"labtest_id":"15","test_name":"x-ray","status":"Completed","report_path":"uploads\/reports\/LAB_15_1768836504.pdf"}
+{"labtest_id":"16","test_name":"Ultrasound Pelvis","status":"Completed","report_path":"uploads\/reports\/LAB_16_1768837121.pdf"}
+{"labtest_id":"17","test_name":"Blood test","status":"Completed","report_path":"uploads\/reports\/LAB_17_1768926124.pdf"}
+{"labtest_id":"20","test_name":"blood test","status":"Completed","report_path":"uploads\/reports\/LAB_20_1768973056.pdf"}
+{"labtest_id":"27","test_name":"Blood Sugar (F\/PP)","status":"Completed","report_path":"uploads\/reports\/LAB_27_1769698795.pdf"}
+{"labtest_id":"42","test_name":"CBC","status":"Completed","report_path":"uploads\/reports\/LAB_42_1770024342.pdf"}
+{"labtest_id":"44","test_name":"CBC","status":"Pending","report_path":null}
+{"labtest_id":"46","test_name":"CBC","status":"Conducted","report_path":null}

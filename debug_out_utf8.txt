@@ -1,0 +1,5 @@
+LAB TESTS:
+{"labtest_id":"29","test_name":"Chest X-Ray","status":"Completed","report_path":"uploads\/reports\/sample_xray.pdf"}
+{"labtest_id":"30","test_name":"Skull Imaging","status":"Completed","report_path":"uploads\/reports\/sample_xray.pdf"}
+{"labtest_id":"31","test_name":"Thoracic CT","status":"Completed","report_path":"uploads\/reports\/sample_xray.pdf"}
+MANUAL REPORTS:
