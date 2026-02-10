@@ -56,8 +56,8 @@ $username = $_SESSION['username'];
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             
@@ -90,6 +90,7 @@ $username = $_SESSION['username'];
                 <a href="prescriptions.php" class="nav-link active"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="patient_ambulance.php" class="nav-link"><i class="fas fa-ambulance"></i> Ambulance Service</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>

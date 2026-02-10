@@ -55,8 +55,8 @@ $username = $_SESSION['username'];
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             
@@ -89,6 +89,7 @@ $username = $_SESSION['username'];
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="patient_ambulance.php" class="nav-link"><i class="fas fa-ambulance"></i> Ambulance Service</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
@@ -135,8 +136,49 @@ $username = $_SESSION['username'];
                 <?php endif; ?>
             </div>
 
+            <!-- Inpatient Discharge Summaries -->
             <div class="content-section" style="margin-top: 30px;">
-                <div class="section-head"><h3>Lab Reports & Results</h3></div>
+                <div class="section-head"><h3>Inpatient Discharge Summaries</h3></div>
+                
+                <?php
+                $admissions_sql = "
+                    SELECT a.*, r.name as doctor_name 
+                    FROM admissions a
+                    LEFT JOIN users u ON a.doctor_id = u.user_id
+                    LEFT JOIN registrations r ON u.registration_id = r.registration_id
+                    WHERE a.patient_id = $user_id AND a.status = 'Discharged'
+                    ORDER BY a.discharge_date DESC
+                ";
+                $admissions_res = $conn->query($admissions_sql);
+
+                if ($admissions_res && $admissions_res->num_rows > 0):
+                    while ($adm_row = $admissions_res->fetch_assoc()):
+                ?>
+                <div class="record-card">
+                    <div style="display:flex; align-items:center;">
+                        <div style="width:40px; height:40px; background:rgba(16, 185, 129, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:#10b981;">
+                            <i class="fas fa-file-medical"></i>
+                        </div>
+                        <div>
+                            <h4 style="margin-bottom: 5px;">Discharge Certificate / Summary</h4>
+                            <p style="color: var(--text-gray); font-size: 13px;">
+                                Stay: <?php echo date('d M, Y', strtotime($adm_row['admission_date'])); ?> TO <?php echo date('d M, Y', strtotime($adm_row['discharge_date'])); ?> • 
+                                Dr. <?php echo htmlspecialchars($adm_row['doctor_name']); ?>
+                            </p>
+                        </div>
+                    </div>
+                    <a href="generate_discharge_summary.php?admission_id=<?php echo $adm_row['admission_id']; ?>" target="_blank" class="btn-download" style="background:rgba(16, 185, 129, 0.1); color:#10b981;">
+                        <i class="fas fa-file-pdf"></i> Summary
+                    </a>
+                </div>
+                <?php 
+                    endwhile;
+                else: 
+                ?>
+                    <div class="empty-state"><p>No discharge summaries found.</p></div>
+                <?php endif; ?>
+            </div>
+
                 
                 <?php
                 $lab_sql = "

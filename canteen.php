@@ -283,8 +283,8 @@ $menu_items = null; // Placeholder
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             
@@ -329,6 +329,7 @@ $menu_items = null; // Placeholder
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link active"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="patient_ambulance.php" class="nav-link"><i class="fas fa-ambulance"></i> Ambulance Service</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
@@ -391,11 +392,7 @@ $menu_items = null; // Placeholder
                                  onerror="this.onerror=null; this.src='<?php echo $fallback; ?>';"
                                  style="<?php echo !$is_avail ? 'filter: grayscale(100%);' : ''; ?>">
                             
-                            <?php if (!$is_avail): ?>
-                            <div style="position: absolute; top: 10px; right: 10px; background: #ef4444; color: white; padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 700; z-index: 10;">
-                                OUT OF STOCK
-                            </div>
-                            <?php endif; ?>
+
 
                             <div class="cat-badge"><?php echo explode(' / ', $item['item_category'])[0]; ?></div>
 
@@ -404,7 +401,6 @@ $menu_items = null; // Placeholder
                                 <div class="food-price">₹<?php echo number_format($item['price'], 0); ?></div>
                                 <div class="food-meta">
                                     <span><i class="fas fa-carrot" style="color: #10b981;"></i> <?php echo $item['diet_type']; ?></span>
-                                    <span><i class="fas fa-clock"></i> <?php echo $item['availability']; ?></span>
                                 </div>
                             </div>
 

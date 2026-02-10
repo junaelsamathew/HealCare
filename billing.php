@@ -56,8 +56,8 @@ $username = $_SESSION['username'];
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             
@@ -90,6 +90,7 @@ $username = $_SESSION['username'];
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link active"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="patient_ambulance.php" class="nav-link"><i class="fas fa-ambulance"></i> Ambulance Service</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
 
@@ -115,17 +116,42 @@ $username = $_SESSION['username'];
                 $a_days = (new DateTime())->diff($a_date)->days;
                 if ($a_days == 0) $a_days = 1;
 
-                // Ward Rates (Match doctor_discharge.php)
+                // 1. Room & Doctor Charges
                 $a_rates = ['General' => 500, 'Semi-Private' => 1500, 'Private' => 3000, 'ICU' => 5000, 'Emergency' => 2000];
                 $a_rate = $a_rates[$active_adm['ward_type']] ?? 1000;
                 $a_room = $a_days * $a_rate;
                 $a_doc = $a_days * 500;
                 
-                // Pending Services
+                // 2. Already Generated Pending Bills
                 $p_serv_res = $conn->query("SELECT SUM(total_amount) as total FROM billing WHERE patient_id = $user_id AND payment_status = 'Pending'");
                 $p_serv_total = ($p_serv_res) ? $p_serv_res->fetch_assoc()['total'] : 0;
+
+                // 3. Unbilled Labs (Stay baseline)
+                $adm_start = $active_adm['admission_date'];
+                $lab_q = $conn->query("SELECT COUNT(*) as count FROM lab_tests WHERE patient_id = $user_id AND (created_at >= '$adm_start' OR test_date >= DATE('$adm_start')) AND payment_status = 'Pending' AND labtest_id NOT IN (SELECT reference_id FROM billing WHERE bill_type LIKE 'Lab%' AND patient_id = $user_id)");
+                $unbilled_lab_charge = ($lab_q->fetch_assoc()['count'] ?? 0) * 500;
+
+                // 4. Unbilled Meds (Stay baseline)
+                $med_charge = 0;
+                $presc_q = $conn->query("SELECT medicine_details FROM prescriptions WHERE patient_id = $user_id AND prescription_date >= DATE('$adm_start') AND (status IS NULL OR status = 'Pending') AND prescription_id NOT IN (SELECT reference_id FROM billing WHERE bill_type LIKE 'Pharmacy%' AND patient_id = $user_id)");
                 
-                $running_total = $a_room + $a_doc + $p_serv_total;
+                // Fetch stock for estimate (simplified version for estimation)
+                $stock_q = $conn->query("SELECT medicine_name, unit_price FROM pharmacy_stock");
+                $stocks = []; while($s = $stock_q->fetch_assoc()) $stocks[] = $s;
+
+                while($presc = $presc_q->fetch_assoc()) {
+                    $text = strtolower($presc['medicine_details']);
+                    $p_cost = 0;
+                    foreach($stocks as $stock) {
+                        if (strpos($text, strtolower($stock['medicine_name'])) !== false) {
+                            $price = floatval($stock['unit_price']);
+                            $p_cost += (10 * $price); // Assume 10 units for estimate
+                        }
+                    }
+                    $med_charge += ($p_cost ?: 200);
+                }
+                
+                $running_total = $a_room + $a_doc + $p_serv_total + $unbilled_lab_charge + $med_charge;
             ?>
             <div class="content-section" style="background: linear-gradient(135deg, #1e293b, #0f172a); border: 1px solid #f59e0b; margin-bottom: 30px;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">

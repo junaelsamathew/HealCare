@@ -1,6 +1,6 @@
 <?php
 include 'includes/db_connect.php';
-$tables = ['wards', 'rooms', 'admissions', 'billing', 'pharmacy_stock', 'lab_tests'];
+$tables = ['wards', 'rooms', 'admissions', 'billing', 'pharmacy_stock', 'lab_tests', 'prescriptions'];
 foreach($tables as $t) {
     echo "--- $t ---\n";
     $res = $conn->query("DESCRIBE $t");

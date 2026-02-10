@@ -2,6 +2,34 @@
 session_start();
 include 'includes/db_connect.php';
 
+// Get section
+$section = $_GET['section'] ?? 'dashboard';
+
+// Fetch Operational Intelligence for Patients
+$occ_res = $conn->query("SELECT w.ward_name, w.capacity, 
+                        (SELECT COUNT(*) FROM rooms r WHERE r.ward_id = w.ward_id AND r.status='Occupied') as occupied
+                        FROM wards w");
+$occ_labels = []; $occ_occupied = []; $occ_capacity = [];
+if($occ_res) {
+    while($or = $occ_res->fetch_assoc()) {
+        $occ_labels[] = $or['ward_name'];
+        $occ_occupied[] = (int)$or['occupied'];
+        $occ_capacity[] = (int)$or['capacity'];
+    }
+}
+
+$peak_res = $conn->query("SELECT HOUR(appointment_time) as hr, COUNT(*) as count 
+                          FROM appointments 
+                          WHERE appointment_time IS NOT NULL 
+                          GROUP BY hr ORDER BY hr");
+$peak_labels = []; $peak_counts = [];
+if($peak_res) {
+    while($pr = $peak_res->fetch_assoc()) {
+        $peak_labels[] = date("g A", strtotime($pr['hr'] . ":00"));
+        $peak_counts[] = (int)$pr['count'];
+    }
+}
+
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
     header("Location: login.php");
     exit();
@@ -378,8 +406,8 @@ while ($row = $notif_res->fetch_assoc()) {
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -440,6 +468,8 @@ while ($row = $notif_res->fetch_assoc()) {
                 <a href="prescriptions.php" class="nav-link"><i class="fas fa-pills"></i> Prescriptions</a>
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
+                <a href="patient_ambulance.php" class="nav-link"><i class="fas fa-ambulance"></i> Ambulance Service</a>
+                <a href="?section=hospital_insights" class="nav-link <?php echo isset($_GET['section']) && $_GET['section'] == 'hospital_insights' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Hospital Insights</a>
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
@@ -462,7 +492,31 @@ while ($row = $notif_res->fetch_assoc()) {
                 <h1 style="display: none;">Patient Dashboard</h1>
             </div>
 
-            <?php if(isset($_GET['msg']) && $_GET['msg'] == 'package_booked'): ?>
+            <?php if ($section == 'hospital_insights'): ?>
+                <!-- Hospital Core Performance Visuals (Mirrored from Admin) -->
+                <div class="content_section" style="margin-bottom: 30px;">
+                    <div class="section-head">
+                        <h3><i class="fas fa-project-diagram" style="color:#3b82f6;"></i> Hospital Operational Intelligence</h3>
+                        <p style="color: #64748b; font-size: 13px;">Transparency in our hospital operations and availability</p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
+                            <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Live Ward Occupancy</h4>
+                            <div style="flex: 1; position: relative; min-height: 0;">
+                                <canvas id="chartOccupancy"></canvas>
+                            </div>
+                        </div>
+                        <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
+                            <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Average Peak Consultation Hours</h4>
+                            <div style="flex: 1; position: relative; min-height: 0;">
+                                <canvas id="chartPeakHours"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <?php if(isset($_GET['msg']) && $_GET['msg'] == 'package_booked'): ?>
             <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px; animation: slideDown 0.4s ease-out;">
                 <div style="width: 40px; height: 40px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
                     <i class="fas fa-check"></i>
@@ -812,6 +866,37 @@ while ($row = $notif_res->fetch_assoc()) {
                         <?php endif; ?>
                     </div>
 
+                    <!-- Ambulance Emergency Card -->
+                    <div class="content-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                            <h3><i class="fas fa-ambulance" style="color:#ef4444;"></i> Ambulance Service</h3>
+                            <a href="patient_ambulance.php" class="download-btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">View All</a>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <?php
+                            $amb_dash = $conn->query("SELECT * FROM ambulance_contacts WHERE availability = 'Available' LIMIT 2");
+                            if ($amb_dash && $amb_dash->num_rows > 0):
+                                while ($amb = $amb_dash->fetch_assoc()):
+                            ?>
+                                <div class="dash-item" style="padding: 12px; border-left: 3px solid #10b981;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <span style="display: block; font-size: 13px; font-weight: 600;"><?php echo htmlspecialchars($amb['driver_name']); ?></span>
+                                            <small style="color: #94a3b8; font-size: 10px;"><?php echo htmlspecialchars($amb['location']); ?></small>
+                                        </div>
+                                        <a href="https://wa.me/918075454467" target="_blank" style="color: #25d366; font-weight: 700; font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                                            <i class="fab fa-whatsapp"></i> WHATSAPP
+                                        </a>
+                                    </div>
+                                </div>
+                            <?php endwhile; else: ?>
+                                <div class="dash-item" style="text-align: center; padding: 15px;">
+                                    <p style="color: #64748b; font-size: 11px;">No available units shown. Call hospital hotline.</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <!-- Recent Lab Reports Card -->
                     <div class="content-section">
                         <div class="section-head">
@@ -845,10 +930,52 @@ while ($row = $notif_res->fetch_assoc()) {
                         </div>
                     </div>
 
+                    <!-- New: Recommended Health Packages -->
+                    <div class="content_section">
+                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                            <h3><i class="fas fa-certificate" style="color:#f59e0b;"></i> New Health Packages</h3>
+                            <a href="health_packages.php" style="font-size:12px; color:#4fc3f7; text-decoration:none;">View All</a>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 12px;">
+                            <?php
+                            $new_pkgs = $conn->query("SELECT * FROM health_packages WHERE status = 'Active' ORDER BY created_at DESC LIMIT 2");
+                            if ($new_pkgs && $new_pkgs->num_rows > 0):
+                                while ($p = $new_pkgs->fetch_assoc()):
+                                    $p_disc = $p['discount_percentage'];
+                            ?>
+                                <div class="dash-item" style="padding: 15px; border-radius: 16px; background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05);">
+                                    <div style="display: flex; gap: 15px; align-items: center;">
+                                        <div style="width: 45px; height: 45px; background: rgba(59, 130, 246, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #3b82f6;">
+                                            <i class="fas fa-stethoscope"></i>
+                                        </div>
+                                        <div style="flex: 1;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <h4 style="margin: 0; font-size: 14px; color: #fff;"><?php echo htmlspecialchars($p['package_name']); ?></h4>
+                                                                                                <?php if ($p_disc > 0): ?>
+                                                    <span style="font-size: 10px; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700;"><?php echo $p_disc; ?>% OFF</span>
+                                                <?php endif; ?>
+
+                                            </div>
+                                            <p style="margin: 4px 0 8px; font-size: 11px; color: #94a3b8; line-height: 1.4;"><?php echo htmlspecialchars($p['package_description']); ?></p>
+                                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                <span style="font-weight: 700; color: #10b981; font-size: 13px;">₹<?php echo number_format($p['discounted_price']); ?></span>
+                                                <a href="health_packages.php?open=<?php echo urlencode($p['package_name']); ?>" style="font-size: 11px; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 6px; text-decoration: none; font-weight: 600;">Book Now</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endwhile; else: ?>
+                                <div class="dash-item" style="text-align: center; padding: 15px;">
+                                    <p style="color: #64748b; font-size: 11px;">Lookout for upcoming seasonal packages.</p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
                     <!-- Active Health Packages Card -->
                     <div class="content-section">
                         <div class="section-head">
-                            <h3><i class="fas fa-box-medical" style="color:#10b981;"></i> My Health Packages</h3>
+                            <h3><i class="fas fa-box-medical" style="color:#10b981;"></i> My Booked Packages</h3>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 15px;">
                             <?php
@@ -858,8 +985,9 @@ while ($row = $notif_res->fetch_assoc()) {
                                 while ($pkg = $pkg_res->fetch_assoc()):
                                     // Extract package name from description "Health Package Booking: [Name] for [Date]"
                                     $desc = $pkg['description'];
-                                    $p_name = str_replace("Health Package Booking: ", "", explode(" for ", $desc)[0]);
-                                    $p_date = explode(" for ", $desc)[1] ?? $pkg['bill_date'];
+                                    $p_parts = explode(" for ", $desc);
+                                    $p_name = str_replace("Health Package Booking: ", "", $p_parts[0]);
+                                    $p_date = $p_parts[1] ?? $pkg['bill_date'];
                             ?>
                                 <div class="dash-item" style="padding: 15px; border-left: 4px solid #10b981;">
                                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -878,7 +1006,7 @@ while ($row = $notif_res->fetch_assoc()) {
                             <?php endwhile; else: ?>
                                 <div class="dash-item" style="text-align: center; padding: 20px;">
                                     <p style="color: #64748b; font-size: 13px;">No active health packages.</p>
-                                    <a href="health_packages.php" style="color: #4fc3f7; font-size: 12px; font-weight: 600; text-decoration: none;">Browse Packages</a>
+                                    <a href="health_packages.php" style="color: #4fc3f7; font-size: 12px; font-weight: 600; text-decoration: none;">Browse All Packages</a>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -886,6 +1014,7 @@ while ($row = $notif_res->fetch_assoc()) {
                 </div>
             </div>
 
+            <?php endif; ?>
         </main>
     </div>
 
@@ -1038,6 +1167,73 @@ while ($row = $notif_res->fetch_assoc()) {
                     }
                 }
             });
+        });
+
+        // Initialize Operational Intelligence Charts
+        <?php if ($section == 'hospital_insights'): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctxOcc = document.getElementById('chartOccupancy').getContext('2d');
+            new Chart(ctxOcc, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode($occ_labels); ?>,
+                    datasets: [
+                        {
+                            label: 'Occupied',
+                            data: <?php echo json_encode($occ_occupied); ?>,
+                            backgroundColor: '#ef4444',
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Available',
+                            data: <?php echo json_encode(array_map(function($c, $o) { return $c - $o; }, $occ_capacity, $occ_occupied)); ?>,
+                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8' } },
+                        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: {
+                        legend: { labels: { color: '#cbd5e1' } }
+                    }
+                }
+            });
+
+            const ctxPeak = document.getElementById('chartPeakHours').getContext('2d');
+            new Chart(ctxPeak, {
+                type: 'line',
+                data: {
+                    labels: <?php echo json_encode($peak_labels); ?>,
+                    datasets: [{
+                        label: 'Appointments',
+                        data: <?php echo json_encode($peak_counts); ?>,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        });
+        <?php endif; ?>
+
         // Brand Animation
         function initBrandAnimation() {
                 const brandElement = document.querySelector('.animated-brand');

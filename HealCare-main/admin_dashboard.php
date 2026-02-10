@@ -407,10 +407,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $v_type = mysqli_real_escape_string($conn, $_POST['vehicle_type']);
         $location = mysqli_real_escape_string($conn, $_POST['location']);
         
-        $sql = "INSERT INTO ambulance_contacts (driver_name, phone_number, vehicle_number, vehicle_type, location, availability) 
-                VALUES ('$driver', '$phone', '$v_no', '$v_type', '$location', 'Available')";
+        $img_url = mysqli_real_escape_string($conn, $_POST['image_url'] ?? '');
+        
+        $sql = "INSERT INTO ambulance_contacts (driver_name, phone_number, vehicle_number, vehicle_type, location, availability, image_url) 
+                VALUES ('$driver', '$phone', '$v_no', '$v_type', '$location', 'Available', '$img_url')";
         if ($conn->query($sql)) {
-            $success_msg = "Ambulance contact added successfully!";
+            echo "<script>window.location.href='admin_dashboard.php?section=ambulance&success=1';</script>";
+            exit();
         } else {
             $error_msg = "Error: " . $conn->error;
         }
@@ -811,9 +814,14 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Admin Dashboard - HealCare</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <style>
         :root {
             --primary-blue: #3b82f6;
@@ -1498,11 +1506,13 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(5px);
+            overflow-y: auto;
+            padding: 40px 0;
         }
 
         .modal-content {
             background: var(--dark-blue);
-            margin: 10% auto;
+            margin: 0 auto;
             padding: 30px;
             border: 1px solid var(--border-color);
             width: 500px;
@@ -1577,6 +1587,194 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             color: var(--text-white);
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
+
+        /* Health Package Modal Enhancement */
+        .package-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            min-height: 45px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .package-tag {
+            background: var(--primary-blue);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        .package-tag i {
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        .package-tag i:hover {
+            opacity: 1;
+            color: #ff3333;
+        }
+        .pkg-input-row {
+            display: flex;
+            gap: 10px;
+        }
+        .pkg-input-row input {
+            flex: 1;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Ambulance Grid & Cards */
+        .ambulance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .ambulance-card {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .ambulance-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary-blue);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .ambulance-img-wrapper {
+            width: 100%;
+            height: 180px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ambulance-branding {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(transparent, rgba(0,0,0,0.95));
+            padding: 25px 15px 12px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            z-index: 5;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ambulance-branding::before {
+            content: '+';
+            color: #ff3333;
+            font-size: 24px;
+            font-family: serif;
+            font-weight: bold;
+        }
+
+        .ambulance-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .ambulance-card:hover .ambulance-img-wrapper img {
+            transform: scale(1.1);
+        }
+
+        .ambulance-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        .badge-avail { background: rgba(16, 185, 129, 0.8); color: white; }
+        .badge-duty { background: rgba(245, 158, 11, 0.8); color: white; }
+        .badge-off { background: rgba(239, 68, 68, 0.8); color: white; }
+
+        .ambulance-content {
+            padding: 20px;
+        }
+
+        .ambulance-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .ambulance-type {
+            font-size: 12px;
+            color: var(--primary-blue);
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .ambulance-info-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .ambulance-info-row i {
+            width: 20px;
+            color: #64748b;
+        }
+
+        .ambulance-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .amb-detail-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .amb-detail-img {
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
     </style>
 
 </head>
@@ -1590,8 +1788,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -1692,10 +1890,16 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
     <!-- Main Content -->
     <main class="main-content">
-        <?php if ($success_msg): ?>
+        <?php 
+        $display_success = $success_msg;
+        if (isset($_GET['success']) && $_GET['success'] == '1') {
+            $display_success = "Action completed successfully!";
+        }
+        if ($display_success): 
+        ?>
             <div class="alert alert-success">
                 <i class="fas fa-check-circle"></i>
-                <?php echo $success_msg; ?>
+                <?php echo $display_success; ?>
             </div>
         <?php endif; ?>
 
@@ -1707,6 +1911,31 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
         <?php endif; ?>
 
         <?php if ($section == 'dashboard'): ?>
+            <?php
+            // --- DATA FOR CHARTS ---
+            // 1. Patient Growth (Last 7 Days)
+            $p_dates = [];
+            $p_counts = [];
+            for ($i=6; $i>=0; $i--) {
+                $d = date('Y-m-d', strtotime("-$i days"));
+                $p_dates[] = date('d M', strtotime($d));
+                // Count new patients created on this date
+                $pq = $conn->query("SELECT COUNT(*) as c FROM users WHERE role='patient' AND DATE(created_at) = '$d'");
+                $p_counts[] = ($pq && $row = $pq->fetch_assoc()) ? $row['c'] : 0;
+            }
+
+            // 2. Revenue Trend (Last 7 Days)
+            $r_dates = [];
+            $r_amts = [];
+            for ($i=6; $i>=0; $i--) {
+                $d = date('Y-m-d', strtotime("-$i days"));
+                $r_dates[] = date('d M', strtotime($d));
+                // Sum paid bills on this date
+                // Note: Ensure billing table uses 'bill_date' and 'payment_status'
+                $rq = $conn->query("SELECT SUM(total_amount) as s FROM billing WHERE payment_status='Paid' AND DATE(bill_date) = '$d'");
+                $r_amts[] = ($rq && $row = $rq->fetch_assoc()) ? $row['s'] : 0;
+            }
+            ?>
             <!-- Dashboard Overview -->
             <div class="top-bar">
                 <div class="page-title">
@@ -1880,6 +2109,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
 
                 <!-- Trend Insight -->
+                <!-- Trend Insight -->
                 <div style="margin-top: 25px; padding: 15px 20px; background: rgba(59, 130, 246, 0.05); border-radius: 12px; border-left: 4px solid var(--primary-blue); display: flex; align-items: center; gap: 12px;">
                     <i class="fas fa-info-circle" style="color: var(--primary-blue); font-size: 16px;"></i>
                     <p style="font-size: 13px; color: var(--text-gray); margin: 0; font-weight: 500;">
@@ -1889,6 +2119,22 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
             </div>
 
+            <!-- New Chart Row: Patient Growth & Revenue -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div class="content-section" style="padding: 25px; margin-bottom: 0;">
+                    <h3 class="section-title" style="margin-bottom: 20px; font-size: 16px;">Patient Demographics (Growth)</h3>
+                    <div style="height: 250px;">
+                        <canvas id="patientChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="content-section" style="padding: 25px; margin-bottom: 0;">
+                    <h3 class="section-title" style="margin-bottom: 20px; font-size: 16px;">Revenue Analysis (Last 7 Days)</h3>
+                    <div style="height: 250px;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
             <!-- Quick Actions -->
             <div class="content-section">
@@ -3460,20 +3706,6 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                     <i class="fas fa-carrot" style="color: #10b981;"></i> <?php echo $m['diet_type']; ?>
                                 </div>
                             </div>
-
-                            <div class="stock-controls">
-                                <form method="POST" action="?section=canteen-menu" style="display:flex; gap:10px; width:100%;">
-                                    <input type="hidden" name="action" value="toggle_stock">
-                                    <input type="hidden" name="menu_id" value="<?php echo $m['menu_id']; ?>">
-                                    
-                                    <button type="submit" name="status" value="Available" class="btn-stock <?php echo $is_avail ? 'active-stock' : ''; ?>">
-                                        In Stock
-                                    </button>
-                                    <button type="submit" name="status" value="Out of Stock" class="btn-stock <?php echo !$is_avail ? 'active-out' : ''; ?>">
-                                        Out of Stock
-                                    </button>
-                                </form>
-                            </div>
                         </div>
                     <?php endwhile; 
                     else: ?>
@@ -3623,66 +3855,121 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                 <div style="font-size: 12px; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
                             </div>
                             
-                            <button class="btn btn-primary" style="width: 100%; margin-top: 25px; padding: 12px; font-weight: 700; background: #1e40af; border-radius: 12px;">Select Package</button>
+
                         </div>
                     <?php endwhile; else: ?>
                         <div class="placeholder-section" style="grid-column: 1/-1; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 60px;">
                             <i class="fas fa-box-open" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i>
                             <h3 style="color: white;">No Packages Found</h3>
-                            <p>Start by creating a new health checkup package.</p>
-                        </div>
+                    <button onclick="openNewPackageModal()" class="btn btn-success"><i class="fas fa-plus"></i> Create New Package</button>
+                </div>
                     <?php endif; ?>
                 </div>
             </div>
 
             <!-- Health Package Modal -->
             <div id="packageModal" class="modal">
-                <div class="modal-content" style="width: 600px;">
+                <div class="modal-content" style="width: 700px; max-width: 95%;">
                     <span class="close-modal" onclick="closeModal('packageModal')">&times;</span>
-                    <h3 id="pkgModalTitle" style="margin-bottom: 25px;">Create New Package</h3>
-                    <form method="POST">
+                    
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="width: 60px; height: 60px; background: rgba(16, 185, 129, 0.1); border-radius: 15px; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; color: #10b981; font-size: 24px;">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <h3 id="pkgModalTitle" style="font-size: 22px; color: white;">Create New Package</h3>
+                        <p style="color: #94a3b8; font-size: 13px;">Design a comprehensive health checkup bundle</p>
+                    </div>
+
+                    <form method="POST" id="pkgForm">
                         <input type="hidden" name="action" value="save_package">
                         <input type="hidden" name="package_id" id="pkg_id">
+                        <input type="hidden" name="included_tests" id="pkg_tests_hidden">
                         
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Package Name</label>
-                            <input type="text" name="package_name" id="pkg_name" required>
-                        </div>
-                        
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Short Description</label>
-                            <textarea name="description" id="pkg_desc" rows="2" required></textarea>
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label><i class="fas fa-signature" style="color: var(--primary-blue);"></i> Package Name</label>
+                                <input type="text" name="package_name" id="pkg_name" placeholder="e.g. Executive Wellness Silver" required>
+                                <small style="color: #64748b; font-size: 11px;">Public title for the patient dashboard</small>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label><i class="fas fa-align-left" style="color: var(--primary-blue);"></i> Short Description</label>
+                                <textarea name="description" id="pkg_desc" rows="3" placeholder="Briefly explain the package benefits..." required></textarea>
+                            </div>
+
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label><i class="fas fa-vial" style="color: var(--primary-blue);"></i> Included Tests & Services</label>
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                    <select id="pkg_suggested_tests" onchange="addSuggestedTag()" style="flex: 1; height: 48px;">
+                                        <option value="">-- Select Standard Test --</option>
+                                        <optgroup label="Blood Tests">
+                                            <option value="CBC">Complete Blood Count (CBC)</option>
+                                            <option value="Blood Sugar">Blood Sugar (F/PP)</option>
+                                            <option value="Lipid Profile">Lipid Profile</option>
+                                            <option value="HbA1c">HbA1c</option>
+                                            <option value="Kidney Function">Kidney Function (KFT)</option>
+                                            <option value="Liver Function">Liver Function (LFT)</option>
+                                            <option value="Thyroid Profile">Thyroid Profile (T3, T4, TSH)</option>
+                                        </optgroup>
+                                        <optgroup label="Cardiology">
+                                            <option value="ECG">ECG</option>
+                                            <option value="ECHO">ECHO</option>
+                                            <option value="TMT">Stress Test (TMT)</option>
+                                        </optgroup>
+                                        <optgroup label="Imaging">
+                                            <option value="X-Ray">X-Ray Chest</option>
+                                            <option value="Ultrasound">Ultrasound (USG)</option>
+                                            <option value="CT Scan">CT Scan</option>
+                                        </optgroup>
+                                        <optgroup label="Other">
+                                            <option value="Urine Test">Urine Analysis</option>
+                                            <option value="Consultation">Doctor Consultation</option>
+                                            <option value="Physical Exam">Physical Examination</option>
+                                        </optgroup>
+                                    </select>
+                                    <div style="display: flex; align-items: center; color: #64748b; font-weight: 700;">OR</div>
+                                    <input type="text" id="pkg_test_input" placeholder="Type custom test..." style="flex: 1;">
+                                    <button type="button" onclick="addTestTag()" class="btn btn-primary" style="padding: 10px 20px;">Add</button>
+                                </div>
+                                <div id="pkg_tags_container" class="package-tags-container">
+                                    <!-- Tags will appear here -->
+                                </div>
+                                <small style="color: #64748b; font-size: 11px;">Select from common tests or type a custom one. Press Enter to add.</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-tag" style="color: #64748b;"></i> Actual Price (₹)</label>
+                                <input type="number" name="actual_price" id="pkg_actual" placeholder="0.00" oninput="calculateDiscount()" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-gift" style="color: #f59e0b;"></i> Offer Price (₹)</label>
+                                <input type="number" name="discount_price" id="pkg_discount" placeholder="0.00" oninput="calculateDiscount()" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-percent" style="color: #ef4444;"></i> Auto Discount</label>
+                                <div style="position: relative;">
+                                    <input type="number" name="discount_percent" id="pkg_percent" readonly style="background: rgba(255,255,255,0.05); color: #ef4444; font-weight: 700;">
+                                    <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #ef4444; font-weight: 700;">% OFF</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-toggle-on" style="color: #10b981;"></i> Status</label>
+                                <select name="status" id="pkg_status" style="height: 48px;">
+                                    <option value="Active">Active & Visible</option>
+                                    <option value="Inactive">Hidden / Archive</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Included Tests (Comma separated)</label>
-                            <input type="text" name="included_tests" id="pkg_tests" placeholder="e.g. CBC, Lipid Profile, X-Ray" required>
+                        <div style="margin-top: 30px; display: flex; gap: 15px;">
+                            <button type="button" class="btn" style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid #334155;" onclick="closeModal('packageModal')">Discard</button>
+                            <button type="submit" class="btn btn-success" style="flex: 2; padding: 15px; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
+                                <i class="fas fa-save" style="margin-right: 8px;"></i> Save Package Details
+                            </button>
                         </div>
-                        
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>Actual Price (₹)</label>
-                                <input type="number" name="actual_price" id="pkg_actual" oninput="calculateDiscount()" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Discounted Price (₹)</label>
-                                <input type="number" name="discount_price" id="pkg_discount" oninput="calculateDiscount()" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Discount %</label>
-                                <input type="number" name="discount_percent" id="pkg_percent" readonly>
-                            </div>
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 25px;">
-                            <label>Status</label>
-                            <select name="status" id="pkg_status">
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn btn-success" style="width: 100%;">Save Package Details</button>
                     </form>
                 </div>
             </div>
@@ -3696,53 +3983,66 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
             </div>
 
-            <div class="content-section">
-                <div class="section-header">
-                    <h3 class="section-title">Emergency Contacts</h3>
-                    <button onclick="openModal('ambulanceModal')" class="btn btn-success"><i class="fas fa-plus"></i> Add Contact</button>
+            <div class="content-section" style="background: transparent; border: none; padding: 0;">
+                <div class="section-header" style="background: var(--dark-blue); padding: 20px; border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+                    <h3 class="section-title"><i class="fas fa-ambulance" style="color: var(--accent-red); margin-right: 10px;"></i> Ready for Emergency</h3>
+                    <button onclick="openModal('ambulanceModal')" class="btn btn-success"><i class="fas fa-plus"></i> Add New Unit</button>
                 </div>
                 
                 <?php
                 $ambulances = $conn->query("SELECT * FROM ambulance_contacts ORDER BY availability ASC, created_at DESC");
                 if ($ambulances && $ambulances->num_rows > 0):
                 ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Driver Name</th>
-                                <th>Phone Number</th>
-                                <th>Vehicle Info</th>
-                                <th>Location</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while($amb = $ambulances->fetch_assoc()): ?>
-                                <tr>
-                                    <td><strong><?php echo htmlspecialchars($amb['driver_name']); ?></strong></td>
-                                    <td><span style="color:var(--primary-blue); font-weight:600;"><?php echo htmlspecialchars($amb['phone_number']); ?></span></td>
-                                    <td>
-                                        <small><?php echo htmlspecialchars($amb['vehicle_type']); ?></small><br>
-                                        <strong><?php echo htmlspecialchars($amb['vehicle_number']); ?></strong>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($amb['location']); ?></td>
-                                    <td>
-                                        <span class="badge badge-<?php echo ($amb['availability'] == 'Available' ? 'active' : ($amb['availability'] == 'On Duty' ? 'pending' : 'rejected')); ?>">
-                                            <?php echo $amb['availability']; ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this contact?')">
+                    <div class="ambulance-grid">
+                        <?php while($amb = $ambulances->fetch_assoc()): 
+                            // Verified Wikimedia Fallback
+                            $default_img = 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';
+                            $img_url = !empty($amb['image_url']) ? $amb['image_url'] : $default_img;
+                        ?>
+                            <div class="ambulance-card" onclick='viewAmbulance(<?php echo json_encode($amb); ?>)'>
+                                <div class="ambulance-img-wrapper">
+                                    <?php 
+                                        $final_src = $img_url;
+                                        if (strpos($final_src, '?') !== false) {
+                                            $final_src .= '&v=' . time();
+                                        } else {
+                                            $final_src .= '?v=' . time();
+                                        }
+                                    ?>
+                                    <img src="<?php echo $final_src; ?>" alt="Ambulance" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';">
+                                    <div class="ambulance-branding">HEALCARE HOSPITAL</div>
+                                </div>
+                                <div class="ambulance-content">
+                                    <div class="ambulance-type">
+                                        <i class="fas fa-microchip"></i> <?php echo htmlspecialchars($amb['vehicle_type']); ?>
+                                    </div>
+                                    <div class="ambulance-title"><?php echo htmlspecialchars($amb['driver_name']); ?></div>
+                                    
+                                    <div class="ambulance-info-row">
+                                        <i class="fas fa-hashtag"></i>
+                                        <span>Reg: <?php echo htmlspecialchars($amb['vehicle_number']); ?></span>
+                                    </div>
+                                    <div class="ambulance-info-row">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span><?php echo htmlspecialchars($amb['location']); ?></span>
+                                    </div>
+                                    <div class="ambulance-info-row" style="color: var(--primary-blue); font-weight: 600;">
+                                        <i class="fas fa-phone"></i>
+                                        <span><?php echo htmlspecialchars($amb['phone_number']); ?></span>
+                                    </div>
+
+                                    <div class="ambulance-actions">
+                                        <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 8px;"><i class="fas fa-eye"></i> Details</button>
+                                        <form method="POST" style="margin: 0;" onsubmit="event.stopPropagation(); return confirm('Delete this unit?');">
                                             <input type="hidden" name="action" value="delete_ambulance">
                                             <input type="hidden" name="contact_id" value="<?php echo $amb['contact_id']; ?>">
-                                            <button type="submit" class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;"><i class="fas fa-trash"></i></button>
+                                            <button type="submit" class="btn btn-danger" style="padding: 8px 12px;"><i class="fas fa-trash"></i></button>
                                         </form>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endwhile; ?>
+                    </div>
                 <?php else: ?>
                     <div class="placeholder-section">
                         <i class="fas fa-ambulance"></i>
@@ -3752,41 +4052,160 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 <?php endif; ?>
             </div>
 
+            <!-- Ambulance Details Modal -->
+            <div id="ambDetailModal" class="modal">
+                <div class="modal-content" style="width: 800px; max-width: 95%;">
+                    <span class="close-modal" onclick="closeModal('ambDetailModal')">&times;</span>
+                    <h2 id="det_driver" style="margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
+                        <i class="fas fa-ambulance" style="color:var(--accent-red)"></i>
+                        Unit Details
+                    </h2>
+                    
+                    <div class="amb-detail-view">
+                        <div>
+                            <img id="det_img" src="" class="amb-detail-img">
+                            <div style="margin-top: 20px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;">
+                                <h4 style="color: var(--primary-blue); margin-bottom: 10px;">Primary Equipment</h4>
+                                <ul style="list-style: none; padding: 0; font-size: 13px; color: #94a3b8;">
+                                    <li style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Oxygen Cylinders & Resuscitators</li>
+                                    <li style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Patient Monitoring System</li>
+                                    <li style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Spinal Boards & Collars</li>
+                                    <li><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Defibrillator (ALS Units Only)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                            <div class="form-group">
+                                <label>Driver Name</label>
+                                <div style="font-size: 18px; font-weight: 600;" id="txt_driver"></div>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Vehicle Reg. No</label>
+                                    <div style="font-size: 16px; color:var(--text-white);" id="txt_vno"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Status</label>
+                                    <div id="txt_status"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Ambulance Type</label>
+                                <div style="font-size: 16px; color:var(--primary-blue); font-weight:600;" id="txt_type"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Field Base Location</label>
+                                <div style="font-size: 16px;" id="txt_loc"></div>
+                            </div>
+                            <div class="form-group" style="background: rgba(59, 130, 246, 0.1); padding: 15px; border-radius: 12px;">
+                                <label style="color: var(--primary-blue);">Emergency Voice Contact</label>
+                                <div style="font-size: 22px; font-weight: 700; color: white;" id="txt_phone"></div>
+                                <a id="btn_call_driver" href="" class="btn btn-primary" style="width: 100%; margin-top: 15px; background: var(--primary-blue); font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                                    <i class="fas fa-phone-alt"></i> CALL DRIVER NOW
+                                </a>
+                            </div>
+                            
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Add Ambulance Modal -->
             <div id="ambulanceModal" class="modal">
-                <div class="modal-content">
+                <div class="modal-content" style="max-width: 500px;">
                     <span class="close-modal" onclick="closeModal('ambulanceModal')">&times;</span>
-                    <h3 style="margin-bottom: 25px;">Add New Emergency Contact</h3>
-                    <form method="POST">
+                    <h3 style="margin-bottom: 25px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-plus-circle" style="color: var(--primary-blue);"></i> Add New Emergency Unit
+                    </h3>
+
+                    <!-- Image Preview Area -->
+                    <div id="amb_preview_container" style="width: 100%; height: 180px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed rgba(255,255,255,0.1);">
+                        <img id="amb_live_preview" src="https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                        <p id="preview_text" style="color: #94a3b8; font-size: 13px; display: none;">Image Preview</p>
+                    </div>
+
+                    <form method="POST" id="addAmbulanceForm" onsubmit="return validateAmbulanceForm()">
                         <input type="hidden" name="action" value="add_ambulance">
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Driver Name</label>
-                            <input type="text" name="driver_name" required>
+                        
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Driver Name</label>
+                                <input type="text" name="driver_name" id="amb_driver_name" placeholder="John Doe" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="text" name="phone_number" id="amb_phone" placeholder="+91 8086XXXXXX" required style="width: 100%;">
+                            </div>
                         </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Phone Number</label>
-                            <input type="text" name="phone_number" required>
+
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                            <div class="form-group">
+                                <label>Vehicle Reg. No</label>
+                                <input type="text" name="vehicle_number" id="amb_vno" placeholder="KL-XX-XXXX" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label>Ambulance Type</label>
+                                <select name="vehicle_type" id="amb_type" style="width: 100%;">
+                                    <option value="Basic Life Support">Basic Life Support</option>
+                                    <option value="Advanced Life Support">Advanced Life Support</option>
+                                    <option value="Patient Transport">Patient Transport</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Vehicle Number</label>
-                            <input type="text" name="vehicle_number" required>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Vehicle Type</label>
-                            <select name="vehicle_type">
-                                <option value="Basic Life Support">Basic Life Support</option>
-                                <option value="Advanced Life Support">Advanced Life Support</option>
-                                <option value="Patient Transport">Patient Transport</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 25px;">
+
+                        <div class="form-group" style="margin-top: 15px;">
                             <label>Base Location</label>
-                            <input type="text" name="location" required>
+                            <input type="text" name="location" id="amb_location" placeholder="South Wing / Main Gate" required style="width: 100%;">
                         </div>
-                        <button type="submit" class="btn btn-success" style="width: 100%;">Save Contact</button>
+
+                        <div class="form-group" style="margin-top: 15px; margin-bottom: 25px;">
+                            <label>Image URL (Optional)</label>
+                            <input type="url" name="image_url" id="amb_image_url" oninput="updateAmbulancePreview(this.value)" placeholder="Enter high-quality image link" style="width: 100%;">
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; font-weight: 700; border-radius: 8px;">
+                            <i class="fas fa-save" style="margin-right: 8px;"></i> Save Ambulance Unit
+                        </button>
                     </form>
                 </div>
             </div>
+
+            <script>
+            function updateAmbulancePreview(url) {
+                const img = document.getElementById('amb_live_preview');
+                const defaultImg = 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';
+                if (url.trim() === '') {
+                    img.src = defaultImg;
+                } else {
+                    img.src = url;
+                    img.onerror = function() {
+                        this.src = defaultImg;
+                        this.title = "Invalid Image URL - Showing Default";
+                    };
+                }
+            }
+
+            function validateAmbulanceForm() {
+                const phone = document.getElementById('amb_phone').value;
+                const driver = document.getElementById('amb_driver_name').value;
+                const vno = document.getElementById('amb_vno').value;
+
+                if (driver.length < 3) {
+                    alert('Driver name must be at least 3 characters.');
+                    return false;
+                }
+
+                // Basic phone validation (digits and maybe space/+/-)
+                const phoneRegex = /^[\d\s+\-]{10,15}$/;
+                if (!phoneRegex.test(phone)) {
+                    alert('Please enter a valid phone number (10-15 digits).');
+                    return false;
+                }
+
+                return true;
+            }
+            </script>
 
         <?php elseif ($section == 'reports'): ?>
             <!-- Revenue Reports -->
@@ -3945,7 +4364,89 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             </div>
 
             <?php
-            // --- FILTER LOGIC ---
+            // --- DATABASE SCHEMA SELF-HEALING ---
+            // Ensure manual_reports has report_type and report_category
+            try {
+                $check_cols = $conn->query("SHOW COLUMNS FROM manual_reports LIKE 'report_type'");
+                if ($check_cols && $check_cols->num_rows == 0) {
+                    $conn->query("ALTER TABLE manual_reports ADD COLUMN report_type VARCHAR(100) DEFAULT 'General' AFTER user_role");
+                    $conn->query("ALTER TABLE manual_reports ADD COLUMN report_category VARCHAR(100) DEFAULT 'Other' AFTER report_type");
+                }
+            } catch (Exception $e) { /* Ignore errors if table doesn't exist yet */ }
+
+            // --- CORE OPERATIONAL METRICS ---
+            try {
+                // Revenue Stats
+                $rev_data = $conn->query("SELECT 
+                    SUM(total_amount) as total,
+                    SUM(CASE WHEN DATE(bill_date) = CURDATE() THEN total_amount ELSE 0 END) as today_rev,
+                    COUNT(DISTINCT patient_id) as total_patients
+                    FROM billing WHERE payment_status = 'Paid'")->fetch_assoc();
+                
+                $total_revenue = $rev_data['total'] ?? 0;
+                $today_revenue = $rev_data['today_rev'] ?? 0;
+                $unique_patients = $rev_data['total_patients'] ?? 0;
+
+                // Appointment Stats
+                $appt_stats = $conn->query("SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN appointment_date = CURDATE() THEN 1 ELSE 0 END) as today_appts,
+                    SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) as completed
+                    FROM appointments")->fetch_assoc();
+                
+                $total_appointments = $appt_stats['total'] ?? 0;
+                $today_appointments = $appt_stats['today_appts'] ?? 0;
+                $success_rate = ($total_appointments > 0) ? round(($appt_stats['completed'] / $total_appointments) * 100) : 0;
+
+                // Revenue by Category (Billing Type)
+                $rev_by_cat = [];
+                $rev_grouped = ['Lab' => 0, 'Pharmacy' => 0, 'Room Charges' => 0, 'Consultation' => 0, 'Other' => 0];
+                $res_cat = $conn->query("SELECT bill_type, SUM(total_amount) as amount FROM billing WHERE payment_status = 'Paid' GROUP BY bill_type");
+                while($rc = $res_cat->fetch_assoc()) {
+                    $type = $rc['bill_type'] ?: 'Other';
+                    $amt = (float)$rc['amount'];
+                    $rev_by_cat[$type] = $amt;
+                    
+                    if (stripos($type, 'Lab') !== false) $rev_grouped['Lab'] += $amt;
+                    elseif (stripos($type, 'Pharmacy') !== false) $rev_grouped['Pharmacy'] += $amt;
+                    elseif (stripos($type, 'Inpatient') !== false || stripos($type, 'Settlement') !== false) $rev_grouped['Room Charges'] += $amt;
+                    elseif (stripos($type, 'Consultation') !== false) $rev_grouped['Consultation'] += $amt;
+                    else $rev_grouped['Other'] += $amt;
+                }
+
+                // Hospital Occupancy Data
+                $occ_res = $conn->query("SELECT w.ward_name, w.capacity, 
+                                        (SELECT COUNT(*) FROM rooms r WHERE r.ward_id = w.ward_id AND r.status='Occupied') as occupied
+                                        FROM wards w");
+                $occ_labels = []; $occ_occupied = []; $occ_capacity = [];
+                if($occ_res) {
+                    while($or = $occ_res->fetch_assoc()) {
+                        $occ_labels[] = $or['ward_name'];
+                        $occ_occupied[] = (int)$or['occupied'];
+                        $occ_capacity[] = (int)$or['capacity'];
+                    }
+                }
+
+                // Peak OPD Hours Data
+                $peak_res = $conn->query("SELECT HOUR(appointment_time) as hr, COUNT(*) as count 
+                                          FROM appointments 
+                                          WHERE appointment_time IS NOT NULL 
+                                          GROUP BY hr ORDER BY hr");
+                $peak_labels = []; $peak_counts = [];
+                if($peak_res) {
+                    while($pr = $peak_res->fetch_assoc()) {
+                        $peak_labels[] = date("g A", strtotime($pr['hr'] . ":00"));
+                        $peak_counts[] = (int)$pr['count'];
+                    }
+                }
+
+            } catch (Exception $e) {
+                $total_revenue = $today_revenue = $unique_patients = $total_appointments = $today_appointments = $success_rate = 0;
+                $rev_grouped = ['Lab' => 0, 'Pharmacy' => 0, 'Room Charges' => 0, 'Consultation' => 0, 'Other' => 0];
+                $occ_labels = $occ_occupied = $occ_capacity = $peak_labels = $peak_counts = [];
+            }
+
+            // --- FILTER LOGIC (MANUAL REPORTS) ---
             $f_type = $_GET['f_type'] ?? '';
             $f_period = $_GET['f_period'] ?? 'all';
             $f_search = $_GET['f_search'] ?? '';
@@ -3995,41 +4496,125 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 while($row = $result->fetch_assoc()) {
                     $reports[] = $row;
                     
-                    // Populate Analytics
-                    $t = $row['report_type'] ?: 'Unspecified';
+                    // Populate Analytics (with trimming and sanitization)
+                    $t = trim($row['report_type'] ?: 'Unspecified');
                     $dist_type[$t] = ($dist_type[$t] ?? 0) + 1;
 
-                    $c = $row['report_category'] ?: 'General';
+                    $c = trim($row['report_category'] ?: 'General');
                     $dist_role[$c] = ($dist_role[$c] ?? 0) + 1;
 
-                    $d = date('Y-m-d', strtotime($row['report_date']));
+                    $raw_date = $row['report_date'];
+                    $d = ($raw_date && $raw_date != '0000-00-00') ? date('M d', strtotime($raw_date)) : 'N/A';
                     $timeline[$d] = ($timeline[$d] ?? 0) + 1;
                 }
             }
-            ksort($timeline); // Sort timeline by date
             ?>
+
+            <!-- Quick Intelligence Metrics -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="stat-card-title">Total Revenue</div>
+                            <div class="stat-card-value" style="color: #10b981;">Rs. <?php echo number_format($total_revenue); ?></div>
+                            <div class="stat-card-subtitle"><i class="fas fa-arrow-up"></i> Rs. <?php echo number_format($today_revenue); ?> recorded today</div>
+                        </div>
+                        <i class="fas fa-money-bill-wave" style="font-size: 30px; color: rgba(16, 185, 129, 0.2);"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="stat-card-title">Patient Flow</div>
+                            <div class="stat-card-value" style="color: #3b82f6;"><?php echo number_format($total_appointments); ?></div>
+                            <div class="stat-card-subtitle"><?php echo $today_appointments; ?> visits scheduled for today</div>
+                        </div>
+                        <i class="fas fa-users" style="font-size: 30px; color: rgba(59, 130, 246, 0.2);"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="stat-card-title">Clinical Success</div>
+                            <div class="stat-card-value" style="color: #f59e0b;"><?php echo $success_rate; ?>%</div>
+                            <div class="stat-card-subtitle">Appointment fulfillment rate</div>
+                        </div>
+                        <i class="fas fa-check-circle" style="font-size: 30px; color: rgba(245, 158, 11, 0.2);"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(59, 130, 246, 0.2);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <div class="stat-card-title">Archive Volume</div>
+                            <div class="stat-card-value" style="color: #8b5cf6;"><?php echo count($reports); ?></div>
+                            <div class="stat-card-subtitle">Digitized reports indexed</div>
+                        </div>
+                        <i class="fas fa-file-medical" style="font-size: 30px; color: rgba(139, 92, 246, 0.2);"></i>
+                    </div>
+                </div>
+            </div>
 
             <!-- Analytics Visuals -->
             <div class="content-section">
                 <div class="section-header">
-                    <h3 class="section-title"><i class="fas fa-chart-line"></i> Intelligence Overview</h3>
-                    <div style="font-size: 13px; color: #94a3b8;">Analysis based on <?php echo count($reports); ?> filtered reports</div>
+                    <h3 class="section-title"><i class="fas fa-chart-pie"></i> Intelligence Overview</h3>
+                    <div style="font-size: 13px; color: #94a3b8;">Real-time analysis based on operations and database records</div>
                 </div>
-                <!-- Charts Grid -->
-                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Report Composition</h4>
-                        <canvas id="chartType" style="height: 200px; width: 100%;"></canvas>
+                
+                <!-- Main Operational Charts -->
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 25px;">
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 420px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Revenue Distribution by Service</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartRevenue"></canvas>
+                        </div>
                     </div>
-                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Departmental Activity</h4>
-                        <canvas id="chartRole" style="height: 200px; width: 100%;"></canvas>
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 420px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Report Composition</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartType"></canvas>
+                        </div>
                     </div>
-                    <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
-                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Submission Timeline</h4>
-                        <canvas id="chartTimeline" style="height: 200px; width: 100%;"></canvas>
+                </div>
+
+                <!-- Secondary Charts Grid -->
+                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 350px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Departmental Activity (Archival)</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartRole"></canvas>
+                        </div>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 350px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 14px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Submission History</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartTimeline"></canvas>
+                        </div>
                     </div>
                  </div>
+            </div>
+            
+            <!-- Hospital Core Performance Visuals -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title"><i class="fas fa-hospital-alt"></i> Hospital Core Performance</h3>
+                    <div style="font-size: 13px; color: #94a3b8;">Deep insights into infrastructure utilization and patient flow</div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Ward Occupancy Index</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartOccupancy"></canvas>
+                        </div>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Peak Consultation Hours (OPD)</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartPeakHours"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Filters & Controls -->
@@ -4110,69 +4695,300 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <?php include 'includes/report_upload_modal.php'; ?>
 
             <script>
-            // Data Injection for Charts
-            const typeLabels = <?php echo json_encode(array_keys($dist_type)); ?>;
-            const typeData = <?php echo json_encode(array_values($dist_type)); ?>;
-            
-            const roleLabels = <?php echo json_encode(array_keys($dist_role)); ?>;
-            const roleData = <?php echo json_encode(array_values($dist_role)); ?>;
-            
-            const timeLabels = <?php echo json_encode(array_keys($timeline)); ?>;
-            const timeData = <?php echo json_encode(array_values($timeline)); ?>;
+            (function() {
+                function initAnalytics() {
+                    console.log("Analytics Init Started...");
+                    if (typeof Chart === 'undefined') {
+                        console.error("Chart.js NOT found! Re-attempting in 500ms...");
+                        setTimeout(initAnalytics, 500);
+                        return;
+                    }
 
-            // Chart Configs
-            const commonOptions = {
-                responsive: true,
-                plugins: {
-                    legend: { labels: { color: '#94a3b8', font: { size: 11 } } }
+                    const colors = {
+                        primary: '#3b82f6',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        purple: '#8b5cf6',
+                        cyan: '#06b6d4'
+                    };
+
+                    const showNoData = (canvasId) => {
+                        const canvas = document.getElementById(canvasId);
+                        if (!canvas) return;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#1e293b';
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.font = '14px Poppins';
+                        ctx.fillStyle = '#64748b';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('No data points found for this period', canvas.width / 2, canvas.height / 2);
+                    };
+
+                    const isAllZero = (arr) => arr.length === 0 || arr.every(v => v === 0);
+
+                // Data Injection
+                const typeLabels = <?php echo json_encode(array_keys($dist_type)); ?>;
+                const typeData = <?php echo json_encode(array_values($dist_type)); ?>;
+                const roleLabels = <?php echo json_encode(array_keys($dist_role)); ?>;
+                const roleData = <?php echo json_encode(array_values($dist_role)); ?>;
+                const timeLabels = <?php echo json_encode(array_keys($timeline)); ?>;
+                const timeData = <?php echo json_encode(array_values($timeline)); ?>;
+                
+                // Unified Revenue Streams (Enhanced)
+                const revLabels = <?php echo json_encode(array_keys($rev_grouped)); ?>;
+                const revData = <?php echo json_encode(array_values($rev_grouped)); ?>;
+
+                // Infrastructure Metrics
+                const occLabels = <?php echo json_encode($occ_labels); ?>;
+                const occOccupied = <?php echo json_encode($occ_occupied); ?>;
+                const occCapacity = <?php echo json_encode($occ_capacity); ?>;
+
+                // Patient Traffic Metrics
+                const peakLabels = <?php echo json_encode($peak_labels); ?>;
+                const peakData = <?php echo json_encode($peak_counts); ?>;
+
+                const commonOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: true,
+                            position: 'bottom',
+                            labels: { 
+                                color: '#94a3b8', 
+                                font: { family: 'Poppins', size: 10, weight: '500' },
+                                padding: 20,
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                            } 
+                        },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#fff',
+                            bodyColor: '#cbd5e1',
+                            padding: 12,
+                            cornerRadius: 10,
+                            borderColor: 'rgba(255,255,255,0.1)',
+                            borderWidth: 1,
+                            titleFont: { size: 14, weight: 'bold', family: 'Poppins' },
+                            bodyFont: { family: 'Poppins' },
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) label += ': ';
+                                    if (context.parsed.y !== null) {
+                                        if (context.dataset.label === 'Revenue') {
+                                            label += 'Rs. ' + context.parsed.y.toLocaleString();
+                                        } else {
+                                            label += context.parsed.y.toLocaleString();
+                                        }
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                };
+
+                const gridOptions = {
+                    y: { 
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
+                        ticks: { color: '#64748b', font: { size: 11, family: 'Poppins' } } 
+                    },
+                    x: { 
+                        grid: { display: false }, 
+                        ticks: { color: '#64748b', font: { size: 11, family: 'Poppins' } } 
+                    }
+                };
+
+                // 0. Revenue Distribution (Enhanced)
+                const ctxRev = document.getElementById('chartRevenue');
+                if(ctxRev) {
+                    if (isAllZero(revData)) {
+                        showNoData('chartRevenue');
+                    } else {
+                        new Chart(ctxRev, {
+                        type: 'bar',
+                        data: {
+                            labels: revLabels,
+                            datasets: [{
+                                label: 'Revenue',
+                                data: revData,
+                                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                                borderRadius: 10,
+                                hoverBackgroundColor: '#3b82f6',
+                                barThickness: 35
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            scales: {
+                                ...gridOptions,
+                                y: { ...gridOptions.y, ticks: { ...gridOptions.y.ticks, callback: v => 'Rs. ' + v.toLocaleString() } }
+                            }
+                        }
+                        }
+                    });
                 }
-            };
+            }
 
-            // 1. Types (Doughnut)
-            new Chart(document.getElementById('chartType'), {
-                type: 'doughnut',
-                data: {
-                    labels: typeLabels,
-                    datasets: [{
-                        data: typeData,
-                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'],
-                        borderWidth: 0
-                    }]
-                },
-                options: commonOptions
-            });
+                // 1. Report Composition
+                const ctxType = document.getElementById('chartType');
+                if(ctxType) {
+                    if (isAllZero(typeData)) {
+                        showNoData('chartType');
+                    } else {
+                        new Chart(ctxType, {
+                        type: 'doughnut',
+                        data: {
+                            labels: typeLabels,
+                            datasets: [{
+                                data: typeData,
+                                backgroundColor: [colors.primary, colors.success, colors.warning, colors.danger, colors.purple, colors.cyan],
+                                borderWidth: 0,
+                                hoverOffset: 15
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            cutout: '72%',
+                            plugins: {
+                                ...commonOptions.plugins,
+                                legend: { position: 'right', labels: { color: '#94a3b8', padding: 15, font: { size: 10 } } }
+                            }
+                        }
+                    });
+                    }
+                }
 
-            // 2. Roles (Bar)
-            new Chart(document.getElementById('chartRole'), {
-                type: 'bar',
-                data: {
-                    labels: roleLabels,
-                    datasets: [{
-                        label: 'Reports',
-                        data: roleData,
-                        backgroundColor: '#3b82f6',
-                        borderRadius: 4
-                    }]
-                },
-                options: { ...commonOptions, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } }
-            });
+                // 2. Departmental Activity
+                const ctxRole = document.getElementById('chartRole');
+                if(ctxRole) {
+                    if (isAllZero(roleData)) {
+                        showNoData('chartRole');
+                    } else {
+                        new Chart(ctxRole, {
+                        type: 'bar',
+                        data: {
+                            labels: roleLabels,
+                            datasets: [{
+                                label: 'Reports Count',
+                                data: roleData,
+                                backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                                borderRadius: 8,
+                                barThickness: 40
+                            }]
+                        },
+                        options: { ...commonOptions, scales: gridOptions }
+                    });
+                    }
+                }
 
-            // 3. Timeline (Line)
-            new Chart(document.getElementById('chartTimeline'), {
-                type: 'line',
-                data: {
-                    labels: timeLabels,
-                    datasets: [{
-                        label: 'Submissions',
-                        data: timeData,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { ...commonOptions, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } }
-            });
+                // 3. Submission Timeline
+                const ctxTimeline = document.getElementById('chartTimeline');
+                if(ctxTimeline) {
+                    if (isAllZero(timeData)) {
+                        showNoData('chartTimeline');
+                    } else {
+                        new Chart(ctxTimeline, {
+                        type: 'line',
+                        data: {
+                            labels: timeLabels,
+                            datasets: [{
+                                label: 'Archive Growth',
+                                data: timeData,
+                                borderColor: colors.purple,
+                                backgroundColor: 'rgba(139, 92, 246, 0.05)',
+                                borderWidth: 3,
+                                pointRadius: 5,
+                                pointBackgroundColor: '#fff',
+                                pointBorderColor: colors.purple,
+                                pointBorderWidth: 2,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: { ...commonOptions, scales: gridOptions }
+                    });
+                    }
+                }
+
+                // 4. Ward Occupancy Index (NEW)
+                const ctxOcc = document.getElementById('chartOccupancy');
+                if(ctxOcc) {
+                    if (isAllZero(occOccupied)) {
+                        showNoData('chartOccupancy');
+                    } else {
+                        new Chart(ctxOcc, {
+                        type: 'bar',
+                        data: {
+                            labels: occLabels,
+                            datasets: [
+                                {
+                                    label: 'Occupied Beds',
+                                    data: occOccupied,
+                                    backgroundColor: colors.danger,
+                                    borderRadius: 6,
+                                },
+                                {
+                                    label: 'Total Capacity',
+                                    data: occCapacity,
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    borderRadius: 6,
+                                }
+                            ]
+                        },
+                        options: {
+                            ...commonOptions,
+                            indexAxis: 'y',
+                            scales: {
+                                x: { ...gridOptions.x, stacked: false, grid: { color: 'rgba(255,255,255,0.03)' } },
+                                y: { ...gridOptions.y, stacked: true }
+                            }
+                        }
+                    });
+                    }
+                }
+
+                // 5. Peak OPD Volume (NEW)
+                const ctxPeak = document.getElementById('chartPeakHours');
+                if(ctxPeak) {
+                    if (isAllZero(peakData)) {
+                        showNoData('chartPeakHours');
+                    } else {
+                        new Chart(ctxPeak, {
+                        type: 'bar',
+                        data: {
+                            labels: peakLabels,
+                            datasets: [{
+                                label: 'Patients per Hour',
+                                data: peakData,
+                                backgroundColor: colors.cyan,
+                                borderRadius: 8,
+                                hoverBackgroundColor: colors.primary
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            plugins: {
+                                ...commonOptions.plugins,
+                                legend: { display: false }
+                            },
+                            scales: gridOptions
+                        }
+                    });
+                    }
+                }
+                }
+
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', initAnalytics);
+                } else {
+                    initAnalytics();
+                }
+            })();
             </script>
 
         <?php elseif ($section == 'complaints'): ?>
@@ -4332,31 +5148,6 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             openModal('canteenMenuModal');
         }
 
-        function openPackageModal() {
-            document.getElementById('pkgModalTitle').innerText = 'Create New Package';
-            document.getElementById('pkg_id').value = '';
-            document.getElementById('pkg_name').value = '';
-            document.getElementById('pkg_desc').value = '';
-            document.getElementById('pkg_tests').value = '';
-            document.getElementById('pkg_actual').value = '';
-            document.getElementById('pkg_discount').value = '';
-            document.getElementById('pkg_percent').value = '';
-            openModal('packageModal');
-        }
-
-        function editPackage(p) {
-            document.getElementById('pkgModalTitle').innerText = 'Edit Health Package';
-            document.getElementById('pkg_id').value = p.package_id;
-            document.getElementById('pkg_name').value = p.package_name;
-            document.getElementById('pkg_desc').value = p.package_description;
-            document.getElementById('pkg_tests').value = p.included_tests;
-            document.getElementById('pkg_actual').value = p.original_price;
-            document.getElementById('pkg_discount').value = p.discounted_price;
-            document.getElementById('pkg_percent').value = p.discount_percentage;
-            document.getElementById('pkg_status').value = p.status;
-            openModal('packageModal');
-        }
-
         function calculateDiscount() {
             const actual = parseFloat(document.getElementById('pkg_actual').value) || 0;
             const discountP = parseFloat(document.getElementById('pkg_discount').value) || 0;
@@ -4366,6 +5157,91 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             } else {
                 document.getElementById('pkg_percent').value = 0;
             }
+        }
+
+        // Tag System for Packages (Nested File)
+        let packageTests = [];
+
+        function addTestTag() {
+            const input = document.getElementById('pkg_test_input');
+            const value = input.value.trim();
+            if (value && !packageTests.includes(value)) {
+                packageTests.push(value);
+                renderTags();
+                input.value = '';
+            }
+        }
+
+        function addSuggestedTag() {
+            const select = document.getElementById('pkg_suggested_tests');
+            const value = select.value;
+            if (value && !packageTests.includes(value)) {
+                packageTests.push(value);
+                renderTags();
+            }
+            select.value = '';
+        }
+
+        function removeTestTag(index) {
+            packageTests.splice(index, 1);
+            renderTags();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('pkg_tags_container');
+            const hiddenInput = document.getElementById('pkg_tests_hidden');
+            
+            if (!container) return; // Guard
+            
+            container.innerHTML = '';
+            if (packageTests.length === 0) {
+                container.innerHTML = '<span style="color: #64748b; font-size: 12px; font-style: italic; margin-left: 10px; margin-top: 8px;">No tests added yet</span>';
+            }
+            
+            packageTests.forEach((test, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'package-tag';
+                tag.innerHTML = `${test} <i class="fas fa-times" onclick="removeTestTag(${index})"></i>`;
+                container.appendChild(tag);
+            });
+            
+            if (hiddenInput) hiddenInput.value = packageTests.join(', ');
+        }
+
+        // Add tag on Enter key
+        document.addEventListener('keypress', function(e) {
+            if (e.target.id === 'pkg_test_input' && e.key === 'Enter') {
+                e.preventDefault();
+                addTestTag();
+            }
+        });
+
+        // Edit and Reset functions
+        function openNewPackageModal() {
+            const form = document.getElementById('pkgForm');
+            if (form) form.reset();
+            document.getElementById('pkg_id').value = '';
+            document.getElementById('pkgModalTitle').innerText = 'Create New Package';
+            packageTests = [];
+            renderTags();
+            openModal('packageModal');
+        }
+
+        function editPackage(p) {
+            document.getElementById('pkgModalTitle').innerText = 'Edit Health Package';
+            document.getElementById('pkg_id').value = p.package_id;
+            document.getElementById('pkg_name').value = p.package_name;
+            document.getElementById('pkg_desc').value = p.package_description;
+            
+            // Load tags
+            packageTests = p.included_tests ? p.included_tests.split(',').map(s => s.trim()).filter(s => s !== '') : [];
+            renderTags();
+            
+            document.getElementById('pkg_actual').value = p.original_price;
+            document.getElementById('pkg_discount').value = p.discounted_price;
+            document.getElementById('pkg_percent').value = p.discount_percentage;
+            document.getElementById('pkg_status').value = p.status;
+            openModal('packageModal');
         }
 
         // --- NEW SYSTEMS ---
@@ -4506,147 +5382,140 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 menus.forEach(m => m.classList.remove('show'));
             }
         }
+
+        function viewAmbulance(amb) {
+            document.getElementById('det_driver').innerText = 'Unit: ' + amb.driver_name;
+            document.getElementById('txt_driver').innerText = amb.driver_name;
+            document.getElementById('txt_vno').innerText = amb.vehicle_number;
+            document.getElementById('txt_type').innerText = amb.vehicle_type;
+            document.getElementById('txt_loc').innerText = amb.location;
+            document.getElementById('txt_phone').innerText = amb.phone_number;
+            document.getElementById('btn_call_driver').href = 'tel:' + amb.phone_number.replace(/[^\d+]/g, '');
+            
+            const img = amb.image_url ? amb.image_url : 'https://images.unsplash.com/photo-1587745416684-47953f16f02f?auto=format&fit=crop&q=80&w=800';
+            document.getElementById('det_img').src = img;
+
+            statusView.innerHTML = `<span class="badge ${badgeClass}">${amb.availability}</span>`;
+
+            // Update modal image with correct fallback
+            const modalImg = amb.image_url ? amb.image_url : 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';
+            const sep = modalImg.includes('?') ? '&' : '?';
+            document.getElementById('det_img').src = modalImg + sep + 'v=<?php echo time(); ?>';
+
+            openModal('ambDetailModal');
+        }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <script>
     <?php if ($section == 'dashboard'): ?>
     document.addEventListener('DOMContentLoaded', function() {
+        console.log("Dashboard Chart Init: Checking Chart.js...");
         const fallback = document.getElementById('chartFallback');
         if (fallback) fallback.style.display = 'block';
 
+        if (typeof Chart === 'undefined') {
+            console.error("Chart.js NOT found in Dashboard section!");
+            if (fallback) fallback.innerText = "Error: Visualization library failed to load.";
+            return;
+        }
+
         setTimeout(() => {
             const ctx = document.getElementById('consultationChart');
-            if (!ctx) {
-                console.error("Canvas element #consultationChart not found even after timeout");
-                return;
+            if (ctx) {
+                if (fallback) fallback.style.display = 'none';
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: <?php echo json_encode($chart_labels); ?>,
+                        datasets: [{
+                            label: 'Appointments',
+                            data: <?php echo json_encode($chart_values); ?>,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 4,
+                            tension: 0.45,
+                            fill: true,
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            annotation: {
+                                annotations: {
+                                    line1: {
+                                        type: 'line',
+                                        yMin: <?php echo $avg_consults_7d; ?>,
+                                        yMax: <?php echo $avg_consults_7d; ?>,
+                                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                                        borderWidth: 1,
+                                        borderDash: [6, 6],
+                                        label: { display: true, content: 'AVG: <?php echo $avg_consults_7d; ?>', position: 'end' }
+                                    }
+                                }
+                            }
+                        },
+                        scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.03)' } } }
+                    }
+                });
             }
+        }, 100);
 
-            const labels = <?php echo json_encode($chart_labels); ?>;
-            const data = <?php echo json_encode($chart_values); ?>;
-            const diffs = <?php echo json_encode($chart_diffs); ?>;
-            const peakIdx = <?php echo $peak_index; ?>;
-            const avgVal = <?php echo $avg_consults_7d; ?>;
-
-            if (typeof Chart === 'undefined') {
-                if (fallback) fallback.innerText = "Error: Visualization library (Chart.js) failed to load.";
-                return;
-            }
-
-            if (fallback) fallback.style.display = 'none';
-
-            new Chart(ctx, {
+        const pCtx = document.getElementById('patientChart');
+        if (pCtx) {
+            new Chart(pCtx, {
                 type: 'line',
                 data: {
-                    labels: labels,
+                    labels: <?php echo json_encode($p_dates); ?>,
                     datasets: [{
-                        label: 'Appointments',
-                        data: data,
+                        label: 'New Patients',
+                        data: <?php echo json_encode($p_counts); ?>,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 4,
-                        tension: 0.45,
+                        borderWidth: 2,
                         fill: true,
-                        pointRadius: data.map((_, i) => i === peakIdx ? 8 : 4),
-                        pointBackgroundColor: data.map((_, i) => i === peakIdx ? '#3b82f6' : '#ffffff'),
-                        pointBorderColor: '#3b82f6',
-                        pointBorderWidth: 2,
-                        pointHoverRadius: 9,
-                        pointHoverBackgroundColor: '#ffffff',
-                        pointHoverBorderColor: '#3b82f6'
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    interaction: {
-                        intersect: false,
-                        mode: 'index',
-                    },
-                    animation: {
-                        duration: 1200,
-                        easing: 'easeOutQuart'
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#1e293b',
-                            titleFont: { family: 'Poppins', size: 14, weight: 'bold' },
-                            bodyFont: { family: 'Poppins', size: 13 },
-                            padding: 15,
-                            cornerRadius: 12,
-                            displayColors: false,
-                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                            borderWidth: 1,
-                            callbacks: {
-                                label: function(context) {
-                                    const index = context.dataIndex;
-                                    const val = context.parsed.y;
-                                    const diff = diffs[index];
-                                    let diffText = diff === 0 ? ' (No change)' : (diff > 0 ? ` (+${diff})` : ` (${diff})`);
-                                    return [
-                                        `Count: ${val} patients`,
-                                        `Prev Day: ${diffText}`
-                                    ];
-                                }
-                            }
-                        },
-                        annotation: {
-                            annotations: {
-                                line1: {
-                                    type: 'line',
-                                    yMin: avgVal,
-                                    yMax: avgVal,
-                                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                                    borderWidth: 1,
-                                    borderDash: [6, 6],
-                                    label: {
-                                        display: true,
-                                        content: 'AVG: ' + avgVal,
-                                        position: 'end',
-                                        backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                                        color: '#94a3b8',
-                                        font: { size: 10, weight: '600' },
-                                        padding: 4
-                                    }
-                                },
-                                peakLabel: {
-                                    type: 'label',
-                                    xValue: peakIdx,
-                                    yValue: data[peakIdx],
-                                    content: ['PEAK'],
-                                    color: '#3b82f6',
-                                    font: { size: 11, weight: 'bold', family: 'Poppins' },
-                                    position: 'top',
-                                    yAdjust: -15
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(255, 255, 255, 0.03)', drawBorder: false },
-                            ticks: { 
-                                color: '#64748b', 
-                                stepSize: 1,
-                                font: { family: 'Poppins', size: 11 }
-                            },
-                            suggestedMax: Math.max(...data) + 2
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { 
-                                color: '#64748b',
-                                font: { family: 'Poppins', size: 11 }
-                            }
-                        }
-                    }
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { stepSize: 1 } } }
                 }
             });
-        }, 800);
+        }
+
+        const rCtx = document.getElementById('revenueChart');
+        if (rCtx) {
+            new Chart(rCtx, {
+                type: 'bar',
+                data: {
+                    labels: <?php echo json_encode($r_dates); ?>,
+                    datasets: [{
+                        label: 'Revenue (₹)',
+                        data: <?php echo json_encode($r_amts); ?>,
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: { label: function(context) { return 'Revenue: ₹' + context.raw.toLocaleString(); } }
+                        }
+                    },
+                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } } }
+                }
+            });
+        }
     });
     <?php endif; ?>
     </script>
+
 </body>
 </html>

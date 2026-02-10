@@ -24,7 +24,7 @@
                     <h4>Contact Info</h4>
                     <ul class="footer-links">
                         <li>Kanjirapally, Kottayam</li>
-                        <li>(+91) 953 904 5609</li>
+                        <li><a href="https://wa.me/918075454467" target="_blank" style="text-decoration: none; color: inherit;"><i class="fab fa-whatsapp" style="color: #25d366;"></i> (+91) 807 545 4467 (Emergency)</a></li>
                         <li>contact@healcare.com</li>
                     </ul>
                 </div>

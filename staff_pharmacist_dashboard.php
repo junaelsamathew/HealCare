@@ -76,10 +76,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($can_dispense) {
             $conn->begin_transaction();
             try {
-                // 1. Mark Prescription as Dispensed
+                // 1. Smart Stock Deduction Logic
+                $presc_res = $conn->query("SELECT medicine_details FROM prescriptions WHERE prescription_id = $id");
+                if ($presc_res && $presc_res->num_rows > 0) {
+                    $presc_text = strtolower($presc_res->fetch_assoc()['medicine_details']);
+                    
+                    // Fetch all available stock (Order by expiry for FIFO)
+                    $stock_q = $conn->query("SELECT stock_id, medicine_name, quantity FROM pharmacy_stock WHERE quantity > 0 ORDER BY expiry_date ASC");
+                    while ($item = $stock_q->fetch_assoc()) {
+                        $med_name = strtolower($item['medicine_name']);
+                        // Check if this medicine is in the current prescription
+                        if (strpos($presc_text, $med_name) !== false) {
+                            // Calculate quantity needed (Parity with billing logic)
+                            $days = 5; 
+                            if (preg_match('/(\d+)\s*days?/i', $presc_text, $matches)) $days = intval($matches[1]);
+                            elseif (preg_match('/(\d+)\s*weeks?/i', $presc_text, $matches)) $days = intval($matches[1]) * 7;
+
+                            $per_day = 2;
+                            if (preg_match('/(\d+)-(\d+)-(\d+)/', $presc_text, $f_matches)) {
+                                $per_day = intval($f_matches[1]) + intval($f_matches[2]) + intval($f_matches[3]);
+                            } elseif (strpos($presc_text, 'od') !== false) { $per_day = 1; }
+                            elseif (strpos($presc_text, 'bd') !== false || strpos($presc_text, 'bid') !== false) { $per_day = 2; }
+                            elseif (strpos($presc_text, 'tds') !== false || strpos($presc_text, 'tid') !== false) { $per_day = 3; }
+                            
+                            $needed = $days * $per_day;
+                            $stock_id = $item['stock_id'];
+                            
+                            // Perform Deduction (Ensure we don't go below zero)
+                            $conn->query("UPDATE pharmacy_stock SET quantity = GREATEST(0, quantity - $needed) WHERE stock_id = $stock_id");
+                        }
+                    }
+                }
+
+                // 2. Mark Prescription as Dispensed
                 $conn->query("UPDATE prescriptions SET status = 'Dispensed' WHERE prescription_id = $id");
                 
-                // 2. Mark Bill as Dispensed (Update clinical lifecycle of the bill)
+                // 3. Mark Bill as Dispensed (Update clinical lifecycle of the bill)
                 $conn->query("UPDATE billing SET payment_status = 'Dispensed' WHERE reference_id = $id AND (bill_type LIKE 'Pharmacy%')");
                 
                 $conn->commit();
@@ -164,8 +196,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             
@@ -327,9 +359,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <tr><th>Item</th><th>Stock</th><th>Expiry</th></tr>
                             </thead>
                             <tbody>
-                                <tr><td>Paracetamol</td><td class="stock-low">12</td><td>Dec 2026</td></tr>
-                                <tr><td>Cough Syrup</td><td>145</td><td>Jun 2027</td></tr>
-                                <tr><td>Insulin Vials</td><td class="stock-low">05</td><td>Oct 2026</td></tr>
+                                <?php
+                                $snap_sql = "SELECT medicine_name, quantity, expiry_date FROM pharmacy_stock ORDER BY quantity ASC LIMIT 3";
+                                $snap_res = $conn->query($snap_sql);
+                                if($snap_res && $snap_res->num_rows > 0) {
+                                    while($s = $snap_res->fetch_assoc()) {
+                                        $low_cls = ($s['quantity'] < 20) ? 'stock-low' : '';
+                                        $exp_format = date('M Y', strtotime($s['expiry_date']));
+                                        echo "<tr>
+                                            <td>".htmlspecialchars($s['medicine_name'])."</td>
+                                            <td class='$low_cls'>".str_pad($s['quantity'], 2, '0', STR_PAD_LEFT)."</td>
+                                            <td>$exp_format</td>
+                                        </tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='3'>No items in stock.</td></tr>";
+                                }
+                                ?>
                             </tbody>
                         </table>
                         <button style="width: 100%; margin-top: 25px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft); color: #fff; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 12px;">Full Inventory Report</button>

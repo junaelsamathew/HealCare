@@ -610,8 +610,8 @@ include_once 'includes/greeting_logic.php';
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -744,8 +744,16 @@ include_once 'includes/greeting_logic.php';
             </div>
 
             <?php if(isset($_GET['msg'])): ?>
-                <div style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 15px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 25px;">
-                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($_GET['msg']); ?>
+                <div style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 20px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.2); margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($_GET['msg']); ?>
+                    </div>
+                    <?php if(isset($_GET['discharged_id'])): ?>
+                        <a href="generate_discharge_summary.php?admission_id=<?php echo intval($_GET['discharged_id']); ?>" target="_blank" 
+                           style="background: #10b981; color: #fff; text-decoration: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-print"></i> Print Discharge Summary
+                        </a>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 

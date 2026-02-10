@@ -191,7 +191,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             </div>
                             <div style='background: #f1f5f9; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;'>
                                 <p style='margin: 0; font-size: 12px; color: #64748b;'>Kanjirapally, Kottayam, Kerala - 686507</p>
-                                <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency: (+91) 953 904 5609 | Web: www.healcare.com</p>
+                                <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency WhatsApp: (+91) 807 545 4467 | Web: www.healcare.com</p>
                             </div>
                         </div>
                         ";
@@ -364,11 +364,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 data-description="Payment for <?php echo $service_name; ?>"
                 data-image="assets/images/logo.png"
                 data-prefill.name="<?php echo htmlspecialchars($patient_name); ?>"
-<<<<<<< HEAD
                 data-prefill.email="<?php echo htmlspecialchars($patient_email ?? 'patient@example.com'); ?>"
-=======
-                data-prefill.email="patient@example.com"
->>>>>>> df85a51ef41de3403fc0cd2d4fca911613970299
                 data-theme.color="#3b82f6"
             ></script>
             <input type="hidden" custom="Hidden Element" name="hidden">

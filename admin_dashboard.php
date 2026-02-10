@@ -407,10 +407,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $v_type = mysqli_real_escape_string($conn, $_POST['vehicle_type']);
         $location = mysqli_real_escape_string($conn, $_POST['location']);
         
-        $sql = "INSERT INTO ambulance_contacts (driver_name, phone_number, vehicle_number, vehicle_type, location, availability) 
-                VALUES ('$driver', '$phone', '$v_no', '$v_type', '$location', 'Available')";
+        $img_url = mysqli_real_escape_string($conn, $_POST['image_url'] ?? '');
+        
+        $sql = "INSERT INTO ambulance_contacts (driver_name, phone_number, vehicle_number, vehicle_type, location, availability, image_url) 
+                VALUES ('$driver', '$phone', '$v_no', '$v_type', '$location', 'Available', '$img_url')";
         if ($conn->query($sql)) {
-            $success_msg = "Ambulance contact added successfully!";
+            echo "<script>window.location.href='admin_dashboard.php?section=ambulance&success=1';</script>";
+            exit();
         } else {
             $error_msg = "Error: " . $conn->error;
         }
@@ -814,7 +817,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
     <title>Admin Dashboard - HealCare</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <style>
         :root {
@@ -1500,11 +1503,13 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
             backdrop-filter: blur(5px);
+            overflow-y: auto;
+            padding: 40px 0;
         }
 
         .modal-content {
             background: var(--dark-blue);
-            margin: 10% auto;
+            margin: 0 auto;
             padding: 30px;
             border: 1px solid var(--border-color);
             width: 500px;
@@ -1579,6 +1584,214 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             color: var(--text-white);
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
+
+        /* Validation Styles */
+        .is-invalid {
+            border: 1px solid #ef4444 !important;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+        }
+        .is-valid {
+            border: 1px solid #10b981 !important;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+        }
+        .invalid-feedback {
+            color: #ef4444;
+            font-size: 11px;
+            margin-top: 5px;
+            display: none;
+            font-weight: 500;
+        }
+        .is-invalid + .invalid-feedback {
+            display: block;
+        }
+
+        /* Health Package Modal Enhancement */
+        .package-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            min-height: 45px;
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        .package-tag {
+            background: var(--primary-blue);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+        .package-tag i {
+            cursor: pointer;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+        .package-tag i:hover {
+            opacity: 1;
+            color: #ff3333;
+        }
+        .pkg-input-row {
+            display: flex;
+            gap: 10px;
+        }
+        .pkg-input-row input {
+            flex: 1;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Ambulance Grid & Cards */
+        .ambulance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .ambulance-card {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+        }
+
+        .ambulance-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary-blue);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .ambulance-img-wrapper {
+            width: 100%;
+            height: 180px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .ambulance-branding {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(transparent, rgba(0,0,0,0.95));
+            padding: 25px 15px 12px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            z-index: 5;
+            pointer-events: none;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .ambulance-branding::before {
+            content: '+';
+            color: #ff3333;
+            font-size: 24px;
+            font-family: serif;
+            font-weight: bold;
+        }
+
+        .ambulance-img-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .ambulance-card:hover .ambulance-img-wrapper img {
+            transform: scale(1.1);
+        }
+
+        .ambulance-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+
+        .badge-avail { background: rgba(16, 185, 129, 0.8); color: white; }
+        .badge-duty { background: rgba(245, 158, 11, 0.8); color: white; }
+        .badge-off { background: rgba(239, 68, 68, 0.8); color: white; }
+
+        .ambulance-content {
+            padding: 20px;
+        }
+
+        .ambulance-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 5px;
+        }
+
+        .ambulance-type {
+            font-size: 12px;
+            color: var(--primary-blue);
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .ambulance-info-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        .ambulance-info-row i {
+            width: 20px;
+            color: #64748b;
+        }
+
+        .ambulance-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .amb-detail-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .amb-detail-img {
+            width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
     </style>
 
 </head>
@@ -1592,8 +1805,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+254) 717 783 146</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -1694,10 +1907,16 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
     <!-- Main Content -->
     <main class="main-content">
-        <?php if ($success_msg): ?>
+        <?php 
+        $display_success = $success_msg;
+        if (isset($_GET['success']) && $_GET['success'] == '1') {
+            $display_success = "Action completed successfully!";
+        }
+        if ($display_success): 
+        ?>
             <div class="alert alert-success">
                 <i class="fas fa-check-circle"></i>
-                <?php echo $success_msg; ?>
+                <?php echo $display_success; ?>
             </div>
         <?php endif; ?>
 
@@ -1709,6 +1928,31 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
         <?php endif; ?>
 
         <?php if ($section == 'dashboard'): ?>
+            <?php
+            // --- DATA FOR CHARTS ---
+            // 1. Patient Growth (Last 7 Days)
+            $p_dates = [];
+            $p_counts = [];
+            for ($i=6; $i>=0; $i--) {
+                $d = date('Y-m-d', strtotime("-$i days"));
+                $p_dates[] = date('d M', strtotime($d));
+                // Count new patients created on this date
+                $pq = $conn->query("SELECT COUNT(*) as c FROM users WHERE role='patient' AND DATE(created_at) = '$d'");
+                $p_counts[] = ($pq && $row = $pq->fetch_assoc()) ? $row['c'] : 0;
+            }
+
+            // 2. Revenue Trend (Last 7 Days)
+            $r_dates = [];
+            $r_amts = [];
+            for ($i=6; $i>=0; $i--) {
+                $d = date('Y-m-d', strtotime("-$i days"));
+                $r_dates[] = date('d M', strtotime($d));
+                // Sum paid bills on this date
+                // Note: Ensure billing table uses 'bill_date' and 'payment_status'
+                $rq = $conn->query("SELECT SUM(total_amount) as s FROM billing WHERE payment_status='Paid' AND DATE(bill_date) = '$d'");
+                $r_amts[] = ($rq && $row = $rq->fetch_assoc()) ? $row['s'] : 0;
+            }
+            ?>
             <!-- Dashboard Overview -->
             <div class="top-bar">
                 <div class="page-title">
@@ -1882,6 +2126,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
 
                 <!-- Trend Insight -->
+                <!-- Trend Insight -->
                 <div style="margin-top: 25px; padding: 15px 20px; background: rgba(59, 130, 246, 0.05); border-radius: 12px; border-left: 4px solid var(--primary-blue); display: flex; align-items: center; gap: 12px;">
                     <i class="fas fa-info-circle" style="color: var(--primary-blue); font-size: 16px;"></i>
                     <p style="font-size: 13px; color: var(--text-gray); margin: 0; font-weight: 500;">
@@ -1891,6 +2136,22 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
             </div>
 
+            <!-- New Chart Row: Patient Growth & Revenue -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div class="content-section" style="padding: 25px; margin-bottom: 0;">
+                    <h3 class="section-title" style="margin-bottom: 20px; font-size: 16px;">Patient Demographics (Growth)</h3>
+                    <div style="height: 250px;">
+                        <canvas id="patientChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="content-section" style="padding: 25px; margin-bottom: 0;">
+                    <h3 class="section-title" style="margin-bottom: 20px; font-size: 16px;">Revenue Analysis (Last 7 Days)</h3>
+                    <div style="height: 250px;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
             <!-- Quick Actions -->
             <div class="content-section">
@@ -1939,7 +2200,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin-bottom: 15px;"><?php echo htmlspecialchars($p['package_description']); ?></p>
                             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #f1f5f9;">
                                 <div style="color: #1e293b; font-weight: 800; font-size: 18px;">₹<?php echo number_format($p['discounted_price'], 0); ?></div>
-                                <div style="font-size: 11px; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
+                                 <?php if ($p['discount_percentage'] > 0): ?>
+                                    <div style="font-size: 11px; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endwhile; endif; ?>
@@ -2139,7 +2402,77 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </table>
             </div>
 
-            <!-- Modals -->
+            <!-- Discharge Summaries Section -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title"><i class="fas fa-file-alt"></i> Patient Discharge History</h3>
+                </div>
+
+                <div class="filter-container" style="margin-bottom: 20px;">
+                    <div class="search-input-group">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="dischargeSearch" placeholder="Search discharged patients..." onkeyup="filterTable('dischargeSearch', 'dischargeTable')">
+                    </div>
+                </div>
+
+                <table id="dischargeTable">
+                    <thead>
+                        <tr>
+                            <th>Patient</th>
+                            <th>Doctor</th>
+                            <th>Stay Period</th>
+                            <th>Final Bill</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $discharged_sql = "SELECT a.*, p.name as patient_name, d.username as doctor_name, b.total_amount, b.bill_id
+                                           FROM admissions a 
+                                           JOIN users u ON a.patient_id = u.user_id 
+                                           JOIN registrations p ON u.registration_id = p.registration_id
+                                           JOIN users d ON a.doctor_id = d.user_id
+                                           LEFT JOIN billing b ON a.bill_id = b.bill_id
+                                           WHERE a.status = 'Discharged' 
+                                           ORDER BY a.discharge_date DESC LIMIT 20";
+                        $discharged = $conn->query($discharged_sql);
+                        if ($discharged && $discharged->num_rows > 0):
+                            while($d = $discharged->fetch_assoc()):
+                        ?>
+                        <tr>
+                            <td><strong><?php echo htmlspecialchars($d['patient_name']); ?></strong></td>
+                            <td>Dr. <?php echo htmlspecialchars($d['doctor_name']); ?></td>
+                            <td>
+                                <small>Adm: <?php echo date('d M, Y', strtotime($d['admission_date'])); ?></small><br>
+                                <small>Dis: <?php echo date('d M, Y', strtotime($d['discharge_date'])); ?></small>
+                            </td>
+                            <td>
+                                <?php if($d['bill_id']): ?>
+                                    <span style="color: #10b981; font-weight: 700;">₹<?php echo number_format($d['total_amount'], 2); ?></span>
+                                <?php else: ?>
+                                    <span style="color: #94a3b8;">N/A</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 5px;">
+                                    <a href="generate_discharge_summary.php?admission_id=<?php echo $d['admission_id']; ?>" target="_blank" class="btn btn-primary" style="padding: 5px 10px; font-size: 11px;">
+                                        <i class="fas fa-file-pdf"></i> Summary
+                                    </a>
+                                    <?php if($d['bill_id']): ?>
+                                        <a href="generate_receipt_pdf.php?bill_id=<?php echo $d['bill_id']; ?>" target="_blank" class="btn btn-success" style="padding: 5px 10px; font-size: 11px;">
+                                            <i class="fas fa-receipt"></i> Bill
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endwhile; else: ?>
+                        <tr><td colspan="5" style="text-align:center; padding: 20px; color:#94a3b8;">No discharged patient records found.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
             <div id="addWardModal" class="modal">
                 <div class="modal-content">
                     <span class="close-modal" onclick="document.getElementById('addWardModal').style.display='none'">&times;</span>
@@ -2776,7 +3109,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Full Name</label>
-                                <input type="text" name="full_name" placeholder="Enter user's full name" required style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);">
+                                <input type="text" name="full_name" id="full_name" placeholder="Enter user's full name" required style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1);">
+                                <div class="invalid-feedback">Digits are not allowed in names.</div>
                             </div>
                             <div class="form-group">
                                 <label>Official Email</label>
@@ -2806,11 +3140,13 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Specialization</label>
-                                <input type="text" name="specialization" placeholder="e.g. Cardiologist">
+                                <input type="text" name="specialization" id="specialization" placeholder="e.g. Cardiologist">
+                                <div class="invalid-feedback">Digits are not allowed here.</div>
                             </div>
                             <div class="form-group">
                                 <label>Qualification</label>
-                                <input type="text" name="qualification" placeholder="e.g. MBBS, MD">
+                                <input type="text" name="qualification" id="qualification" placeholder="e.g. MBBS, MD">
+                                <div class="invalid-feedback">Digits are not allowed here.</div>
                             </div>
                             <div class="form-group">
                                 <label>Experience (Years)</label>
@@ -2887,7 +3223,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             </div>
                             <div class="form-group">
                                 <label>Qualification Details</label>
-                                <input type="text" name="staff_qualification" placeholder="e.g. B.Sc Nursing, D.Pharm">
+                                <input type="text" name="staff_qualification" id="staff_qualification" placeholder="e.g. B.Sc Nursing, D.Pharm">
+                                <div class="invalid-feedback">Digits are not allowed here.</div>
                             </div>
                             <div class="form-group">
                                 <label>Experience (Years)</label>
@@ -3498,20 +3835,6 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                     <i class="fas fa-carrot" style="color: #10b981;"></i> <?php echo $m['diet_type']; ?>
                                 </div>
                             </div>
-
-                            <div class="stock-controls">
-                                <form method="POST" action="?section=canteen-menu" style="display:flex; gap:10px; width:100%;">
-                                    <input type="hidden" name="action" value="toggle_stock">
-                                    <input type="hidden" name="menu_id" value="<?php echo $m['menu_id']; ?>">
-                                    
-                                    <button type="submit" name="status" value="Available" class="btn-stock <?php echo $is_avail ? 'active-stock' : ''; ?>">
-                                        In Stock
-                                    </button>
-                                    <button type="submit" name="status" value="Out of Stock" class="btn-stock <?php echo !$is_avail ? 'active-out' : ''; ?>">
-                                        Out of Stock
-                                    </button>
-                                </form>
-                            </div>
                         </div>
                     <?php endwhile; 
                     else: ?>
@@ -3601,7 +3924,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <div class="content-section" style="background: transparent; border: none; padding: 0;">
                 <div class="section-header" style="margin-bottom: 30px;">
                     <h3 class="section-title" style="color: white;">Package Management</h3>
-                    <button onclick="openPackageModal()" class="btn btn-success"><i class="fas fa-plus"></i> Create New Package</button>
+                    <button onclick="openNewPackageModal()" class="btn btn-success"><i class="fas fa-plus"></i> Create New Package</button>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; margin-top: 20px;">
@@ -3661,7 +3984,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                 <div style="font-size: 12px; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
                             </div>
                             
-                            <button class="btn btn-primary" style="width: 100%; margin-top: 25px; padding: 12px; font-weight: 700; background: #1e40af; border-radius: 12px;">Select Package</button>
+
                         </div>
                     <?php endwhile; else: ?>
                         <div class="placeholder-section" style="grid-column: 1/-1; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 60px;">
@@ -3675,52 +3998,107 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
             <!-- Health Package Modal -->
             <div id="packageModal" class="modal">
-                <div class="modal-content" style="width: 600px;">
+                <div class="modal-content" style="width: 700px; max-width: 95%;">
                     <span class="close-modal" onclick="closeModal('packageModal')">&times;</span>
-                    <h3 id="pkgModalTitle" style="margin-bottom: 25px;">Create New Package</h3>
-                    <form method="POST">
+                    
+                    <div style="text-align: center; margin-bottom: 30px;">
+                        <div style="width: 60px; height: 60px; background: rgba(16, 185, 129, 0.1); border-radius: 15px; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; color: #10b981; font-size: 24px;">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <h3 id="pkgModalTitle" style="font-size: 22px; color: white;">Create New Package</h3>
+                        <p style="color: #94a3b8; font-size: 13px;">Design a comprehensive health checkup bundle</p>
+                    </div>
+
+                    <form method="POST" id="pkgForm">
                         <input type="hidden" name="action" value="save_package">
                         <input type="hidden" name="package_id" id="pkg_id">
+                        <input type="hidden" name="included_tests" id="pkg_tests_hidden">
                         
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Package Name</label>
-                            <input type="text" name="package_name" id="pkg_name" required>
-                        </div>
-                        
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Short Description</label>
-                            <textarea name="description" id="pkg_desc" rows="2" required></textarea>
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label><i class="fas fa-signature" style="color: var(--primary-blue);"></i> Package Name</label>
+                                <input type="text" name="package_name" id="pkg_name" placeholder="e.g. Executive Wellness Silver" required>
+                                <small style="color: #64748b; font-size: 11px;">Public title for the patient dashboard</small>
+                            </div>
+                            
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label><i class="fas fa-align-left" style="color: var(--primary-blue);"></i> Short Description</label>
+                                <textarea name="description" id="pkg_desc" rows="3" placeholder="Briefly explain the package benefits..." required></textarea>
+                            </div>
+
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label><i class="fas fa-vial" style="color: var(--primary-blue);"></i> Included Tests & Services</label>
+                                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                    <select id="pkg_suggested_tests" onchange="addSuggestedTag()" style="flex: 1; height: 48px;">
+                                        <option value="">-- Select Standard Test --</option>
+                                        <optgroup label="Blood Tests">
+                                            <option value="CBC">Complete Blood Count (CBC)</option>
+                                            <option value="Blood Sugar">Blood Sugar (F/PP)</option>
+                                            <option value="Lipid Profile">Lipid Profile</option>
+                                            <option value="HbA1c">HbA1c</option>
+                                            <option value="Kidney Function">Kidney Function (KFT)</option>
+                                            <option value="Liver Function">Liver Function (LFT)</option>
+                                            <option value="Thyroid Profile">Thyroid Profile (T3, T4, TSH)</option>
+                                        </optgroup>
+                                        <optgroup label="Cardiology">
+                                            <option value="ECG">ECG</option>
+                                            <option value="ECHO">ECHO</option>
+                                            <option value="TMT">Stress Test (TMT)</option>
+                                        </optgroup>
+                                        <optgroup label="Imaging">
+                                            <option value="X-Ray">X-Ray Chest</option>
+                                            <option value="Ultrasound">Ultrasound (USG)</option>
+                                            <option value="CT Scan">CT Scan</option>
+                                        </optgroup>
+                                        <optgroup label="Other">
+                                            <option value="Urine Test">Urine Analysis</option>
+                                            <option value="Consultation">Doctor Consultation</option>
+                                            <option value="Physical Exam">Physical Examination</option>
+                                        </optgroup>
+                                    </select>
+                                    <div style="display: flex; align-items: center; color: #64748b; font-weight: 700;">OR</div>
+                                    <input type="text" id="pkg_test_input" placeholder="Type custom test..." style="flex: 1;">
+                                    <button type="button" onclick="addTestTag()" class="btn btn-primary" style="padding: 10px 20px;">Add</button>
+                                </div>
+                                <div id="pkg_tags_container" class="package-tags-container">
+                                    <!-- Tags will appear here -->
+                                </div>
+                                <small style="color: #64748b; font-size: 11px;">Select from common tests or type a custom one. Press Enter to add.</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-tag" style="color: #64748b;"></i> Actual Price (₹)</label>
+                                <input type="number" name="actual_price" id="pkg_actual" placeholder="0.00" oninput="calculateDiscount()" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-gift" style="color: #f59e0b;"></i> Offer Price (₹)</label>
+                                <input type="number" name="discount_price" id="pkg_discount" placeholder="0.00" oninput="calculateDiscount()" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-percent" style="color: #ef4444;"></i> Auto Discount</label>
+                                <div style="position: relative;">
+                                    <input type="number" name="discount_percent" id="pkg_percent" readonly style="background: rgba(255,255,255,0.05); color: #ef4444; font-weight: 700;">
+                                    <span style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #ef4444; font-weight: 700;">% OFF</span>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fas fa-toggle-on" style="color: #10b981;"></i> Status</label>
+                                <select name="status" id="pkg_status" style="height: 48px;">
+                                    <option value="Active">Active & Visible</option>
+                                    <option value="Inactive">Hidden / Archive</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Included Tests (Comma separated)</label>
-                            <input type="text" name="included_tests" id="pkg_tests" placeholder="e.g. CBC, Lipid Profile, X-Ray" required>
+                        <div style="margin-top: 30px; display: flex; gap: 15px;">
+                            <button type="button" class="btn" style="flex: 1; background: rgba(0,0,0,0.2); border: 1px solid #334155;" onclick="closeModal('packageModal')">Discard</button>
+                            <button type="submit" class="btn btn-success" style="flex: 2; padding: 15px; font-weight: 700; font-size: 15px; letter-spacing: 0.5px;">
+                                <i class="fas fa-save" style="margin-right: 8px;"></i> Save Package Details
+                            </button>
                         </div>
-                        
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label>Actual Price (₹)</label>
-                                <input type="number" name="actual_price" id="pkg_actual" oninput="calculateDiscount()" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Discounted Price (₹)</label>
-                                <input type="number" name="discount_price" id="pkg_discount" oninput="calculateDiscount()" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Discount %</label>
-                                <input type="number" name="discount_percent" id="pkg_percent" readonly>
-                            </div>
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 25px;">
-                            <label>Status</label>
-                            <select name="status" id="pkg_status">
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn btn-success" style="width: 100%;">Save Package Details</button>
                     </form>
                 </div>
             </div>
@@ -3734,53 +4112,66 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
             </div>
 
-            <div class="content-section">
-                <div class="section-header">
-                    <h3 class="section-title">Emergency Contacts</h3>
-                    <button onclick="openModal('ambulanceModal')" class="btn btn-success"><i class="fas fa-plus"></i> Add Contact</button>
+            <div class="content-section" style="background: transparent; border: none; padding: 0;">
+                <div class="section-header" style="background: var(--dark-blue); padding: 20px; border-radius: 20px; border: 1px solid var(--border-color); margin-bottom: 25px;">
+                    <h3 class="section-title"><i class="fas fa-ambulance" style="color: var(--accent-red); margin-right: 10px;"></i> Ready for Emergency</h3>
+                    <button onclick="openModal('ambulanceModal')" class="btn btn-success"><i class="fas fa-plus"></i> Add New Unit</button>
                 </div>
                 
                 <?php
                 $ambulances = $conn->query("SELECT * FROM ambulance_contacts ORDER BY availability ASC, created_at DESC");
                 if ($ambulances && $ambulances->num_rows > 0):
                 ?>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Driver Name</th>
-                                <th>Phone Number</th>
-                                <th>Vehicle Info</th>
-                                <th>Location</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php while($amb = $ambulances->fetch_assoc()): ?>
-                                <tr>
-                                    <td><strong><?php echo htmlspecialchars($amb['driver_name']); ?></strong></td>
-                                    <td><span style="color:var(--primary-blue); font-weight:600;"><?php echo htmlspecialchars($amb['phone_number']); ?></span></td>
-                                    <td>
-                                        <small><?php echo htmlspecialchars($amb['vehicle_type']); ?></small><br>
-                                        <strong><?php echo htmlspecialchars($amb['vehicle_number']); ?></strong>
-                                    </td>
-                                    <td><?php echo htmlspecialchars($amb['location']); ?></td>
-                                    <td>
-                                        <span class="badge badge-<?php echo ($amb['availability'] == 'Available' ? 'active' : ($amb['availability'] == 'On Duty' ? 'pending' : 'rejected')); ?>">
-                                            <?php echo $amb['availability']; ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <form method="POST" style="display:inline;" onsubmit="return confirm('Delete this contact?')">
+                    <div class="ambulance-grid">
+                        <?php while($amb = $ambulances->fetch_assoc()): 
+                            // Verified Wikimedia Fallback
+                            $default_img = 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';
+                            $img_url = !empty($amb['image_url']) ? $amb['image_url'] : $default_img;
+                        ?>
+                            <div class="ambulance-card" onclick='viewAmbulance(<?php echo json_encode($amb); ?>)'>
+                                <div class="ambulance-img-wrapper">
+                                    <?php 
+                                        $final_src = $img_url;
+                                        if (strpos($final_src, '?') !== false) {
+                                            $final_src .= '&v=' . time();
+                                        } else {
+                                            $final_src .= '?v=' . time();
+                                        }
+                                    ?>
+                                    <img src="<?php echo $final_src; ?>" alt="Ambulance" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';">
+                                    <div class="ambulance-branding">HEALCARE HOSPITAL</div>
+                                </div>
+                                <div class="ambulance-content">
+                                    <div class="ambulance-type">
+                                        <i class="fas fa-microchip"></i> <?php echo htmlspecialchars($amb['vehicle_type']); ?>
+                                    </div>
+                                    <div class="ambulance-title"><?php echo htmlspecialchars($amb['driver_name']); ?></div>
+                                    
+                                    <div class="ambulance-info-row">
+                                        <i class="fas fa-hashtag"></i>
+                                        <span>Reg: <?php echo htmlspecialchars($amb['vehicle_number']); ?></span>
+                                    </div>
+                                    <div class="ambulance-info-row">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span><?php echo htmlspecialchars($amb['location']); ?></span>
+                                    </div>
+                                    <div class="ambulance-info-row" style="color: var(--primary-blue); font-weight: 600;">
+                                        <i class="fas fa-phone"></i>
+                                        <span><?php echo htmlspecialchars($amb['phone_number']); ?></span>
+                                    </div>
+
+                                    <div class="ambulance-actions">
+                                        <button class="btn btn-primary" style="flex: 1; font-size: 11px; padding: 8px;"><i class="fas fa-eye"></i> Details</button>
+                                        <form method="POST" style="margin: 0;" onsubmit="event.stopPropagation(); return confirm('Delete this unit?');">
                                             <input type="hidden" name="action" value="delete_ambulance">
                                             <input type="hidden" name="contact_id" value="<?php echo $amb['contact_id']; ?>">
-                                            <button type="submit" class="btn btn-danger" style="font-size: 11px; padding: 5px 10px;"><i class="fas fa-trash"></i></button>
+                                            <button type="submit" class="btn btn-danger" style="padding: 8px 12px;"><i class="fas fa-trash"></i></button>
                                         </form>
-                                    </td>
-                                </tr>
-                            <?php endwhile; ?>
-                        </tbody>
-                    </table>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endwhile; ?>
+                    </div>
                 <?php else: ?>
                     <div class="placeholder-section">
                         <i class="fas fa-ambulance"></i>
@@ -3790,41 +4181,164 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 <?php endif; ?>
             </div>
 
+            <!-- Ambulance Details Modal -->
+            <div id="ambDetailModal" class="modal">
+                <div class="modal-content" style="width: 800px; max-width: 95%;">
+                    <span class="close-modal" onclick="closeModal('ambDetailModal')">&times;</span>
+                    <h2 id="det_driver" style="margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
+                        <i class="fas fa-ambulance" style="color:var(--accent-red)"></i>
+                        Unit Details
+                    </h2>
+                    
+                    <div class="amb-detail-view">
+                        <div>
+                            <img id="det_img" src="" class="amb-detail-img">
+                            <div style="margin-top: 20px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 15px;">
+                                <h4 style="color: var(--primary-blue); margin-bottom: 10px;">Primary Equipment</h4>
+                                <ul style="list-style: none; padding: 0; font-size: 13px; color: #94a3b8;">
+                                    <li style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Oxygen Cylinders & Resuscitators</li>
+                                    <li style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Patient Monitoring System</li>
+                                    <li style="margin-bottom: 8px;"><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Spinal Boards & Collars</li>
+                                    <li><i class="fas fa-check-circle" style="color: #10b981; margin-right: 10px;"></i> Defibrillator (ALS Units Only)</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 20px;">
+                            <div class="form-group">
+                                <label>Driver Name</label>
+                                <div style="font-size: 18px; font-weight: 600;" id="txt_driver"></div>
+                            </div>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Vehicle Reg. No</label>
+                                    <div style="font-size: 16px; color:var(--text-white);" id="txt_vno"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Status</label>
+                                    <div id="txt_status"></div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Ambulance Type</label>
+                                <div style="font-size: 16px; color:var(--primary-blue); font-weight:600;" id="txt_type"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Field Base Location</label>
+                                <div style="font-size: 16px;" id="txt_loc"></div>
+                            </div>
+                            <div class="form-group">
+                                <label>Unit Contact (Driver)</label>
+                                <div style="font-size: 16px; font-weight: 500;" id="txt_phone"></div>
+                            </div>
+                            <div class="form-group" style="background: rgba(37, 211, 102, 0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(37, 211, 102, 0.2);">
+                                <label style="color: #25d366;">Central Emergency WhatsApp</label>
+                                <div style="font-size: 20px; font-weight: 700; color: white;">(+91) 807 545 4467</div>
+                                <a href="https://wa.me/918075454467" target="_blank" class="btn btn-primary" style="width: 100%; margin-top: 15px; background: #25d366; border: none; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                                    <i class="fab fa-whatsapp"></i> MESSAGE EMERGENCY
+                                </a>
+                            </div>
+                            
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Add Ambulance Modal -->
             <div id="ambulanceModal" class="modal">
-                <div class="modal-content">
+                <div class="modal-content" style="max-width: 500px;">
                     <span class="close-modal" onclick="closeModal('ambulanceModal')">&times;</span>
-                    <h3 style="margin-bottom: 25px;">Add New Emergency Contact</h3>
-                    <form method="POST">
+                    <h3 style="margin-bottom: 25px; display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-plus-circle" style="color: var(--primary-blue);"></i> Add New Emergency Unit
+                    </h3>
+
+                    <!-- Image Preview Area -->
+                    <div id="amb_preview_container" style="width: 100%; height: 180px; background: rgba(0,0,0,0.2); border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px dashed rgba(255,255,255,0.1);">
+                        <img id="amb_live_preview" src="https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                        <p id="preview_text" style="color: #94a3b8; font-size: 13px; display: none;">Image Preview</p>
+                    </div>
+
+                    <form method="POST" id="addAmbulanceForm" onsubmit="return validateAmbulanceForm()">
                         <input type="hidden" name="action" value="add_ambulance">
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Driver Name</label>
-                            <input type="text" name="driver_name" required>
+                        
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div class="form-group">
+                                <label>Driver Name</label>
+                                <input type="text" name="driver_name" id="amb_driver_name" placeholder="John Doe" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone Number</label>
+                                <input type="text" name="phone_number" id="amb_phone" placeholder="+91 8086XXXXXX" required style="width: 100%;">
+                            </div>
                         </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Phone Number</label>
-                            <input type="text" name="phone_number" required>
+
+                        <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+                            <div class="form-group">
+                                <label>Vehicle Reg. No</label>
+                                <input type="text" name="vehicle_number" id="amb_vno" placeholder="KL-XX-XXXX" required style="width: 100%;">
+                            </div>
+                            <div class="form-group">
+                                <label>Ambulance Type</label>
+                                <select name="vehicle_type" id="amb_type" style="width: 100%;">
+                                    <option value="Basic Life Support">Basic Life Support</option>
+                                    <option value="Advanced Life Support">Advanced Life Support</option>
+                                    <option value="Patient Transport">Patient Transport</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Vehicle Number</label>
-                            <input type="text" name="vehicle_number" required>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 15px;">
-                            <label>Vehicle Type</label>
-                            <select name="vehicle_type">
-                                <option value="Basic Life Support">Basic Life Support</option>
-                                <option value="Advanced Life Support">Advanced Life Support</option>
-                                <option value="Patient Transport">Patient Transport</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 25px;">
+
+                        <div class="form-group" style="margin-top: 15px;">
                             <label>Base Location</label>
-                            <input type="text" name="location" required>
+                            <input type="text" name="location" id="amb_location" placeholder="South Wing / Main Gate" required style="width: 100%;">
                         </div>
-                        <button type="submit" class="btn btn-success" style="width: 100%;">Save Contact</button>
+
+                        <div class="form-group" style="margin-top: 15px; margin-bottom: 25px;">
+                            <label>Image URL (Optional)</label>
+                            <input type="url" name="image_url" id="amb_image_url" oninput="updateAmbulancePreview(this.value)" placeholder="Enter high-quality image link" style="width: 100%;">
+                        </div>
+
+                        <button type="submit" class="btn btn-success" style="width: 100%; padding: 12px; font-weight: 700; border-radius: 8px;">
+                            <i class="fas fa-save" style="margin-right: 8px;"></i> Save Ambulance Unit
+                        </button>
                     </form>
                 </div>
             </div>
+
+            <script>
+            function updateAmbulancePreview(url) {
+                const img = document.getElementById('amb_live_preview');
+                const defaultImg = 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';
+                if (url.trim() === '') {
+                    img.src = defaultImg;
+                } else {
+                    img.src = url;
+                    img.onerror = function() {
+                        this.src = defaultImg;
+                        this.title = "Invalid Image URL - Showing Default";
+                    };
+                }
+            }
+
+            function validateAmbulanceForm() {
+                const phone = document.getElementById('amb_phone').value;
+                const driver = document.getElementById('amb_driver_name').value;
+                const vno = document.getElementById('amb_vno').value;
+
+                if (driver.length < 3) {
+                    alert('Driver name must be at least 3 characters.');
+                    return false;
+                }
+
+                // Basic phone validation (digits and maybe space/+/-)
+                const phoneRegex = /^[\d\s+\-]{10,15}$/;
+                if (!phoneRegex.test(phone)) {
+                    alert('Please enter a valid phone number (10-15 digits).');
+                    return false;
+                }
+
+                return true;
+            }
+            </script>
 
         <?php elseif ($section == 'reports'): ?>
             <!-- Revenue Reports -->
@@ -3983,6 +4497,15 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             </div>
 
             <?php
+            // --- DATABASE SCHEMA SELF-HEALING ---
+            try {
+                $check_cols = $conn->query("SHOW COLUMNS FROM manual_reports LIKE 'report_type'");
+                if ($check_cols && $check_cols->num_rows == 0) {
+                    $conn->query("ALTER TABLE manual_reports ADD COLUMN report_type VARCHAR(100) DEFAULT 'General' AFTER user_role");
+                    $conn->query("ALTER TABLE manual_reports ADD COLUMN report_category VARCHAR(100) DEFAULT 'Other' AFTER report_type");
+                }
+            } catch (Exception $e) { }
+
             // --- CORE OPERATIONAL METRICS ---
             try {
                 // Revenue Stats
@@ -4009,8 +4532,46 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
 
                 // Revenue by Category (Billing Type)
                 $rev_by_cat = [];
+                $rev_grouped = ['Lab' => 0, 'Pharmacy' => 0, 'Room Charges' => 0, 'Consultation' => 0, 'Other' => 0];
                 $res_cat = $conn->query("SELECT bill_type, SUM(total_amount) as amount FROM billing WHERE payment_status = 'Paid' GROUP BY bill_type");
-                while($rc = $res_cat->fetch_assoc()) $rev_by_cat[$rc['bill_type']] = (float)$rc['amount'];
+                while($rc = $res_cat->fetch_assoc()) {
+                    $type = $rc['bill_type'] ?: 'Other';
+                    $amt = (float)$rc['amount'];
+                    $rev_by_cat[$type] = $amt;
+                    
+                    if (stripos($type, 'Lab') !== false) $rev_grouped['Lab'] += $amt;
+                    elseif (stripos($type, 'Pharmacy') !== false) $rev_grouped['Pharmacy'] += $amt;
+                    elseif (stripos($type, 'Inpatient') !== false || stripos($type, 'Settlement') !== false) $rev_grouped['Room Charges'] += $amt;
+                    elseif (stripos($type, 'Consultation') !== false) $rev_grouped['Consultation'] += $amt;
+                    else $rev_grouped['Other'] += $amt;
+                }
+
+                // Hospital Occupancy Data
+                $occ_res = $conn->query("SELECT w.ward_name, w.capacity, 
+                                        (SELECT COUNT(*) FROM rooms r WHERE r.ward_id = w.ward_id AND r.status='Occupied') as occupied
+                                        FROM wards w");
+                $occ_labels = []; $occ_occupied = []; $occ_capacity = [];
+                if($occ_res) {
+                    while($or = $occ_res->fetch_assoc()) {
+                        $occ_labels[] = $or['ward_name'];
+                        $occ_occupied[] = (int)$or['occupied'];
+                        $occ_capacity[] = (int)$or['capacity'];
+                    }
+                }
+
+                // Peak OPD Hours Data
+                $peak_res = $conn->query("SELECT HOUR(appointment_time) as hr, COUNT(*) as count 
+                                          FROM appointments 
+                                          WHERE appointment_time IS NOT NULL 
+                                          GROUP BY hr ORDER BY hr");
+                $peak_labels = []; $peak_counts = [];
+                if($peak_res) {
+                    while($pr = $peak_res->fetch_assoc()) {
+                        $peak_labels[] = date("g A", strtotime($pr['hr'] . ":00"));
+                        $peak_counts[] = (int)$pr['count'];
+                    }
+                }
+
 
             } catch (Exception $e) {
                 // Fallback
@@ -4166,6 +4727,30 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     </div>
                  </div>
             </div>
+            
+            <!-- Hospital Core Performance Visuals -->
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title"><i class="fas fa-hospital-alt"></i> Hospital Core Performance</h3>
+                    <div style="font-size: 13px; color: #94a3b8;">Deep insights into infrastructure utilization and patient flow</div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 30px;">
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Ward Occupancy Index</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartOccupancy"></canvas>
+                        </div>
+                    </div>
+                    <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
+                        <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Peak Consultation Hours (OPD)</h4>
+                        <div style="flex: 1; position: relative; min-height: 0;">
+                            <canvas id="chartPeakHours"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 
             <!-- Filters & Controls -->
             <div class="content-section">
@@ -4438,6 +5023,91 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             }
         }
 
+        // Tag System for Packages
+        let packageTests = [];
+
+        function addTestTag() {
+            const input = document.getElementById('pkg_test_input');
+            const value = input.value.trim();
+            if (value && !packageTests.includes(value)) {
+                packageTests.push(value);
+                renderTags();
+                input.value = '';
+            }
+        }
+
+        function addSuggestedTag() {
+            const select = document.getElementById('pkg_suggested_tests');
+            const value = select.value;
+            if (value && !packageTests.includes(value)) {
+                packageTests.push(value);
+                renderTags();
+            }
+            select.value = '';
+        }
+
+        function removeTestTag(index) {
+            packageTests.splice(index, 1);
+            renderTags();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('pkg_tags_container');
+            const hiddenInput = document.getElementById('pkg_tests_hidden');
+            
+            container.innerHTML = '';
+            if (packageTests.length === 0) {
+                container.innerHTML = '<span style="color: #64748b; font-size: 12px; font-style: italic; margin-left: 10px; margin-top: 8px;">No tests added yet</span>';
+            }
+            
+            packageTests.forEach((test, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'package-tag';
+                tag.innerHTML = `${test} <i class="fas fa-times" onclick="removeTestTag(${index})"></i>`;
+                container.appendChild(tag);
+            });
+            
+            hiddenInput.value = packageTests.join(', ');
+        }
+
+        // Add tag on Enter key
+        document.getElementById('pkg_test_input')?.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTestTag();
+            }
+        });
+
+        // Extend openEditPackage to load tags
+        const originalOpenEdit = window.editPackage;
+        window.editPackage = function(pkg) {
+            // Populate fields
+            document.getElementById('pkg_id').value = pkg.package_id;
+            document.getElementById('pkg_name').value = pkg.package_name;
+            document.getElementById('pkg_desc').value = pkg.package_description;
+            document.getElementById('pkg_actual').value = pkg.original_price;
+            document.getElementById('pkg_discount').value = pkg.discounted_price;
+            document.getElementById('pkg_percent').value = pkg.discount_percentage;
+            document.getElementById('pkg_status').value = pkg.status;
+            document.getElementById('pkgModalTitle').innerText = 'Edit Health Package';
+            
+            // Load tags
+            packageTests = pkg.included_tests ? pkg.included_tests.split(',').map(s => s.trim()).filter(s => s !== '') : [];
+            renderTags();
+            
+            openModal('packageModal');
+        };
+
+        // Reset tags on "Add" button
+        function openNewPackageModal() {
+            document.getElementById('pkgForm').reset();
+            document.getElementById('pkg_id').value = '';
+            document.getElementById('pkgModalTitle').innerText = 'Create New Package';
+            packageTests = [];
+            renderTags();
+            openModal('packageModal');
+        }
+
         // --- NEW SYSTEMS ---
 
         function toggleNotifications() {
@@ -4599,6 +5269,29 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 menus.forEach(m => m.classList.remove('show'));
             }
         }
+
+        function viewAmbulance(amb) {
+            document.getElementById('det_driver').innerText = 'Unit: ' + amb.driver_name;
+            document.getElementById('txt_driver').innerText = amb.driver_name;
+            document.getElementById('txt_vno').innerText = amb.vehicle_number;
+            document.getElementById('txt_type').innerText = amb.vehicle_type;
+            document.getElementById('txt_loc').innerText = amb.location;
+            document.getElementById('txt_phone').innerText = amb.phone_number;
+            
+            const img = amb.image_url ? amb.image_url : 'https://images.unsplash.com/photo-1587745416684-47953f16f02f?auto=format&fit=crop&q=80&w=800';
+            document.getElementById('det_img').src = img;
+
+            const statusView = document.getElementById('txt_status');
+            let badgeClass = amb.availability === 'Available' ? 'badge-active' : (amb.availability === 'On Duty' ? 'badge-pending' : 'badge-rejected');
+            statusView.innerHTML = `<span class="badge ${badgeClass}">${amb.availability}</span>`;
+
+            // Update modal image with correct fallback
+            const modalImg = amb.image_url ? amb.image_url : 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Ambulance_in_London.jpg';
+            const sep = modalImg.includes('?') ? '&' : '?';
+            document.getElementById('det_img').src = modalImg + sep + 'v=<?php echo time(); ?>';
+
+            openModal('ambDetailModal');
+        }
     </script>
     <script>
     <?php if ($section == 'dashboard'): ?>
@@ -4619,10 +5312,13 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             const peakIdx = <?php echo $peak_index; ?>;
             const avgVal = <?php echo $avg_consults_7d; ?>;
 
+            console.log("Dashboard Chart Init: Checking Chart.js...");
             if (typeof Chart === 'undefined') {
-                if (fallback) fallback.innerText = "Error: Visualization library (Chart.js) failed to load.";
+                console.error("Chart.js is NOT loaded!");
+                if (fallback) fallback.innerText = "Error: Visualization library (Chart.js) failed to load. Please check your internet connection or console for errors.";
                 return;
             }
+            console.log("Chart.js loaded successfully. Initializing consultations chart...");
 
             if (fallback) fallback.style.display = 'none';
 
@@ -4735,180 +5431,264 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     }
                 }
             });
+
+            // --- New Charts: Patient Growth & Revenue ---
+            console.log("Initializing Dashboard Metrics Charts...");
+            
+            const pCtx = document.getElementById('patientChart');
+            if (pCtx) {
+                new Chart(pCtx, {
+                    type: 'line',
+                    data: {
+                        labels: <?php echo json_encode($p_dates); ?>,
+                        datasets: [{
+                            label: 'New Patients',
+                            data: <?php echo json_encode($p_counts); ?>,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#3b82f6',
+                            pointRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: { 
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                                padding: 10, 
+                                cornerRadius: 8, 
+                                displayColors: false 
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', precision: 0 } },
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            }
+
+            const rCtx = document.getElementById('revenueChart');
+            if (rCtx) {
+                new Chart(rCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: <?php echo json_encode($r_dates); ?>,
+                        datasets: [{
+                            label: 'Revenue',
+                            data: <?php echo json_encode($r_amts); ?>,
+                            backgroundColor: '#10b981',
+                            borderRadius: 4,
+                            hoverBackgroundColor: '#059669'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)', 
+                                padding: 10, 
+                                cornerRadius: 8, 
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return 'Revenue: ₹' + context.raw.toLocaleString();
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                            x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                        }
+                    }
+                });
+            }
         }, 800);
     });
     <?php endif; ?>
 
     <?php if ($section == 'analytics'): ?>
+    (function() {
+        function initAnalytics() {
+            console.log("Analytics Init Started (Root)...");
+            if (typeof Chart === 'undefined') {
+                console.error("Chart.js NOT found! Re-attempting in 500ms...");
+                setTimeout(initAnalytics, 500);
+                return;
+            }
+
+            const colors = {
+                primary: '#3b82f6', success: '#10b981', warning: '#f59e0b',
+                danger: '#ef4444', purple: '#8b5cf6', cyan: '#06b6d4'
+            };
+
+            const showNoData = (canvasId) => {
+                const canvas = document.getElementById(canvasId);
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#1e293b';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.font = '14px Poppins';
+                ctx.fillStyle = '#64748b';
+                ctx.textAlign = 'center';
+                ctx.fillText('No data available for this period', canvas.width/2, canvas.height/2);
+            };
+
+            const isAllZero = (arr) => !arr || arr.length === 0 || arr.every(v => v == 0);
+
+            // Data Injection
+            const typeLabels = <?php echo json_encode(array_keys($dist_type)); ?>;
+            const typeData = <?php echo json_encode(array_values($dist_type)); ?>;
+            const roleLabels = <?php echo json_encode(array_keys($dist_role)); ?>;
+            const roleData = <?php echo json_encode(array_values($dist_role)); ?>;
+            const timeLabels = <?php echo json_encode(array_keys($timeline)); ?>;
+            const timeData = <?php echo json_encode(array_values($timeline)); ?>;
+            const revLabels = <?php echo json_encode(array_keys($rev_grouped)); ?>;
+            const revData = <?php echo json_encode(array_values($rev_grouped)); ?>;
+            const occLabels = <?php echo json_encode($occ_labels); ?>;
+            const occOccupied = <?php echo json_encode($occ_occupied); ?>;
+            const occCapacity = <?php echo json_encode($occ_capacity); ?>;
+            const peakLabels = <?php echo json_encode($peak_labels); ?>;
+            const peakData = <?php echo json_encode($peak_counts); ?>;
+
+            const commonOptions = {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: true, position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } }
+            };
+
+            const gridOptions = {
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b' } },
+                    x: { grid: { display: false }, ticks: { color: '#64748b' } }
+                }
+            };
+
+            // Charts
+            const charts = [
+                { id: 'chartRevenue', type: 'bar', labels: revLabels, data: revData, color: colors.primary, label: 'Revenue' },
+                { id: 'chartType', type: 'doughnut', labels: typeLabels, data: typeData, colors: Object.values(colors) },
+                { id: 'chartRole', type: 'bar', labels: roleLabels, data: roleData, color: colors.success, label: 'Reports' },
+                { id: 'chartTimeline', type: 'line', labels: timeLabels, data: timeData, color: colors.purple, label: 'Archive' }
+            ];
+
+            charts.forEach(c => {
+                const ctx = document.getElementById(c.id);
+                if (!ctx) return;
+                if (isAllZero(c.data)) showNoData(c.id);
+                else {
+                    const cfg = {
+                        type: c.type,
+                        data: {
+                            labels: c.labels,
+                            datasets: [{
+                                label: c.label || '',
+                                data: c.data,
+                                backgroundColor: c.colors || c.color,
+                                borderColor: c.type === 'line' ? c.color : 'transparent',
+                                borderRadius: c.type === 'bar' ? 8 : 0,
+                                fill: c.type === 'line'
+                            }]
+                        },
+                        options: c.type === 'doughnut' ? commonOptions : { ...commonOptions, ...gridOptions }
+                    };
+                    new Chart(ctx, cfg);
+                }
+            });
+
+            // Special Charts
+            const ctxOcc = document.getElementById('chartOccupancy');
+            if (ctxOcc) {
+                if (isAllZero(occOccupied)) showNoData('chartOccupancy');
+                else new Chart(ctxOcc, { type: 'bar', data: { labels: occLabels, datasets: [{ label: 'Occupied', data: occOccupied, backgroundColor: colors.danger }, { label: 'Total', data: occCapacity, backgroundColor: 'rgba(255,255,255,0.1)' }] }, options: { ...commonOptions, indexAxis: 'y' } });
+            }
+
+            const ctxPeak = document.getElementById('chartPeakHours');
+            if (ctxPeak) {
+                if (isAllZero(peakData)) showNoData('chartPeakHours');
+                else new Chart(ctxPeak, { type: 'bar', data: { labels: peakLabels, datasets: [{ label: 'Patients', data: peakData, backgroundColor: colors.cyan }] }, options: { ...commonOptions, ...gridOptions } });
+            }
+        }
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAnalytics);
+        else initAnalytics();
+    })();
+    <?php endif; ?>
+
+    <?php if ($section == 'create-user'): ?>
     document.addEventListener('DOMContentLoaded', function() {
-        const colors = {
-            primary: '#3b82f6',
-            success: '#10b981',
-            warning: '#f59e0b',
-            danger: '#ef4444',
-            purple: '#8b5cf6',
-            cyan: '#06b6d4'
-        };
+        const form = document.querySelector('form[action=""]'); // Target the create user form
+        const fullName = document.getElementById('full_name');
+        const spec = document.getElementById('specialization');
+        const qual = document.getElementById('qualification');
+        const staffQual = document.getElementById('staff_qualification');
 
-        // Data Injection
-        const typeLabels = <?php echo json_encode(array_keys($dist_type)); ?>;
-        const typeData = <?php echo json_encode(array_values($dist_type)); ?>;
-        const roleLabels = <?php echo json_encode(array_keys($dist_role)); ?>;
-        const roleData = <?php echo json_encode(array_values($dist_role)); ?>;
-        const timeLabels = <?php echo json_encode(array_keys($timeline)); ?>;
-        const timeData = <?php echo json_encode(array_values($timeline)); ?>;
-        const revLabels = <?php echo json_encode(array_keys($rev_by_cat)); ?>;
-        const revData = <?php echo json_encode(array_values($rev_by_cat)); ?>;
+        function isJunk(val) {
+            if (!val) return false;
+            const repetitiveRegex = /(.)\1{3,}/;
+            if (repetitiveRegex.test(val)) return true;
+            if (val.length < 3 && !['na', 'n/a', 'no'].includes(val.toLowerCase())) return true;
+            return false;
+        }
 
-        const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { 
-                    display: true,
-                    position: 'bottom',
-                    labels: { 
-                        color: '#94a3b8', 
-                        font: { family: 'Poppins', size: 10, weight: '500' },
-                        padding: 20,
-                        usePointStyle: true,
-                        pointStyle: 'circle'
-                    } 
-                },
-                tooltip: {
-                    backgroundColor: '#1e293b',
-                    titleColor: '#fff',
-                    bodyColor: '#cbd5e1',
-                    padding: 12,
-                    cornerRadius: 10,
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    borderWidth: 1,
-                    titleFont: { size: 14, weight: 'bold', family: 'Poppins' },
-                    bodyFont: { family: 'Poppins' },
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) label += ': ';
-                            if (context.parsed.y !== null) {
-                                if (context.dataset.label === 'Revenue') {
-                                    label += 'Rs. ' + context.parsed.y.toLocaleString();
-                                } else {
-                                    label += context.parsed.y.toLocaleString();
-                                }
-                            }
-                            return label;
-                        }
+        function validateText(input) {
+            if (!input) return true;
+            const val = input.value.trim();
+            const hasDigits = /\d/.test(val);
+            const junk = isJunk(val);
+            const feedback = input.nextElementSibling;
+
+            if (val === "") {
+                input.classList.remove('is-invalid', 'is-valid');
+                return true;
+            }
+
+            if (hasDigits || junk) {
+                input.classList.remove('is-valid');
+                input.classList.add('is-invalid');
+                if (feedback && feedback.classList.contains('invalid-feedback')) {
+                    if (hasDigits) {
+                        feedback.textContent = "Digits (0-9) are not allowed in this field.";
+                    } else if (junk) {
+                        feedback.textContent = "Please enter valid, meaningful information.";
                     }
+                }
+                return false;
+            } else {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                return true;
+            }
+        }
+
+        [fullName, spec, qual, staffQual].forEach(input => {
+            if (input) {
+                input.addEventListener('input', () => validateText(input));
+            }
+        });
+
+        form.addEventListener('submit', function(e) {
+            const isNameValid = validateText(fullName);
+            // Only validate specialization/qualification if they are visible/relevant
+            const isSpecValid = (spec && spec.offsetParent !== null) ? validateText(spec) : true;
+            const isQualValid = (qual && qual.offsetParent !== null) ? validateText(qual) : true;
+            const isStaffQualValid = (staffQual && staffQual.offsetParent !== null) ? validateText(staffQual) : true;
+
+            if (!isNameValid || !isSpecValid || !isQualValid || !isStaffQualValid) {
+                e.preventDefault();
+                const firstError = document.querySelector('.is-invalid');
+                if (firstError) {
+                    firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
-        };
-
-        const gridOptions = {
-            y: { 
-                beginAtZero: true,
-                grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
-                ticks: { color: '#64748b', font: { size: 11, family: 'Poppins' } } 
-            },
-            x: { 
-                grid: { display: false }, 
-                ticks: { color: '#64748b', font: { size: 11, family: 'Poppins' } } 
-            }
-        };
-
-        // 0. Revenue Distribution
-        const ctxRev = document.getElementById('chartRevenue');
-        if(ctxRev) {
-            new Chart(ctxRev, {
-                type: 'bar',
-                data: {
-                    labels: revLabels,
-                    datasets: [{
-                        label: 'Revenue',
-                        data: revData,
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-                        borderRadius: 10,
-                        hoverBackgroundColor: '#3b82f6',
-                        barThickness: 35
-                    }]
-                },
-                options: {
-                    ...commonOptions,
-                    scales: {
-                        ...gridOptions,
-                        y: { ...gridOptions.y, ticks: { ...gridOptions.y.ticks, callback: v => 'Rs. ' + v.toLocaleString() } }
-                    }
-                }
-            });
-        }
-
-        // 1. Report Composition
-        const ctxType = document.getElementById('chartType');
-        if(ctxType) {
-            new Chart(ctxType, {
-                type: 'doughnut',
-                data: {
-                    labels: typeLabels,
-                    datasets: [{
-                        data: typeData,
-                        backgroundColor: [colors.primary, colors.success, colors.warning, colors.danger, colors.purple, colors.cyan],
-                        borderWidth: 0,
-                        hoverOffset: 15
-                    }]
-                },
-                options: {
-                    ...commonOptions,
-                    cutout: '72%',
-                    plugins: {
-                        ...commonOptions.plugins,
-                        legend: { position: 'right', labels: { color: '#94a3b8', padding: 15, font: { size: 10 } } }
-                    }
-                }
-            });
-        }
-
-        // 2. Departmental Activity
-        const ctxRole = document.getElementById('chartRole');
-        if(ctxRole) {
-            new Chart(ctxRole, {
-                type: 'bar',
-                data: {
-                    labels: roleLabels,
-                    datasets: [{
-                        label: 'Reports Count',
-                        data: roleData,
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        borderRadius: 8,
-                        barThickness: 40
-                    }]
-                },
-                options: { ...commonOptions, scales: gridOptions }
-            });
-        }
-
-        // 3. Submission Timeline
-        const ctxTimeline = document.getElementById('chartTimeline');
-        if(ctxTimeline) {
-            new Chart(ctxTimeline, {
-                type: 'line',
-                data: {
-                    labels: timeLabels,
-                    datasets: [{
-                        label: 'Archive Growth',
-                        data: timeData,
-                        borderColor: colors.purple,
-                        backgroundColor: 'rgba(139, 92, 246, 0.05)',
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#fff',
-                        pointBorderColor: colors.purple,
-                        pointBorderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: { ...commonOptions, scales: gridOptions }
-            });
-        }
+        });
     });
     <?php endif; ?>
     </script>

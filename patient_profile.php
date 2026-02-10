@@ -191,6 +191,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
             background: rgba(255,255,255,0.05);
         }
         .form-control[readonly] { opacity: 0.7; cursor: not-allowed; }
+        .btn-update {
+            background: #10b981;
             border: none;
             padding: 15px 40px;
             border-radius: 12px;
@@ -210,6 +212,26 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
         }
         .alert-success { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
         .alert-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+
+        /* Validation Styles */
+        .is-invalid {
+            border: 1px solid #ef4444 !important;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+        }
+        .is-valid {
+            border: 1px solid #10b981 !important;
+            box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.1);
+        }
+        .invalid-feedback {
+            color: #ef4444;
+            font-size: 11px;
+            margin-top: 5px;
+            display: none;
+            font-weight: 500;
+        }
+        .is-invalid + .invalid-feedback {
+            display: block;
+        }
 
         /* File Input Styling */
         .file-input-wrapper {
@@ -269,8 +291,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
                     <i class="fas fa-phone-alt"></i>
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">EMERGENCY</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">(+91) 953 904 5609</span>
+                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
+                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                 </div>
             </div>
             
@@ -348,6 +370,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
                             </label>
                             <span id="file-name-display" style="margin-left: 10px; color: #94a3b8; font-size: 13px;"></span>
                             <input type="file" id="profile_upload" name="profile_photo" accept="image/*" onchange="updateFileName(this)">
+                            <div class="invalid-feedback" id="photo_error"></div>
                         </div>
                     </div>
 
@@ -357,7 +380,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
                     </div>
                     <div class="form-group">
                         <label>Date of Birth</label>
-                        <input type="date" name="dob" class="form-control" value="<?php echo $profile['date_of_birth']; ?>" required>
+                        <input type="date" name="dob" id="dob" class="form-control" value="<?php echo $profile['date_of_birth']; ?>" required>
+                        <div class="invalid-feedback">Date of birth cannot be in the future.</div>
                     </div>
                     <div class="form-group">
                         <label>Gender</label>
@@ -381,7 +405,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
                     </div>
                     <div class="form-group">
                         <label>Phone Number</label>
-                        <input type="text" name="phone" class="form-control" value="<?php echo htmlspecialchars($profile['phone']); ?>" required>
+                        <input type="text" name="phone" id="phone" class="form-control" value="<?php echo htmlspecialchars($profile['phone']); ?>" required placeholder="10-digit number">
+                        <div class="invalid-feedback">Please enter a valid 10-digit phone number.</div>
                     </div>
                     <div class="form-group">
                         <label>Address</label>
@@ -392,14 +417,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
                 <h3 class="section-title" style="margin-top: 30px;">Medical Information</h3>
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label>Known Allergies</label>
-                    <textarea name="allergies" class="form-control" rows="2" placeholder="List any known allergies..."><?php echo htmlspecialchars($profile['allergies'] ?? ''); ?></textarea>
+                    <textarea name="allergies" id="allergies" class="form-control" rows="2" placeholder="List any known allergies..."><?php echo htmlspecialchars($profile['allergies'] ?? ''); ?></textarea>
+                    <div class="invalid-feedback">Digits are not allowed here. Please enter valid text or "None".</div>
                 </div>
                 <div class="form-group">
                     <label>Past Medical History</label>
-                    <textarea name="medical_history" class="form-control" rows="4" placeholder="Brief history of past conditions, surgeries, or chronic illnesses..."><?php echo htmlspecialchars($profile['medical_history'] ?? ''); ?></textarea>
+                    <textarea name="medical_history" id="medical_history" class="form-control" rows="4" placeholder="Brief history of past conditions, surgeries, or chronic illnesses..."><?php echo htmlspecialchars($profile['medical_history'] ?? ''); ?></textarea>
+                    <div class="invalid-feedback">Digits are not allowed here. Please provide meaningful medical history.</div>
                 </div>
 
-                <button type="submit" name="update_profile" class="btn-update">Save Changes</button>
+                <button type="submit" name="update_profile" id="submitBtn" class="btn-update">Save Changes</button>
             </form>
 
         </main>
@@ -467,6 +494,144 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
             }
             
             initBrandAnimation();
+
+            // --- Live Validation Logic ---
+            const form = document.querySelector('.form-section');
+            const phoneInput = document.getElementById('phone');
+            const dobInput = document.getElementById('dob');
+            const photoInput = document.getElementById('profile_upload');
+            const allergiesInput = document.getElementById('allergies');
+            const historyInput = document.getElementById('medical_history');
+            const submitBtn = document.getElementById('submitBtn');
+
+            function isJunk(val) {
+                if (!val) return false;
+                // Check for repetitive characters like "aaaa", "....", "1111"
+                const repetitiveRegex = /(.)\1{3,}/;
+                if (repetitiveRegex.test(val)) return true;
+                
+                // Check if it's too short and not a common "None/NA"
+                if (val.length < 3 && !['na', 'n/a', 'no'].includes(val.toLowerCase())) return true;
+
+                return false;
+            }
+
+            function validateMedicalText(input) {
+                const val = input.value.trim();
+                const hasDigits = /\d/.test(val);
+                const junk = isJunk(val);
+                const feedback = input.nextElementSibling;
+
+                if (val === "") {
+                    input.classList.remove('is-invalid', 'is-valid');
+                    return true;
+                }
+
+                if (hasDigits || junk) {
+                    input.classList.remove('is-valid');
+                    input.classList.add('is-invalid');
+                    if (hasDigits) {
+                        feedback.textContent = "Digits (0-9) are not allowed in this field.";
+                    } else if (junk) {
+                        feedback.textContent = "Please enter valid, meaningful information (avoid repetitive characters).";
+                    }
+                    return false;
+                } else {
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                    return true;
+                }
+            }
+
+            function validatePhone() {
+                const val = phoneInput.value.trim();
+                const regex = /^[0-9]{10}$/; // Basic 10-digit validation
+                if (regex.test(val)) {
+                    phoneInput.classList.remove('is-invalid');
+                    phoneInput.classList.add('is-valid');
+                    return true;
+                } else {
+                    phoneInput.classList.remove('is-valid');
+                    phoneInput.classList.add('is-invalid');
+                    return false;
+                }
+            }
+
+            function validateDOB() {
+                const val = dobInput.value;
+                if (!val) return false;
+                
+                const selectedDate = new Date(val);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                if (selectedDate > today) {
+                    dobInput.classList.remove('is-valid');
+                    dobInput.classList.add('is-invalid');
+                    return false;
+                } else {
+                    dobInput.classList.remove('is-invalid');
+                    dobInput.classList.add('is-valid');
+                    return true;
+                }
+            }
+
+            function validatePhoto() {
+                if (!photoInput.files || photoInput.files.length === 0) return true; // Optional
+
+                const file = photoInput.files[0];
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                const errorDiv = document.getElementById('photo_error');
+
+                if (!allowedTypes.includes(file.type)) {
+                    errorDiv.textContent = "Invalid file type. Only JPG, PNG, GIF allowed.";
+                    photoInput.classList.add('is-invalid');
+                    return false;
+                }
+
+                if (file.size > maxSize) {
+                    errorDiv.textContent = "File too large. Max 5MB.";
+                    photoInput.classList.add('is-invalid');
+                    return false;
+                }
+
+                photoInput.classList.remove('is-invalid');
+                photoInput.classList.add('is-valid');
+                return true;
+            }
+
+            function checkAll() {
+                const isPhoneValid = validatePhone();
+                const isDobValid = validateDOB();
+                const isPhotoValid = validatePhoto();
+                
+                // We don't disable the button, but we could. 
+                // Instead, we'll validate on submit too.
+            }
+
+            phoneInput.addEventListener('input', validatePhone);
+            dobInput.addEventListener('change', validateDOB);
+            photoInput.addEventListener('change', validatePhoto);
+            allergiesInput.addEventListener('input', () => validateMedicalText(allergiesInput));
+            historyInput.addEventListener('input', () => validateMedicalText(historyInput));
+
+            form.addEventListener('submit', function(e) {
+                const isPhoneValid = validatePhone();
+                const isDobValid = validateDOB();
+                const isPhotoValid = validatePhoto();
+                const isAllergiesValid = validateMedicalText(allergiesInput);
+                const isHistoryValid = validateMedicalText(historyInput);
+
+                if (!isPhoneValid || !isDobValid || !isPhotoValid || !isAllergiesValid || !isHistoryValid) {
+                    e.preventDefault();
+                    // Optional: Scroll to first error
+                    const firstError = document.querySelector('.is-invalid');
+                    if (firstError) {
+                        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            });
         });
     </script>
 

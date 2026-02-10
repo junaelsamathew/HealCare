@@ -1,7 +1,11 @@
 <?php
 include 'includes/db_connect.php';
-$result = $conn->query("DESCRIBE prescriptions");
-while($row = $result->fetch_assoc()){
-    print_r($row);
+$res = $conn->query("DESCRIBE prescriptions");
+if($res) {
+    while($row = $res->fetch_assoc()) {
+        echo $row['Field'] . " - " . $row['Type'] . "\n";
+    }
+} else {
+    echo "Error: " . $conn->error . "\n";
 }
 ?>

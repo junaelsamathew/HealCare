@@ -2,36 +2,34 @@
 session_start();
 include 'includes/db_connect.php';
 
-// Mock Packages Data (Normally fetched from DB)
-$packages = [
-    [
-        'id' => 1, 
-        'name' => 'Basic Health Checkup', 
-        'desc' => 'Complete basic health screening', 
-        'tests' => 'CBC, Blood Sugar, Blood Pressure, Urine Test', 
-        'price' => 1200.00, 
-        'original_price' => 1500.00,
-        'icon' => 'fas fa-user-check'
-    ],
-    [
-        'id' => 2, 
-        'name' => 'Comprehensive Package', 
-        'desc' => 'Advanced health screening with imaging', 
-        'tests' => 'CBC, Lipid Profile, Kidney, Liver, ECG, X-Ray', 
-        'price' => 2625.00, 
-        'original_price' => 3500.00,
-        'icon' => 'fas fa-heartbeat'
-    ],
-    [
-        'id' => 3, 
-        'name' => 'Diabetes Care Package', 
-        'desc' => 'Complete diabetes monitoring', 
-        'tests' => 'HbA1c, Fasting Sugar, PP Sugar, Kidney Function', 
-        'price' => 1700.00, 
-        'original_price' => 2000.00,
-        'icon' => 'fas fa-notes-medical'
-    ]
-];
+// Fetch Packages from Database
+$packages_res = $conn->query("SELECT * FROM health_packages WHERE status = 'Active' ORDER BY created_at DESC");
+$packages = [];
+if ($packages_res && $packages_res->num_rows > 0) {
+    while ($row = $packages_res->fetch_assoc()) {
+        // Determine icon based on name
+        $icon = 'fas fa-file-medical';
+        if (stripos($row['package_name'], 'Basic') !== false) {
+            $icon = 'fas fa-user-check';
+        } elseif (stripos($row['package_name'], 'Comprehensive') !== false || stripos($row['package_name'], 'Executive') !== false) {
+            $icon = 'fas fa-heartbeat';
+        } elseif (stripos($row['package_name'], 'Diabetes') !== false) {
+            $icon = 'fas fa-notes-medical';
+        } elseif (stripos($row['package_name'], 'Wellness') !== false) {
+            $icon = 'fas fa-spa';
+        }
+        
+        $packages[] = [
+            'id' => $row['package_id'],
+            'name' => $row['package_name'],
+            'desc' => $row['package_description'],
+            'tests' => $row['included_tests'],
+            'price' => $row['discounted_price'],
+            'original_price' => $row['original_price'],
+            'icon' => $icon
+        ];
+    }
+}
 
 $message = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -304,9 +302,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
 
             <div class="price-tag">
-                <span class="current-price">₹<?php echo $pkg['price']; ?></span>
-                <span class="original-price">₹<?php echo $pkg['original_price']; ?></span>
-                <span class="discount-badge"><?php echo round((($pkg['original_price']-$pkg['price'])/$pkg['original_price'])*100); ?>% OFF</span>
+                <span class="current-price">₹<?php echo number_format($pkg['price'], 2); ?></span>
+                <?php if ($pkg['original_price'] > $pkg['price']): ?>
+                    <span class="original-price">₹<?php echo number_format($pkg['original_price'], 2); ?></span>
+                    <span class="discount-badge"><?php echo round((($pkg['original_price'] - $pkg['price']) / $pkg['original_price']) * 100); ?>% OFF</span>
+                <?php endif; ?>
             </div>
 
             <button class="btn-select-pkg" onclick="openBooking('<?php echo $pkg['name']; ?>', '<?php echo $pkg['price']; ?>')">Select Package</button>

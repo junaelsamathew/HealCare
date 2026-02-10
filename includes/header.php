@@ -25,8 +25,8 @@
                             </svg>
                         </div>
                         <div class="info-text">
-                            <span class="info-label">EMERGENCY</span>
-                            <span class="info-value">(+91) 953 904 5609</span>
+                            <span class="info-label">WHATSAPP</span>
+                            <a href="https://wa.me/918075454467" target="_blank" class="info-value" style="text-decoration: none; color: #25d366;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
                         </div>
                     </div>
 
