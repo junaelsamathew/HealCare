@@ -2,14 +2,11 @@
 ob_start();
 session_start();
 include 'includes/db_connect.php';
+include 'includes/email_config.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
-
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
 
 // Fetch bill data
 $bill_id = isset($_REQUEST['bill_id']) ? (int)$_REQUEST['bill_id'] : 0;
@@ -129,16 +126,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // 4. Send Email if we have email
                     if (!empty($pat_email)) {
                         $mail = new PHPMailer(true);
-                        $mail->isSMTP();
-                        $mail->Host       = 'smtp.gmail.com';
-                        $mail->SMTPAuth   = true;
-                        $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                        $mail->Password   = 'yiuwcrykatkfzdwv';
-                        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-                        $mail->Port       = 465;
-                        $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-
-                        $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                        configureDefaultMail($mail);
                         $mail->addAddress($pat_email, $pat_name);
 
                         $email_booking_number = date('Y', strtotime($date_str)) . "/" . str_pad($appt_id, 6, '0', STR_PAD_LEFT);

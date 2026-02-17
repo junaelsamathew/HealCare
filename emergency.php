@@ -26,7 +26,7 @@ include 'includes/header.php';
             
             <h4 style="color: #0a1f44; margin-top: 30px; margin-bottom: 15px;">Key Features:</h4>
             <ul class="check-list" style="list-style: none; padding: 0;">
-                <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> <a href="https://wa.me/918075454467" target="_blank" style="text-decoration: none; color: inherit;">24x7 Ambulance WhatsApp (+91 8075454467)</a></li>
+                <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> <a href="https://wa.me/919539045609" target="_blank" style="text-decoration: none; color: inherit;">24x7 Ambulance WhatsApp (+91 9539045609)</a></li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Trauma Care</li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Cardiac Emergencies</li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Pediatric Emergencies</li>
@@ -46,14 +46,14 @@ include 'includes/header.php';
                         <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255,0,0,0.05); border-left: 4px solid #ff4444;">
                             <h5 style="margin: 0; color: #0a1f44;"><?php echo htmlspecialchars($amb['driver_name']); ?></h5>
                             <p style="font-size: 11px; color: #777; margin-bottom: 10px;"><?php echo htmlspecialchars($amb['vehicle_type']); ?> • <?php echo htmlspecialchars($amb['vehicle_number']); ?></p>
-                            <a href="https://wa.me/918075454467" target="_blank" style="font-size: 18px; font-weight: bold; color: #25d366; margin: 0; text-decoration: none;">
+                            <a href="https://wa.me/919539045609" target="_blank" style="font-size: 18px; font-weight: bold; color: #25d366; margin: 0; text-decoration: none;">
                                 <i class="fab fa-whatsapp"></i> MESSAGE
                             </a>
                             <small style="display: block; margin-top: 5px; color: #999;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($amb['location']); ?></small>
                         </div>
                     <?php endwhile; else: ?>
                         <div style="grid-column: 1/-1; text-align: center; padding: 20px;">
-                            <a href="https://wa.me/918075454467" target="_blank" style="font-size: 14px; font-weight: bold; color: #25d366; text-decoration: none;">WHATSAPP HOTLINE: (+91) 807 545 4467</a><br>
+                            <a href="https://wa.me/919539045609" target="_blank" style="font-size: 14px; font-weight: bold; color: #25d366; text-decoration: none;">WHATSAPP HOTLINE: (+91) 953 904 5609</a><br>
                             <small style="color: #777;">No individual ambulance contacts currently listed.</small>
                         </div>
                     <?php endif; ?>

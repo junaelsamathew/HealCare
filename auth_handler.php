@@ -3,13 +3,9 @@ ob_start(); // Start output buffering to prevent header issues
 session_start();
 include 'includes/db_connect.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\SMTP;
+include 'includes/email_config.php';
 
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
+
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $action = $_POST['action'];
@@ -35,25 +31,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         try {
             //Server settings
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'junaelsamathew2028@mca.ajce.in'; // Updated based on user context
-            $mail->Password   = 'yiuwcrykatkfzdwv';
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = 465;
+            configureDefaultMail($mail);
             
-            // Fix for local XAMPP SSL issues
-            $mail->SMTPOptions = array(
-                'ssl' => array(
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                )
-            );
-
             //Recipients
-            $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
             $mail->addAddress($email);
 
             //Content
@@ -156,23 +136,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         
         try {
             //Server settings
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-            $mail->Password   = 'yiuwcrykatkfzdwv';
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = 465;
-            $mail->SMTPOptions = array(
-                'ssl' => array(
-                    'verify_peer' => false,
-                    'verify_peer_name' => false,
-                    'allow_self_signed' => true
-                )
-            );
+            configureDefaultMail($mail);
 
             //Recipients
-            $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
             $mail->addAddress($email, $name);
 
             //Content
@@ -530,16 +496,7 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
             // Send Email
             $mail = new PHPMailer(true);
             try {
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
-                $mail->SMTPAuth   = true;
-                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                $mail->Password   = 'yiuwcrykatkfzdwv';
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-                $mail->Port       = 465;
-                $mail->SMTPOptions = array('ssl' => array('verify_peer'=>false,'verify_peer_name'=>false,'allow_self_signed'=>true));
-
-                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                configureDefaultMail($mail);
                 $mail->addAddress($email, $name);
                 $mail->isHTML(true);
                 $mail->Subject = 'New Verification Code - HealCare';
@@ -579,16 +536,7 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
             // Send Email
             $mail = new PHPMailer(true);
             try {
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
-                $mail->SMTPAuth   = true;
-                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                $mail->Password   = 'yiuwcrykatkfzdwv';
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-                $mail->Port       = 465;
-                $mail->SMTPOptions = array('ssl' => array('verify_peer'=>false,'verify_peer_name'=>false,'allow_self_signed'=>true));
-
-                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                configureDefaultMail($mail);
                 $mail->addAddress($email, $name);
                 $mail->isHTML(true);
                 $mail->Subject = 'Verify Your Account - HealCare';

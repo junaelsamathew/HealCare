@@ -35,18 +35,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $diet = $_POST['diet_type'];
         $price = $_POST['price'];
         $desc = $_POST['description'];
-        $avail = $_POST['availability'];
+        $stock = (int)$_POST['stock_quantity'];
+        
+        // Auto-set availability based on stock
+        $avail = ($stock > 0) ? 'Available' : 'Out of Stock';
+
         $mid = $_POST['menu_id'] ?? null;
 
         if ($mid) {
-            $stmt = $conn->prepare("UPDATE canteen_menu SET item_name=?, item_category=?, diet_type=?, price=?, description=?, availability=? WHERE menu_id=?");
-            $stmt->bind_param("sssdssi", $name, $cat, $diet, $price, $desc, $avail, $mid);
+            $stmt = $conn->prepare("UPDATE canteen_menu SET item_name=?, item_category=?, diet_type=?, price=?, description=?, stock_quantity=?, availability=? WHERE menu_id=?");
+            $stmt->bind_param("sssdssii", $name, $cat, $diet, $price, $desc, $stock, $avail, $mid);
         } else {
-            $stmt = $conn->prepare("INSERT INTO canteen_menu (item_name, item_category, diet_type, price, description, availability) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("sssdss", $name, $cat, $diet, $price, $desc, $avail);
+            $stmt = $conn->prepare("INSERT INTO canteen_menu (item_name, item_category, diet_type, price, description, stock_quantity, availability) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sssdsis", $name, $cat, $diet, $price, $desc, $stock, $avail);
         }
         if ($stmt->execute()) {
             $success_msg = $mid ? "Menu item updated!" : "New menu item added!";
+        }
+    }
+
+    // 3. Restock Item (Authorized)
+    if (isset($_POST['restock_item'])) {
+        $mid = $_POST['menu_id'];
+        $qty_added = (int)$_POST['add_quantity'];
+        $pin = $_POST['auth_pin'];
+
+        // Simple authorized PIN check (In real app, fetch from localized config or user role)
+        if ($pin === '1234') { 
+            // Update stock and auto-set availability
+            $stmt = $conn->prepare("UPDATE canteen_menu SET stock_quantity = stock_quantity + ?, availability = 'Available' WHERE menu_id = ?");
+            $stmt->bind_param("ii", $qty_added, $mid);
+            if ($stmt->execute()) {
+                $success_msg = "Stock added successfully!";
+            }
+        } else {
+            $error_msg = "Unauthorized! Incorrect Admin/Manager PIN.";
         }
     }
 
@@ -283,6 +306,62 @@ $section = $_GET['section'] ?? 'active_orders';
                         <h2 style="margin: 0;">Food Menu Management</h2>
                         <button onclick="openModal()" class="btn btn-primary"><i class="fas fa-plus"></i> Add New Food Item</button>
                     </div>
+                    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border);">
+                        <form method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                            <input type="hidden" name="section" value="menu_management">
+                            
+                            <div style="flex: 1; min-width: 200px;">
+                                <input type="text" name="search" placeholder="Search food name..." value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>" class="form-input">
+                            </div>
+
+                            <div style="min-width: 150px;">
+                                <select name="category" class="form-input">
+                                    <option value="">All Categories</option>
+                                    <option value="Morning / Breakfast" <?php if(($_GET['category']??'') == 'Morning / Breakfast') echo 'selected'; ?>>Breakfast</option>
+                                    <option value="Lunch" <?php if(($_GET['category']??'') == 'Lunch') echo 'selected'; ?>>Lunch</option>
+                                    <option value="Evening Snacks" <?php if(($_GET['category']??'') == 'Evening Snacks') echo 'selected'; ?>>Snacks</option>
+                                    <option value="Dinner" <?php if(($_GET['category']??'') == 'Dinner') echo 'selected'; ?>>Dinner</option>
+                                    <option value="Night Food" <?php if(($_GET['category']??'') == 'Night Food') echo 'selected'; ?>>Night Food</option>
+                                    <option value="Other Food Items" <?php if(($_GET['category']??'') == 'Other Food Items') echo 'selected'; ?>>Others</option>
+                                </select>
+                            </div>
+
+                            <div style="min-width: 150px;">
+                                <select name="diet" class="form-input">
+                                    <option value="">All Diets</option>
+                                    <option value="Normal" <?php if(($_GET['diet']??'') == 'Normal') echo 'selected'; ?>>Normal</option>
+                                    <option value="Diabetic" <?php if(($_GET['diet']??'') == 'Diabetic') echo 'selected'; ?>>Diabetic</option>
+                                    <option value="Low-Salt" <?php if(($_GET['diet']??'') == 'Low-Salt') echo 'selected'; ?>>Low-Salt</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-outline" style="color: var(--accent); border-color: var(--accent);"><i class="fas fa-search"></i> Filter</button>
+                            
+                            <?php if(isset($_GET['search']) || isset($_GET['category']) || isset($_GET['diet'])): ?>
+                                <a href="?section=menu_management" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;"><i class="fas fa-times"></i> Clear</a>
+                            <?php endif; ?>
+                        </form>
+                    </div>
+
+                    <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                        <?php
+                        $stats = $conn->query("SELECT 
+                            COUNT(*) as total,
+                            SUM(CASE WHEN stock_quantity > 0 THEN 1 ELSE 0 END) as in_stock,
+                            SUM(CASE WHEN stock_quantity <= 0 THEN 1 ELSE 0 END) as out_stock
+                            FROM canteen_menu")->fetch_assoc();
+                        ?>
+                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); padding: 10px 20px; border-radius: 10px; color: #3b82f6; font-size: 13px; font-weight: 600;">
+                            Total Items: <?php echo $stats['total'] ?? 0; ?>
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 10px 20px; border-radius: 10px; color: #10b981; font-size: 13px; font-weight: 600;">
+                            In Stock: <?php echo $stats['in_stock'] ?? 0; ?>
+                        </div>
+                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 10px 20px; border-radius: 10px; color: #ef4444; font-size: 13px; font-weight: 600;">
+                            Out of Stock: <?php echo $stats['out_stock'] ?? 0; ?>
+                        </div>
+                    </div>
+
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -290,28 +369,54 @@ $section = $_GET['section'] ?? 'active_orders';
                                 <th>Category</th>
                                 <th>Diet Type</th>
                                 <th>Price</th>
+                                <th>Stock</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php
-                            $menu = $conn->query("SELECT * FROM canteen_menu ORDER BY item_category, item_name");
-                            while ($m = $menu->fetch_assoc()):
+                            $where_clauses = [];
+                            if (!empty($_GET['search'])) {
+                                $search = $conn->real_escape_string($_GET['search']);
+                                $where_clauses[] = "item_name LIKE '%$search%'";
+                            }
+                            if (!empty($_GET['category'])) {
+                                $cat = $conn->real_escape_string($_GET['category']);
+                                $where_clauses[] = "item_category = '$cat'";
+                            }
+                            if (!empty($_GET['diet'])) {
+                                $diet = $conn->real_escape_string($_GET['diet']);
+                                $where_clauses[] = "diet_type = '$diet'";
+                            }
+
+                            $sql = "SELECT * FROM canteen_menu";
+                            if (!empty($where_clauses)) {
+                                $sql .= " WHERE " . implode(" AND ", $where_clauses);
+                            }
+                            $sql .= " ORDER BY item_category, item_name";
+                            
+                            $menu = $conn->query($sql);
+                            if ($menu && $menu->num_rows > 0):
+                                while ($m = $menu->fetch_assoc()):
                             ?>
                                 <tr>
                                     <td><strong><?php echo htmlspecialchars($m['item_name']); ?></strong></td>
                                     <td><?php echo $m['item_category']; ?></td>
                                     <td><?php echo $m['diet_type'] ?: 'Any'; ?></td>
                                     <td>₹<?php echo number_format($m['price'], 0); ?></td>
+                                    <td><?php echo $m['stock_quantity']; ?></td>
                                     <td>
-                                        <span class="status-badge" style="background: <?php echo $m['availability'] == 'Available' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'; ?>; color: <?php echo $m['availability'] == 'Available' ? '#10b981' : '#ef4444'; ?>;">
-                                            <?php echo $m['availability']; ?>
+                                        <span class="status-badge" style="background: <?php echo $m['stock_quantity'] > 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'; ?>; color: <?php echo $m['stock_quantity'] > 0 ? '#10b981' : '#ef4444'; ?>;">
+                                            <?php echo $m['stock_quantity'] > 0 ? 'Available' : 'Out of Stock'; ?>
                                         </span>
                                     </td>
                                     <td>
                                         <div style="display: flex; gap: 10px;">
-                                            <button onclick='editItem(<?php echo json_encode($m); ?>)' class="btn btn-outline" style="padding: 5px 10px;"><i class="fas fa-edit"></i></button>
+                                            <button onclick='editItem(<?php echo json_encode($m); ?>)' class="btn btn-action edit"><i class="fas fa-edit"></i> Edit</button>
+                                            <button class="btn btn-action" style="background: var(--primary); color: white;" onclick='openRestockModal(<?php echo json_encode($m); ?>)'>
+                                                <i class="fas fa-plus-circle"></i> Stock
+                                            </button>
                                             <form method="POST" onsubmit="return confirm('Delete this item?');">
                                                 <input type="hidden" name="menu_id" value="<?php echo $m['menu_id']; ?>">
                                                 <button name="delete_menu_item" class="btn btn-outline" style="padding: 5px 10px; color: #ef4444; border-color: rgba(239,68,68,0.2);"><i class="fas fa-trash"></i></button>
@@ -319,12 +424,28 @@ $section = $_GET['section'] ?? 'active_orders';
                                         </div>
                                     </td>
                                 </tr>
-                            <?php endwhile; ?>
+                            <?php 
+                                endwhile; 
+                            else:
+                            ?>
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-dim);">
+                                        <i class="fas fa-utensils" style="font-size: 30px; margin-bottom: 10px; opacity: 0.5;"></i><br>
+                                        No menu items found matching your filters.
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                 </div>
 
             <?php elseif ($section == 'reports'): ?>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Reports & Analytics</h2>
+                    <button onclick="openReportModal()" class="btn btn-primary">
+                        <i class="fas fa-upload"></i> Upload Report
+                    </button>
+                </div>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
                     <!-- 1. Daily Sales Report -->
                     <div class="card">
@@ -426,6 +547,33 @@ $section = $_GET['section'] ?? 'active_orders';
     </main>
 
     <!-- Menu Modal -->
+    <!-- Restock Modal -->
+    <div id="restockModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="restockTitle">Add Stock</h3>
+                <button type="button" class="close-modal" onclick="closeRestockModal()">&times;</button>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="menu_id" id="r_menu_id">
+                <div class="form-group">
+                    <label class="form-label">Item Name</label>
+                    <input type="text" id="r_item_name" class="form-input" readonly style="background: rgba(255,255,255,0.05); color: #aaa;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Add Quantity (Daily Prep)</label>
+                    <input type="number" name="add_quantity" class="form-input" min="1" required placeholder="Enter amount to add">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Manager PIN (Auth Required)</label>
+                    <input type="password" name="auth_pin" class="form-input" required placeholder="Enter PIN">
+                </div>
+                <button type="submit" name="restock_item" class="btn-submit" style="width: 100%;">Confirm Restock</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit/Add Modal -->
     <div id="menuModal" class="modal-overlay">
         <div class="modal">
             <h3 id="modalTitle">Add Food Item</h3>
@@ -463,11 +611,8 @@ $section = $_GET['section'] ?? 'active_orders';
                         <input type="number" step="0.01" name="price" id="m_price" class="form-input" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Availability</label>
-                        <select name="availability" id="m_avail" class="form-input">
-                            <option>Available</option>
-                            <option>Out of Stock</option>
-                        </select>
+                        <label class="form-label">Stock Quantity</label>
+                        <input type="number" name="stock_quantity" id="m_stock" class="form-input" value="0" min="0" required>
                     </div>
                 </div>
                 <div class="form-group">
@@ -488,6 +633,7 @@ $section = $_GET['section'] ?? 'active_orders';
             document.getElementById('m_id').value = "";
             document.getElementById('m_name').value = "";
             document.getElementById('m_price').value = "";
+            document.getElementById('m_stock').value = "0";
             document.getElementById('m_desc').value = "";
             document.getElementById('menuModal').style.display = 'flex';
         }
@@ -501,9 +647,19 @@ $section = $_GET['section'] ?? 'active_orders';
             document.getElementById('m_cat').value = item.item_category;
             document.getElementById('m_diet').value = item.diet_type;
             document.getElementById('m_price').value = item.price;
-            document.getElementById('m_avail').value = item.availability;
+            document.getElementById('m_stock').value = item.stock_quantity;
             document.getElementById('m_desc').value = item.description;
             document.getElementById('menuModal').style.display = 'flex';
+        }
+
+        function openRestockModal(item) {
+            document.getElementById('r_menu_id').value = item.menu_id;
+            document.getElementById('r_item_name').value = item.item_name;
+            document.getElementById('restockModal').style.display = 'flex';
+        }
+
+        function closeRestockModal() {
+            document.getElementById('restockModal').style.display = 'none';
         }
 
         // Auto reload Active Orders every minute & Notification
@@ -530,5 +686,10 @@ $section = $_GET['section'] ?? 'active_orders';
         <?php endif; ?>
     </script>
 
+    <!-- Report Upload Modal Integration -->
+    <?php 
+    $staff_type = 'canteen_staff';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

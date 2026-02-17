@@ -90,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $prescription_id = null;
         if (!empty($prescription_text)) {
             $date = date('Y-m-d');
-            $stmt_presc = $conn->prepare("INSERT INTO prescriptions (patient_id, doctor_id, prescription_date, medicine_details, instructions) VALUES (?, ?, ?, ?, ?)");
+            $stmt_presc = $conn->prepare("INSERT INTO prescriptions (patient_id, doctor_id, prescription_date, medicine_details, instructions, status) VALUES (?, ?, ?, ?, ?, 'Active')");
             $stmt_presc->bind_param("iisss", $patient_id, $doctor_id, $date, $prescription_text, $special_notes);
             $stmt_presc->execute();
             $prescription_id = $conn->insert_id;

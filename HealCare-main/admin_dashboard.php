@@ -1,14 +1,11 @@
 <?php
 session_start();
 include 'includes/db_connect.php';
+include 'includes/email_config.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
-
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
 
 // Simple Auth Check
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
@@ -129,16 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // --- SEND CREDENTIALS VIA EMAIL ---
             $mail = new PHPMailer(true);
             //Server settings
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-            $mail->Password   = 'yiuwcrykatkfzdwv'; // App Password
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = 465;
-            $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-            
-            $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare HR');
+            configureDefaultMail($mail);
             $mail->addAddress($email, $name);
             $mail->isHTML(true);
             $mail->Subject = 'Welcome to HealCare - Your Official Credentials';
@@ -189,16 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $name = $row['name'];
                 
                 $mail = new PHPMailer(true);
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
-                $mail->SMTPAuth   = true;
-                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                $mail->Password   = 'yiuwcrykatkfzdwv';
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-                $mail->Port       = 465;
-                $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-                
-                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare HR');
+            configureDefaultMail($mail);
                 $mail->addAddress($email, $name);
                 $mail->isHTML(true);
                 $mail->Subject = 'Update on your HealCare Application';
@@ -301,16 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             // --- SEND CREDENTIALS VIA EMAIL ---
             $mail = new PHPMailer(true);
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-            $mail->Password   = 'yiuwcrykatkfzdwv';
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = 465;
-            $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-            
-            $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare HR');
+            configureDefaultMail($mail);
             $mail->addAddress($email, $name);
             $mail->isHTML(true);
             $mail->Subject = 'Official Account Created - HealCare';
@@ -1789,7 +1759,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">

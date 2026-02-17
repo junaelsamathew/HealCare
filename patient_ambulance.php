@@ -225,7 +225,7 @@ $username = $_SESSION['username'];
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -325,11 +325,7 @@ $username = $_SESSION['username'];
                                     </div>
                                 </div>
                             </div>
-                            <div style="padding: 0 20px 20px;">
-                                <a href="https://wa.me/918075454467" target="_blank" class="btn-call">
-                                    <i class="fab fa-whatsapp"></i> WhatsApp
-                                </a>
-                            </div>
+
                         </div>
                     <?php endwhile; else: ?>
                         <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
@@ -387,9 +383,7 @@ $username = $_SESSION['username'];
                             </div>
                         </div>
 
-                        <a id="det_call_btn" href="" class="btn-call" style="background: #3b82f6; margin-top: 25px; height: 50px;">
-                            <i class="fas fa-phone-alt"></i> CALL DRIVER NOW
-                        </a>
+
                     </div>
                 </div>
             </div>

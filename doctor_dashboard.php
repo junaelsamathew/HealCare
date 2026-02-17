@@ -199,7 +199,7 @@ for ($i = 6; $i >= 0; $i--) {
     $date = date('Y-m-d', strtotime("-$i days"));
     $day_name = date('D', strtotime($date));
     
-    $stmt_count = $conn->prepare("SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status = 'Completed'");
+    $stmt_count = $conn->prepare("SELECT COUNT(*) as count FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status NOT IN ('Cancelled', 'Rejected', 'Requested')");
     $stmt_count->bind_param("is", $user_id, $date);
     $stmt_count->execute();
     $day_count = $stmt_count->get_result()->fetch_assoc()['count'];
@@ -339,6 +339,7 @@ include_once 'includes/greeting_logic.php';
         .badge-status-Completed { background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-status-Cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         .badge-status-Lab { background: rgba(168, 85, 247, 0.1); color: #a855f7; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .badge-status-Waiting { background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 4px 10px; border-radius: 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
         
         /* Table Styles for Inpatient Rounds */
         table {
@@ -611,7 +612,7 @@ include_once 'includes/greeting_logic.php';
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -794,6 +795,111 @@ include_once 'includes/greeting_logic.php';
                 </div>
             </div>
 
+            <!-- My Admitted Patients (Inpatient Overview) -->
+            <div class="content-section" style="margin-bottom: 30px;">
+                <div class="section-head" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3><i class="fas fa-procedures"></i> My Admitted Patients</h3>
+                        <p style="font-size: 13px; color: #94a3b8;">Real-time status of your inpatients.</p>
+                    </div>
+                    <?php
+                    // Check Blood Bank Global Alert
+                    $low_blood = $conn->query("SELECT blood_group, units_available FROM blood_bank WHERE units_available <= 5");
+                    if ($low_blood && $low_blood->num_rows > 0):
+                        $alert_msg = "";
+                        while($lb = $low_blood->fetch_assoc()) $alert_msg .= $lb['blood_group'] . " (" . $lb['units_available'] . "U) ";
+                    ?>
+                        <div style="background: rgba(239, 68, 68, 0.15); color: #f87171; padding: 6px 12px; border-radius: 8px; font-size: 12px; border: 1px solid rgba(239, 68, 68, 0.3); display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-exclamation-circle"></i> <strong>Critical Blood Low:</strong> <?php echo $alert_msg; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <?php
+                $inpatients = $conn->query("
+                    SELECT a.admission_id, a.admission_date, p.name, p.patient_code, p.blood_group, 
+                           w.ward_name, r.room_number,
+                           (SELECT recorded_at FROM patient_vitals WHERE patient_id = a.patient_id ORDER BY recorded_at DESC LIMIT 1) as last_vital_time,
+                           (SELECT CONCAT(blood_pressure_systolic, '/', blood_pressure_diastolic) FROM patient_vitals WHERE patient_id = a.patient_id ORDER BY recorded_at DESC LIMIT 1) as last_bp
+                    FROM admissions a
+                    JOIN patient_profiles p ON a.patient_id = p.user_id
+                    LEFT JOIN rooms r ON a.room_id = r.room_id
+                    LEFT JOIN wards w ON r.ward_id = w.ward_id
+                    WHERE a.doctor_id = $user_id AND a.status = 'Admitted'
+                    ORDER BY a.admission_date DESC
+                ");
+                ?>
+
+                <?php if ($inpatients && $inpatients->num_rows > 0): ?>
+                    <div style="overflow-x: auto;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); text-align: left;">
+                                    <th style="padding: 12px; color: #94a3b8; font-size: 11px; text-transform: uppercase;">Patient</th>
+                                    <th style="padding: 12px; color: #94a3b8; font-size: 11px; text-transform: uppercase;">Location</th>
+                                    <th style="padding: 12px; color: #94a3b8; font-size: 11px; text-transform: uppercase;">Admitted Since</th>
+                                    <th style="padding: 12px; color: #94a3b8; font-size: 11px; text-transform: uppercase;">Status</th>
+                                    <th style="padding: 12px; text-align: right; color: #94a3b8; font-size: 11px; text-transform: uppercase;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php while($ip = $inpatients->fetch_assoc()): 
+                                    $adm_days = floor((time() - strtotime($ip['admission_date'])) / (60 * 60 * 24));
+                                    
+                                    // Check specific blood availability for this patient
+                                    $bg = $ip['blood_group'];
+                                    $bg_alert = false;
+                                    if(in_array($bg, ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])) {
+                                        $chk_bg = $conn->query("SELECT units_available FROM blood_bank WHERE blood_group = '$bg' AND units_available <= 3");
+                                        if($chk_bg->num_rows > 0) $bg_alert = true;
+                                    }
+                                ?>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                    <td style="padding: 15px;">
+                                        <div style="font-weight: 600; color: #fff;"><?php echo htmlspecialchars($ip['name']); ?></div>
+                                        <div style="font-size: 11px; color: #64748b;">
+                                            <?php echo $ip['patient_code']; ?> • <span style="color: <?php echo $bg_alert ? '#ef4444' : '#94a3b8'; ?>; font-weight: <?php echo $bg_alert ? '700' : '400'; ?>;"><?php echo $ip['blood_group']; ?> <?php if($bg_alert) echo '<i class="fas fa-exclamation-triangle" title="Low Blood Stock"></i>'; ?></span>
+                                        </div>
+                                    </td>
+                                    <td style="padding: 15px;">
+                                        <div style="color: #cbd5e1; font-size: 13px;"><?php echo htmlspecialchars($ip['ward_name']); ?></div>
+                                        <div style="font-size: 11px; color: #64748b;">Room <?php echo $ip['room_number']; ?></div>
+                                    </td>
+                                    <td style="padding: 15px; font-size: 13px; color: #cbd5e1;">
+                                        <?php echo date('M d', strtotime($ip['admission_date'])); ?> 
+                                        <span style="font-size: 11px; color: #64748b;">(<?php echo $adm_days; ?> days)</span>
+                                    </td>
+                                    <td style="padding: 15px;">
+                                        <?php if($ip['last_vital_time']): 
+                                            $mins_ago = round((time() - strtotime($ip['last_vital_time'])) / 60);
+                                            $status_color = ($mins_ago < 240) ? '#10b981' : '#f59e0b'; // Green if checked < 4 hours ago
+                                            $status_text = ($mins_ago < 240) ? 'Stable' : 'Needs Check';
+                                        ?>
+                                            <span style="color: <?php echo $status_color; ?>; background: <?php echo $status_color; ?>15; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                                                <?php echo $status_text; ?> (BP: <?php echo $ip['last_bp']; ?>)
+                                            </span>
+                                        <?php else: ?>
+                                            <span style="color: #94a3b8; background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 12px; font-size: 11px;">No Data</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="padding: 15px; text-align: right;">
+                                        <a href="doctor_inpatient_chart.php?admission_id=<?php echo $ip['admission_id']; ?>" class="btn-consult" style="text-decoration: none; padding: 6px 12px; font-size: 12px;">
+                                            <i class="fas fa-notes-medical"></i> View Chart
+                                        </a>
+                                    </td>
+                                </tr>
+                                <?php endwhile; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php else: ?>
+                    <div style="text-align: center; padding: 30px; color: #64748b;">
+                        <i class="fas fa-bed" style="font-size: 32px; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>No patients currently admitted under your care.</p>
+                    </div>
+                <?php endif; ?>
+            </div>
+
             <!-- Consultation Statistics (Weekly) -->
             <div class="content-section" style="margin-bottom: 30px; background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.7)) !important; border: 1px solid rgba(59, 130, 246, 0.2) !important;">
                 <div class="section-head" style="display: flex; justify-content: space-between; align-items: center;">
@@ -811,140 +917,7 @@ include_once 'includes/greeting_logic.php';
                 </div>
             </div>
             
-            <?php if ($next_patient): 
-                $np_name = htmlspecialchars($next_patient['patient_name']);
-                $np_code = $next_patient['patient_code'] ?: 'N/A';
-                $np_phone = htmlspecialchars($next_patient['phone']);
-                $np_weight = $next_patient['weight'] ?: '--';
-                $np_height = $next_patient['height'] ?: '--';
-                $np_last = $next_patient['last_visit'] ? date('d M, Y', strtotime($next_patient['last_visit'])) : 'New Patient';
-                $np_time = date('h:i A', strtotime($next_patient['appointment_time']));
-                $np_reg = date('M d, Y', strtotime($next_patient['registered_date']));
-                
-                // Age calculation
-                $np_age = '--';
-                $np_dob = 'N/A';
-                if (!empty($next_patient['date_of_birth'])) {
-                    $dob = new DateTime($next_patient['date_of_birth']);
-                    $now = new DateTime();
-                    $np_age = $now->diff($dob)->y . ' Years';
-                    $np_dob = $dob->format('d M, Y');
-                }
-            ?>
-            <div class="content-section" style="background: linear-gradient(135deg, #1e293b, #0f172a) !important; border: 1px solid #3b82f6 !important; margin-bottom: 30px; position: relative; overflow: hidden;">
-                <div style="position: absolute; right: -20px; top: -20px; font-size: 150px; color: rgba(59, 130, 246, 0.05); transform: rotate(-15deg); z-index: 0; pointer-events: none;">
-                    <i class="fas fa-user-md"></i>
-                </div>
-                
-                <div class="section-head" style="position: relative; z-index: 1;">
-                    <h3 style="color: #3b82f6; display: flex; align-items: center; gap: 10px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981;"></span>
-                        Up Next: Clinical Priority
-                    </h3>
-                </div>
 
-                <div style="display: grid; grid-template-columns: 100px 1fr 280px; gap: 30px; align-items: center; position: relative; z-index: 1;">
-                    <!-- Avatar/ID -->
-                    <div style="text-align: center;">
-                        <div style="width: 80px; height: 80px; background: #3b82f6; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 10px; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);">
-                            <?php echo substr($np_name, 0, 1); ?>
-                        </div>
-                        <span style="font-size: 11px; color: #94a3b8; font-weight: 700; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px;">
-                            <?php echo $np_code; ?>
-                        </span>
-                    </div>
-
-                    <!-- Details Grid -->
-                    <div>
-                        <h2 style="color: #fff; margin: 0 0 15px 0; font-size: 24px;"><?php echo $np_name; ?></h2>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">DOB / Age</span>
-                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_dob; ?> (<?php echo $np_age; ?>)</span>
-                            </div>
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Weight</span>
-                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_weight; ?> kg</span>
-                            </div>
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Height</span>
-                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_height; ?> cm</span>
-                            </div>
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Last Visit</span>
-                                <span style="font-size: 14px; color: #10b981; font-weight: 600;"><?php echo $np_last; ?></span>
-                            </div>
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Registered</span>
-                                <span style="font-size: 14px; color: #fff; font-weight: 600;"><?php echo $np_reg; ?></span>
-                            </div>
-                            <div style="display: flex; flex-direction: column;">
-                                <span style="font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Scheduled For</span>
-                                <span style="font-size: 14px; color: #3b82f6; font-weight: 800;"><?php echo $np_time; ?> Today</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Contact/Actions -->
-                    <div style="display: flex; flex-direction: column; gap: 12px; padding-left: 20px; border-left: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <a href="tel:<?php echo $np_phone; ?>" class="btn-consult" style="background: #10b981; text-align: center; justify-content: center; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-phone"></i> Call
-                            </a>
-                            <a href="sms:<?php echo $np_phone; ?>" class="btn-consult" style="background: #3b82f6; text-align: center; justify-content: center; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-comment"></i> Msg
-                            </a>
-                        </div>
-                        
-                        <?php if($next_patient['status'] == 'Requested' || $next_patient['status'] == 'Pending'): ?>
-                            <form method="POST" style="margin:0; display:flex; gap:10px; flex-direction: column;">
-                                <input type="hidden" name="update_status" value="1">
-                                <input type="hidden" name="appt_id" value="<?php echo $next_patient['appointment_id']; ?>">
-                                
-                                <?php if($next_patient['consultation_mode'] == 'Online'): ?>
-                                    <input type="url" name="meeting_link" placeholder="Paste Meeting Link here" 
-                                           style="width: 100%; padding: 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 13px; margin-bottom: 5px;" required>
-                                <?php endif; ?>
-
-                                <div style="display: flex; gap: 10px;">
-                                    <button type="submit" name="new_status" value="Approved" style="flex:1; background: #10b981; color: #fff; border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; transition:0.3s;">
-                                        <i class="fas fa-check"></i> Approve
-                                    </button>
-                                    <button type="submit" name="new_status" value="Cancelled" style="flex:1; background: #ef4444; color: #fff; border: none; padding: 15px; border-radius: 12px; font-weight: 800; cursor: pointer; transition:0.3s;">
-                                        <i class="fas fa-times"></i> Reject
-                                    </button>
-                                </div>
-                            </form>
-                        <?php else: ?>
-                            <?php 
-                                $is_lab = ($next_patient['status'] == 'Pending Lab' || $next_patient['status'] == 'Lab Completed');
-                                $btn_text = $is_lab ? 'Review Lab & Consult' : 'Start Consultation';
-                                $btn_icon = $is_lab ? 'fa-flask' : 'fa-user-md';
-                                $btn_bg = $is_lab ? '#a855f7' : '#fff';
-                                $btn_color = $is_lab ? '#fff' : '#020617';
-                            ?>
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
-                                <a href="doctor_dashboard.php?patient_id=<?php echo $next_patient['patient_id']; ?>&appt_id=<?php echo $next_patient['appointment_id']; ?>" 
-                                style="background: <?php echo $btn_bg; ?>; color: <?php echo $btn_color; ?>; text-decoration: none; padding: 15px; border-radius: 12px; font-weight: 800; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.1); transition: 0.3s;">
-                                    <i class="fas <?php echo $btn_icon; ?>"></i> <?php echo $btn_text; ?>
-                                </a>
-                                
-                                <?php if($next_patient['consultation_mode'] == 'Online' && !empty($next_patient['meeting_link'])): ?>
-                                    <a href="<?php echo htmlspecialchars($next_patient['meeting_link']); ?>" target="_blank" 
-                                       style="background: #10b981; color: white; text-decoration: none; padding: 12px; border-radius: 12px; font-weight: 700; text-align: center; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                        <i class="fas fa-video"></i> Join Video Call
-                                    </a>
-                                <?php endif; ?>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <p style="margin: 0; text-align: center; font-size: 11px; color: #94a3b8;">
-                            Status: <strong style="color:<?php echo ($next_patient['status'] == 'Requested' ? '#fbbf24' : ($is_lab ? '#a855f7' : '#10b981')); ?>"><?php echo strtoupper($next_patient['status']); ?></strong>
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
 
             <!-- Inpatient Rounds Section -->
             <div class="content-section" style="margin-bottom: 30px; border: 1px solid rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.05);">
@@ -1115,8 +1088,7 @@ include_once 'includes/greeting_logic.php';
                                                 <div style="display: flex; gap: 10px; align-items: center;">
                                                     <div style="font-size: 13px; color: #fff; font-weight: 600;"><i class="fas fa-clock"></i> Scheduled: '.$p_time.'</div>
                                                     <div style="flex: 1;"></div>
-                                                    <a href="tel:'.$p_phone.'" class="btn-consult" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);"><i class="fas fa-phone"></i> Call</a>
-                                                    <a href="sms:'.$p_phone.'" class="btn-consult" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2);"><i class="fas fa-comment-alt"></i> Message</a>
+
                                                 </div>
                                             </div>
                                             <div class="action-btns" style="display:flex; flex-direction: column; gap:10px; margin-left: 20px;">';
@@ -1124,10 +1096,10 @@ include_once 'includes/greeting_logic.php';
                                                     echo '<form method="POST" style="margin:0; display:flex; gap:10px;">
                                                             <input type="hidden" name="update_status" value="1">
                                                             <input type="hidden" name="appt_id" value="'.$a_id.'">
-                                                            <button type="submit" name="new_status" value="Approved" class="btn-consult" style="background:#10b981; flex:1;"><i class="fas fa-check"></i></button>
-                                                            <button type="submit" name="new_status" value="Cancelled" class="btn-consult" style="background:#ef4444; flex:1;"><i class="fas fa-times"></i></button>
+                                                            <button type="submit" name="new_status" value="Approved" class="btn-consult" style="background:#10b981; flex:1; font-size: 11px; padding: 5px;"><i class="fas fa-check"></i> Accept</button>
+                                                            <button type="submit" name="new_status" value="Cancelled" class="btn-consult" style="background:#ef4444; flex:1; font-size: 11px; padding: 5px;"><i class="fas fa-times"></i> Decline</button>
                                                           </form>';
-                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed' || $status == 'Pending Lab' || $status == 'Lab Completed') {
+                                                } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed' || $status == 'Pending Lab' || $status == 'Lab Completed' || $status == 'Waiting') {
                                                     if($appt['is_external']) {
                                                         echo '<span style="font-size: 11px; color: #94a3b8; text-align: center;"><i class="fas fa-id-card"></i> Reg. Required</span>';
                                                     } else {
@@ -1229,9 +1201,14 @@ include_once 'includes/greeting_logic.php';
                     <!-- Recent Lab Reports (To Review) -->
                     <!-- Recent Lab Orders -->
                     <div class="content-section">
-                        <div class="section-head">
+                        <div class="section-head" style="display: flex; justify-content: space-between; align-items: center;">
                             <h3>Recent Lab Orders</h3>
-                            <a href="doctor_lab_orders.php" style="color: #4fc3f7; font-size: 13px;">View All</a>
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <button onclick="openReportModal()" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 5px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fas fa-upload"></i> Upload
+                                </button>
+                                <a href="doctor_lab_orders.php" style="color: #4fc3f7; font-size: 13px;">View All</a>
+                            </div>
                         </div>
                         <div style="display: flex; flex-direction: column; gap: 12px;">
                             <?php
@@ -1680,6 +1657,14 @@ include_once 'includes/greeting_logic.php';
             if (modal) {
                 modal.style.display = 'flex';
                 console.log("Consultation modal opened for patient: <?php echo addslashes($active_patient['name']); ?>");
+
+                // Fix: Clear URL parameters to prevent modal opening on refresh
+                if (window.history.replaceState) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('patient_id');
+                    url.searchParams.delete('appt_id');
+                    window.history.replaceState({}, document.title, url.toString());
+                }
             }
         })();
     </script>
@@ -1991,5 +1976,10 @@ include_once 'includes/greeting_logic.php';
             }
         }
     </script>
+    <!-- Report Upload Modal Integration -->
+    <?php 
+    $staff_type = 'doctor';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

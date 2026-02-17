@@ -1,12 +1,4 @@
 <?php
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
-use PHPMailer\PHPMailer\Exception;
-
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
-
 ob_start();
 session_start();
 include 'includes/db_connect.php';

@@ -112,7 +112,7 @@ if (stripos($lab_type, 'Pathology') !== false) {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             
@@ -755,9 +755,14 @@ if (stripos($lab_type, 'Pathology') !== false) {
                 <?php endif; ?>
 
             <?php elseif ($_GET['section'] == 'reports'): ?>
-                <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Laboratory Reports</h1>
-                    <p style="color:#64748b; font-size:14px;">Access daily test logs, revenue data, and equipment analytics.</p>
+                <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="color:#fff; font-size: 28px;">Laboratory Reports</h1>
+                        <p style="color:#64748b; font-size:14px;">Access daily test logs, revenue data, and equipment analytics.</p>
+                    </div>
+                     <button onclick="openReportModal()" style="background: #4fc3f7; color: #020617; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-upload"></i> Upload Report
+                    </button>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
@@ -972,5 +977,10 @@ if (stripos($lab_type, 'Pathology') !== false) {
             });
         });
     </script>
+    <!-- Report Upload Modal Integration -->
+    <?php 
+    $staff_type = 'lab_staff';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

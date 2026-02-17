@@ -80,6 +80,7 @@ $report_access = [
     'payment_mode' => ['admin'],
     'patient_visit' => ['admin', 'doctor'],
     'doctor_performance' => ['admin', 'doctor'],
+    'insurance_revenue' => ['admin'],
     'canteen_daily_sales' => ['admin', 'canteen_staff'],
     'canteen_item_sales' => ['admin', 'canteen_staff'],
     'canteen_payments' => ['admin', 'canteen_staff'],
@@ -247,6 +248,7 @@ if (in_array($effective_role, ['admin', 'doctor', 'lab_staff', 'receptionist', '
                             'overall_revenue' => ['icon' => 'fa-coins', 'title' => 'Overall Revenue', 'desc' => 'Total hospital income across all departments.'],
                             'consultation_revenue' => ['icon' => 'fa-user-md', 'title' => 'Consultation Revenue', 'desc' => 'Income from doctor visits and consults.'],
                             'dept_revenue' => ['icon' => 'fa-hospital-user', 'title' => 'Department Revenue', 'desc' => 'Revenue split by medical department.'],
+                            'insurance_revenue' => ['icon' => 'fa-shield-alt', 'title' => 'Insurance Revenue', 'desc' => 'Analyze coverage amounts and claim statuses.'],
                             'appointment_report' => ['icon' => 'fa-calendar-check', 'title' => 'Appointment Report', 'desc' => 'Scheduling success and cancellation metrics.'],
                             'lab_revenue' => ['icon' => 'fa-vials', 'title' => 'Laboratory Revenue', 'desc' => 'Insights into diagnostic service earnings.'],
                             'pharmacy_sales' => ['icon' => 'fa-pills', 'title' => 'Pharmacy Sales', 'desc' => 'Medication sales and inventory financial report.'],
@@ -375,6 +377,16 @@ if (in_array($effective_role, ['admin', 'doctor', 'lab_staff', 'receptionist', '
                             case 'payment_mode':
                                  $headers = ['Payment Mode', 'Transaction Count', 'Total Revenue'];
                                  $query = "SELECT payment_mode, COUNT(bill_id), SUM(total_amount) FROM billing WHERE payment_status = 'Paid' AND bill_date BETWEEN '$start_date' AND '$end_date' GROUP BY payment_mode";
+                                 break;
+                            case 'insurance_revenue':
+                                 $headers = ['Date', 'Bill ID', 'Patient', 'Total Bill', 'Ins. Covered', 'Pat. Payable', 'Claim Status'];
+                                 $query = "SELECT b.bill_date, b.bill_id, r.name as patient_name, b.total_amount, b.insurance_amount, b.patient_payable_amount, COALESCE(c.status, 'No Claim') as claim_status 
+                                           FROM billing b 
+                                           JOIN users u ON b.patient_id = u.user_id 
+                                           JOIN registrations r ON u.registration_id = r.registration_id 
+                                           LEFT JOIN insurance_claims c ON b.insurance_claim_id = c.claim_id 
+                                           WHERE b.payment_mode = 'Insurance' AND b.bill_date BETWEEN '$start_date' AND '$end_date' 
+                                           ORDER BY b.bill_date DESC";
                                  break;
                             case 'patient_visit':
                                  $headers = ['Visit Date', 'New Patients', 'Relapses/Followups', 'Total Visits'];
@@ -581,9 +593,16 @@ if (in_array($effective_role, ['admin', 'doctor', 'lab_staff', 'receptionist', '
 
 
             <?php elseif ($view == 'repository'): ?>
-                <div style="margin-bottom: 40px;">
-                    <h2 style="font-size: 28px; margin-bottom: 10px;">Document Repository</h2>
-                    <p style="color:var(--text-dim);">Centralized storage for all uploaded PDF reports and manual archives.</p>
+                <div style="margin-bottom: 40px; display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <h2 style="font-size: 28px; margin-bottom: 10px;">Document Repository</h2>
+                        <p style="color:var(--text-dim);">Centralized storage for all uploaded PDF reports and manual archives.</p>
+                    </div>
+                    <?php if($role == 'admin'): ?>
+                    <button onclick="window.location.href='generate_system_reports.php?period=daily&role=all'" class="btn btn-primary" title="Generates Daily Activity Report for All Roles">
+                        <i class="fas fa-magic"></i> Auto-Generate Daily Reports
+                    </button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="card">

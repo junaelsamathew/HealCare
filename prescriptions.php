@@ -57,7 +57,7 @@ $username = $_SESSION['username'];
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             
@@ -102,18 +102,33 @@ $username = $_SESSION['username'];
             <div class="content-section" style="background: transparent; border: none; padding: 0;">
                 
                 <?php
+                // Handle Order Action
+                if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_prescription'])) {
+                    $pid = intval($_POST['prescription_id']);
+                    $conn->query("UPDATE prescriptions SET status = 'Requested' WHERE prescription_id = $pid AND status = 'Active'");
+                    echo "<div style='background: #10b981; color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px;'><i class='fas fa-check-circle'></i> Order sent to pharmacy successfully!</div>";
+                }
+
                 $presc_sql = "
-                    SELECT p.*, r.name as doctor_name, r.specialization
+                    SELECT p.*, r.name as doctor_name, r.specialization, b.bill_id, b.payment_status, b.total_amount
                     FROM prescriptions p
                     LEFT JOIN users u ON p.doctor_id = u.user_id
                     LEFT JOIN registrations r ON u.registration_id = r.registration_id
-                    WHERE p.patient_id = $user_id
+                    LEFT JOIN billing b ON p.prescription_id = b.reference_id AND (b.bill_type LIKE 'Pharmacy%' || b.bill_type LIKE 'Combined%')
+                    WHERE p.patient_id = $user_id AND p.status != 'Cancelled'
                     ORDER BY p.prescription_date DESC
                 ";
                 $presc_res = $conn->query($presc_sql);
 
                 if ($presc_res && $presc_res->num_rows > 0):
                     while ($p_row = $presc_res->fetch_assoc()):
+                        $status = $p_row['status'];
+                        $status_color = '#94a3b8';
+                        if($status == 'Active' || $status == 'Pending') $status_color = '#3b82f6';
+                        if($status == 'Requested') $status_color = '#f59e0b';
+                        if($status == 'Awaiting Payment') $status_color = '#f59e0b';
+                        if($status == 'Paid') $status_color = '#10b981';
+                        if($status == 'Dispensed') $status_color = '#10b981';
                 ?>
                 <div class="prescription-card">
                     <div class="presc-header">
@@ -123,6 +138,9 @@ $username = $_SESSION['username'];
                                     $pr_doc = $p_row['doctor_name'];
                                     echo htmlspecialchars((stripos($pr_doc, 'Dr.') === 0) ? $pr_doc : 'Dr. ' . $pr_doc);
                                 ?>
+                                <span style="font-size: 11px; background: <?php echo $status_color; ?>; padding: 2px 8px; border-radius: 12px; margin-left: 10px; vertical-align: middle;">
+                                    <?php echo htmlspecialchars($status); ?>
+                                </span>
                             </h4>
                             <p style="color: var(--text-gray); font-size: 13px;">
                                 <?php echo htmlspecialchars($p_row['specialization'] ?? 'Clinician'); ?> • 
@@ -145,6 +163,34 @@ $username = $_SESSION['username'];
                                 <small style="color: #94a3b8;">Additional Instructions:</small>
                                 <p style="font-size: 13px; color: #94a3b8; font-style: italic;"><?php echo htmlspecialchars($p_row['instructions']); ?></p>
                             </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 15px;">
+                        <?php if($status == 'Active' || $status == 'Pending'): ?>
+                            <form method="POST">
+                                <input type="hidden" name="prescription_id" value="<?php echo $p_row['prescription_id']; ?>">
+                                <button type="submit" name="order_prescription" style="background: #4fc3f7; color: #020617; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-shopping-cart"></i> Order Medicines
+                                </button>
+                            </form>
+                        <?php elseif($status == 'Requested'): ?>
+                            <button disabled style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: default;">
+                                <i class="fas fa-clock"></i> Waiting for Pharmacy
+                            </button>
+                        <?php elseif($status == 'Awaiting Payment' && $p_row['bill_id'] && $p_row['payment_status'] != 'Paid'): ?>
+                            <a href="billing.php" style="background: #f59e0b; color: #000; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-credit-card"></i> Pay Bill (₹<?php echo number_format($p_row['total_amount']); ?>)
+                            </a>
+                        <?php elseif($status == 'Paid'): ?>
+                            <button disabled style="background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: default;">
+                                <i class="fas fa-check"></i> Paid - Ready to Collect
+                            </button>
+                         <?php elseif($status == 'Dispensed'): ?>
+                            <button disabled style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: default;">
+                                <i class="fas fa-box-open"></i> Medicines Dispensed
+                            </button>
                         <?php endif; ?>
                     </div>
                 </div>

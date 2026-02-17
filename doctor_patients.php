@@ -114,7 +114,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -176,25 +176,37 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                     <tbody>
                         <?php
                         // Fetch patients who have had appointments with this doctor
-                        $p_query = "
+                            $search_term = '';
+                            $search_sql = '';
+                            if (isset($_GET['search']) && !empty($_GET['search'])) {
+                                $search_term = '%' . $_GET['search'] . '%';
+                                $search_sql = " AND (r.name LIKE ? OR p.patient_code LIKE ? OR u.username LIKE ?)";
+                            }
+
+                            $p_query = "
                             SELECT 
                                 u.user_id as patient_user_id,
                                 r.name as patient_name,
                                 r.email as patient_email,
                                 p.gender,
                                 p.date_of_birth,
+                                p.patient_code,
                                 MAX(a.appointment_date) as last_appointment
                             FROM appointments a
                             JOIN users u ON a.patient_id = u.user_id
                             JOIN registrations r ON u.registration_id = r.registration_id
                             LEFT JOIN patient_profiles p ON u.user_id = p.user_id
-                            WHERE a.doctor_id = ?
+                            WHERE a.doctor_id = ? $search_sql
                             GROUP BY u.user_id
                             ORDER BY last_appointment DESC
                         ";
                         
                         $stmt = $conn->prepare($p_query);
-                        $stmt->bind_param("i", $user_id);
+                        if (!empty($search_term)) {
+                            $stmt->bind_param("isss", $user_id, $search_term, $search_term, $search_term);
+                        } else {
+                            $stmt->bind_param("i", $user_id);
+                        }
                         $stmt->execute();
                         $result = $stmt->get_result();
 
@@ -219,10 +231,10 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                                 }
                                 
                                 // Generate Display ID (Mocking the format requested: HC-P-YEAR-ID)
-                                $display_id = 'HC-P-' . date('Y') . '-' . str_pad($row['patient_user_id'], 4, '0', STR_PAD_LEFT);
+                                $display_id = !empty($row['patient_code']) ? $row['patient_code'] : 'HC-P-' . date('Y') . '-' . str_pad($row['patient_user_id'], 4, '0', STR_PAD_LEFT);
                         ?>
                         <tr class="patient-row">
-                            <td><?php echo $display_id; ?></td>
+                            <td><?php echo htmlspecialchars($display_id); ?></td>
                             <td>
                                 <strong style="color: white;"><?php echo htmlspecialchars($row['patient_name']); ?></strong>
                                 <br><small style="color: #64748b;"><?php echo htmlspecialchars($row['patient_email']); ?></small>

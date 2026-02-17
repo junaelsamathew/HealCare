@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'includes/db_connect.php';
+include 'includes/email_config.php';
 
 // --- RAZORPAY CONFIG ---
 $key_secret = "2ISLOGjYRAekJBSbyBEiJt6V";
@@ -86,22 +87,10 @@ if ($generated_signature == $signature) {
 
             // --- SEND CONFIRMATION EMAIL ---
             if (!empty($pat_email)) {
-                require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-                require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-                require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
 
                 try {
-                $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
-                $mail->SMTPAuth   = true;
-                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                $mail->Password   = 'yiuwcrykatkfzdwv';
-                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-                $mail->Port       = 465;
-                $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-
-                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                $mail = new PHPMailer(true);
+                configureDefaultMail($mail);
                 $mail->addAddress($pat_email, $pat);
 
                 $email_booking_number = date('Y', strtotime($date)) . "/" . str_pad($row['appointment_id'], 6, '0', STR_PAD_LEFT);

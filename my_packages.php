@@ -118,7 +118,64 @@ $username = $_SESSION['username'];
 </head>
 <body>
 
-    <?php include 'includes/header.php'; ?>
+
+
+    <!-- Top Bar -->
+    <div class="top-bar" style="background-color: #ffffff; padding: 15px 0; border-bottom: 1px solid #e0e0e0; font-family: 'Poppins', sans-serif;">
+        <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+            <div class="top-bar-content" style="display: flex; justify-content: space-between; align-items: center;">
+                <a href="index.php" class="logo" style="text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                    <img src="images/healcare_logo.jpg" alt="HealCare Logo" class="logo-img" style="height: 65px; width: auto; object-fit: contain;"> 
+                    <style>
+                        @keyframes revealLetter {
+                            0% { opacity: 0; transform: translateY(10px); }
+                            100% { opacity: 1; transform: translateY(0); }
+                        }
+                    </style>
+                    <span class="animated-brand" style="font-size: 28px; font-weight: 700; color: #0a1f44; font-family: 'Poppins', sans-serif;">
+                        <?php 
+                        $text = "HEALCARE HOSPITAL";
+                        $chars = str_split($text);
+                        foreach ($chars as $index => $char) {
+                            $delay = $index * 0.1;
+                            if ($char === ' ') {
+                                echo "&nbsp;";
+                            } else {
+                                echo "<span style='display:inline-block; opacity:0; animation: revealLetter 0.5s forwards {$delay}s;'>$char</span>";
+                            }
+                        }
+                        ?>
+                    </span>
+                </a>
+                <div class="top-info" style="display: flex; gap: 40px;">
+                    <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                        <div class="info-icon" style="width: 40px; height: 40px; border: 2px solid #0a1f44; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0a1f44;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                        </div>
+                        <div class="info-text" style="display: flex; flex-direction: column;">
+                            <span class="info-label" style="font-size: 11px; font-weight: 600; color: #0a1f44; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;">WHATSAPP</span>
+                            <a href="https://wa.me/919539045609" target="_blank" class="info-value" style="text-decoration: none; color: #25d366; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                        </div>
+                    </div>
+
+                    <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                        <div class="info-icon" style="width: 40px; height: 40px; border: 2px solid #0a1f44; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0a1f44;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="info-text" style="display: flex; flex-direction: column;">
+                            <span class="info-label" style="font-size: 11px; font-weight: 600; color: #0a1f44; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;">LOCATION</span>
+                            <span class="info-value" style="font-size: 13px; color: #1e90ff; font-weight: 500; font-family: 'Poppins', sans-serif;">Kanjirapally, Kottayam</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="dashboard-layout">
         <aside class="sidebar">

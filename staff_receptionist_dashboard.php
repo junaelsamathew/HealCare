@@ -22,6 +22,20 @@ if($pat_res) {
     }
 }
 
+// Fetch Doctors for Dropdown
+$doc_query = "SELECT d.user_id, r.name, d.department, d.consultation_fee 
+              FROM doctors d 
+              JOIN users u ON d.user_id = u.user_id 
+              JOIN registrations r ON u.registration_id = r.registration_id 
+              ORDER BY d.department, r.name";
+$doc_res = $conn->query($doc_query);
+$doctor_list = [];
+if ($doc_res) {
+    while ($doc = $doc_res->fetch_assoc()) {
+        $doctor_list[] = $doc;
+    }
+}
+
 // Handle POST Requests
 $msg = "";
 $msg_type = "";
@@ -31,35 +45,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'register_patient') {
         $p_name = mysqli_real_escape_string($conn, $_POST['p_name']);
         $p_phone = mysqli_real_escape_string($conn, $_POST['p_phone']);
-        $p_dept = mysqli_real_escape_string($conn, $_POST['p_dept']);
-        $p_age = mysqli_real_escape_string($conn, $_POST['p_age']);
+        $p_email = mysqli_real_escape_string($conn, $_POST['p_email']);
+        // If email is empty, generate a dummy one
+        if(empty($p_email)) {
+            $p_email = strtolower(str_replace(' ', '', $p_name)) . rand(100,999) . '@healcare.local';
+        }
+
+        $p_dept = isset($_POST['p_dept']) ? mysqli_real_escape_string($conn, $_POST['p_dept']) : ''; // Initial Dept or Preferred Dept
+        $p_age = (int)$_POST['p_age'];
         $p_gender = mysqli_real_escape_string($conn, $_POST['p_gender']);
+        $p_doctor_id = (int)$_POST['p_doctor']; // Selected Doctor ID
 
         // Generate Patient ID
         $year = date("Y");
         $rand = rand(1000, 9999);
         $p_code = "HC-P-{$year}-{$rand}";
         
-        // Create User Account (Optional, usually for Portal Access)
-        // For Quick Reg, we might just store in patient_profiles linked to a new user
-        // Password = Phone number as default
         $password = password_hash($p_phone, PASSWORD_DEFAULT);
         
         $conn->begin_transaction();
         try {
-            $conn->query("INSERT INTO users (username, password, role, status) VALUES ('$p_code', '$password', 'patient', 'Active')");
+            // 1. Insert into Registrations (Required for tracking name/role properly)
+            // Note: Registrations table has 'name', 'email', 'phone', 'password', 'user_type', 'status'
+            $stmt_reg = $conn->prepare("INSERT INTO registrations (name, email, phone, password, user_type, status, registered_date) VALUES (?, ?, ?, ?, 'patient', 'Approved', CURDATE())");
+            $stmt_reg->bind_param("ssss", $p_name, $p_email, $p_phone, $password);
+            $stmt_reg->execute();
+            $new_reg_id = $conn->insert_id;
+
+            // 2. Insert into Users
+            $stmt_user = $conn->prepare("INSERT INTO users (username, password, role, status, registration_id) VALUES (?, ?, 'patient', 'Active', ?)");
+            $stmt_user->bind_param("ssi", $p_code, $password, $new_reg_id);
+            $stmt_user->execute();
             $new_user_id = $conn->insert_id;
             
-            $conn->query("INSERT INTO patient_profiles (user_id, patient_code, name, phone, gender, department_visit) VALUES ($new_user_id, '$p_code', '$p_name', '$p_phone', '$p_gender', '$p_dept')");
-            $new_patient_id = $conn->insert_id;
+            // 3. Insert into Patient Profiles
+            $dob = date('Y-m-d', strtotime("-{$p_age} years"));
+            $stmt_prof = $conn->prepare("INSERT INTO patient_profiles (user_id, patient_code, name, phone, gender, date_of_birth) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt_prof->bind_param("isssss", $new_user_id, $p_code, $p_name, $p_phone, $p_gender, $dob);
+            $stmt_prof->execute();
             
-            // Auto Book Appointment if desired? Let's just register.
-            $msg = "Patient Registered! ID: <strong>$p_code</strong>";
+            // 4. Create Appointment if Doctor Selected
+            $appt_msg = "";
+            if ($p_doctor_id > 0) {
+                $appt_date = date('Y-m-d H:i:s'); // Now
+                
+                // Calculate Queue Number for this Doctor Today
+                $q_res = $conn->query("SELECT MAX(queue_number) as max_q FROM appointments WHERE doctor_id = $p_doctor_id AND DATE(appointment_date) = CURDATE()");
+                $max_q = $q_res->fetch_assoc()['max_q'] ?? 0;
+                $token_no = $max_q + 1;
+
+                // Find Department of Doctor if not set correctly in p_dept (though usually p_dept matches)
+                // We use the dropdown department if available, else fetch from DB
+                // For safety, let's just use the posted dept or fetch it
+                $dept_chk = $conn->query("SELECT department FROM doctors WHERE user_id = $p_doctor_id");
+                $doc_dept = ($dept_chk && $dept_chk->num_rows > 0) ? $dept_chk->fetch_assoc()['department'] : $p_dept;
+
+                $stmt_appt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, status, queue_number) VALUES (?, ?, ?, ?, 'Waiting', ?)");
+                $stmt_appt->bind_param("iisss", $new_user_id, $p_doctor_id, $doc_dept, $appt_date, $token_no);
+                $stmt_appt->execute();
+                
+                $appt_msg = "<br>Appointment Booked with Dr. (Token: #$token_no)";
+            }
+            
+            $msg = "Patient Registered! ID: <strong>$p_code</strong> $appt_msg";
             $msg_type = "success";
+
+            // 5. Add Insurance Policy (Optional)
+            if (!empty($_POST['ins_provider']) && !empty($_POST['ins_policy_no'])) {
+                $ins_provider = $_POST['ins_provider'];
+                $ins_policy = $_POST['ins_policy_no'];
+                $ins_limit = (float)$_POST['ins_limit'];
+                $ins_percent = (int)$_POST['ins_percent'];
+                $ins_valid = $_POST['ins_valid_until']; // valid_until
+                
+                // Set valid_from to today
+                $ins_from = date('Y-m-d');
+                
+                $stmt_ins = $conn->prepare("INSERT INTO insurance_policies (patient_id, provider_name, policy_number, coverage_limit, coverage_percentage, valid_from, valid_until, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')");
+                $stmt_ins->bind_param("issdiss", $new_user_id, $ins_provider, $ins_policy, $ins_limit, $ins_percent, $ins_from, $ins_valid);
+                $stmt_ins->execute();
+            }
+
             $conn->commit();
         } catch (Exception $e) {
             $conn->rollback();
             $msg = "Error: " . $e->getMessage();
+            $msg_type = "error";
+        }
+    }
+
+    // 1.5 Add Insurance Policy (Standalone)
+    if (isset($_POST['action']) && $_POST['action'] === 'add_policy') {
+        $p_id = (int)$_POST['patient_id'];
+        $ins_provider = $_POST['ins_provider'];
+        $ins_policy = $_POST['ins_policy_no'];
+        $ins_limit = (float)$_POST['ins_limit'];
+        $ins_percent = (int)$_POST['ins_percent'];
+        $ins_from = $_POST['ins_valid_from'];
+        $ins_valid = $_POST['ins_valid_until'];
+        
+        $stmt = $conn->prepare("INSERT INTO insurance_policies (patient_id, provider_name, policy_number, coverage_limit, coverage_percentage, valid_from, valid_until, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')");
+        $stmt->bind_param("issdiss", $p_id, $ins_provider, $ins_policy, $ins_limit, $ins_percent, $ins_from, $ins_valid);
+        
+        if ($stmt->execute()) {
+            $msg = "Insurance Policy Added Successfully!";
+            $msg_type = "success";
+        } else {
+            $msg = "Error adding policy: " . $conn->error;
             $msg_type = "error";
         }
     }
@@ -262,7 +354,7 @@ $calendar_result = $conn->query($cal_sql);
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             
@@ -296,6 +388,7 @@ $calendar_result = $conn->query($cal_sql);
             <a href="?section=queue" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'queue') ? 'active' : ''; ?>"><i class="fas fa-calendar-alt"></i> Reception / Queue</a>
             <a href="?section=billing" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'billing') ? 'active' : ''; ?>"><i class="fas fa-file-invoice-dollar"></i> Patient Billing</a>
             <a href="?section=reports" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'reports') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Reports</a>
+            <a href="?section=insurance" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'insurance') ? 'active' : ''; ?>"><i class="fas fa-shield-alt"></i> Insurance</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
 
@@ -629,6 +722,66 @@ $calendar_result = $conn->query($cal_sql);
                     </div>
                 </div>
 
+            <?php elseif ($_GET['section'] == 'insurance'): ?>
+                <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="color:#fff; font-size: 28px;">Insurance Management</h1>
+                        <p style="color:#64748b; font-size:14px;">Manage patient insurance policies and coverage.</p>
+                    </div>
+                    <button class="btn-action-main" onclick="openModal('insuranceModal')" style="background: #3b82f6; border-color: #3b82f6;"><i class="fas fa-plus"></i> Add New Policy</button>
+                </div>
+
+                <div class="stat-card-new" style="background: rgba(30, 41, 59, 0.4);">
+                    <table class="queue-table">
+                        <thead>
+                            <tr>
+                                <th>Patient</th>
+                                <th>Provider</th>
+                                <th>Policy No</th>
+                                <th>Coverage</th>
+                                <th>Valid Until</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $ins_sql = "
+                                SELECT ip.*, r.name as patient_name, pp.patient_code 
+                                FROM insurance_policies ip
+                                JOIN users u ON ip.patient_id = u.user_id
+                                JOIN registrations r ON u.registration_id = r.registration_id
+                                LEFT JOIN patient_profiles pp ON u.user_id = pp.user_id
+                                ORDER BY ip.created_at DESC LIMIT 50
+                            ";
+                            $ins_res = $conn->query($ins_sql);
+                            if($ins_res && $ins_res->num_rows > 0):
+                                while($pol = $ins_res->fetch_assoc()):
+                                    $is_active = ($pol['valid_until'] >= date('Y-m-d') && $pol['status'] == 'Active');
+                                    $status_color = $is_active ? '#10b981' : '#ef4444';
+                                    $status_text = $pol['status'];
+                                    if($pol['status'] == 'Active' && $pol['valid_until'] < date('Y-m-d')) $status_text = 'Expired';
+                            ?>
+                            <tr>
+                                <td>
+                                    <strong style="color:white;"><?php echo htmlspecialchars($pol['patient_name']); ?></strong><br>
+                                    <small style="color:#64748b;"><?php echo $pol['patient_code']; ?></small>
+                                </td>
+                                <td><?php echo htmlspecialchars($pol['provider_name']); ?></td>
+                                <td><?php echo htmlspecialchars($pol['policy_number']); ?></td>
+                                <td>
+                                    <?php echo $pol['coverage_percentage']; ?>% Cover<br>
+                                    <small>Limit: ₹<?php echo number_format($pol['coverage_limit']); ?></small>
+                                </td>
+                                <td><?php echo date('d M Y', strtotime($pol['valid_until'])); ?></td>
+                                <td><span style="color: <?php echo $status_color; ?>; font-weight: 600;"><?php echo $status_text; ?></span></td>
+                            </tr>
+                            <?php endwhile; else: ?>
+                            <tr><td colspan="6" style="text-align:center; padding:30px;">No insurance policies found.</td></tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+
             <?php endif; ?>
         </main>
     </div>
@@ -642,11 +795,51 @@ $calendar_result = $conn->query($cal_sql);
             </div>
             <form method="POST">
                 <input type="hidden" name="action" value="register_patient">
-                <div class="form-group-staff"><label>Full Name</label><input type="text" name="p_name" required></div>
-                <div class="form-group-staff"><label>Phone Number</label><input type="text" name="p_phone" required></div>
+                <div class="form-group-staff">
+                    <label>Full Name</label>
+                    <input type="text" name="p_name" id="p_name" required>
+                    <small id="nameError" style="color: red; display: none;">Please enter a valid name (letters and spaces only).</small>
+                </div>
+                <div class="form-group-staff">
+                    <label>Phone Number</label>
+                    <input type="text" name="p_phone" id="p_phone" required>
+                    <small id="phoneError" style="color: red; display: none;">Please enter a valid 10-digit phone number.</small>
+                </div>
                 <div class="form-group-staff"><label>Gender</label><select name="p_gender"><option>Male</option><option>Female</option></select></div>
-                <div class="form-group-staff"><label>Age</label><input type="number" name="p_age"></div>
-                <div class="form-group-staff"><label>Initial Dept</label><select name="p_dept"><option>General Medicine</option><option>ENT</option><option>Dental</option></select></div>
+                <div class="form-group-staff">
+                    <label>Age</label>
+                    <input type="number" name="p_age" id="p_age" min="0" max="150">
+                    <small id="ageError" style="color: red; display: none;">Please enter a valid age.</small>
+                </div>
+                <div class="form-group-staff">
+                    <label>Email (Optional)</label>
+                    <input type="email" name="p_email" placeholder="patient@example.com">
+                </div>
+                <!-- Initial Dept removed in favor of Doctor Selection, or kept as fallback -->
+                <!-- <div class="form-group-staff"><label>Initial Dept</label><select name="p_dept"><option>General Medicine</option><option>ENT</option><option>Dental</option></select></div> -->
+                
+                <div class="form-group-staff">
+                    <label>Assign Doctor</label>
+                    <select name="p_doctor" style="background: #1e293b; color: white;" required>
+                        <option value="">-- Select Doctor --</option>
+                        <?php foreach($doctor_list as $doc): ?>
+                            <option value="<?php echo $doc['user_id']; ?>">
+                                <?php echo htmlspecialchars($doc['name']); ?> - <?php echo htmlspecialchars($doc['department']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                
+                <h4 style="color: #64748b; font-size: 14px; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid var(--border-soft); padding-bottom: 5px;">Insurance Details (Optional)</h4>
+                <div class="form-group-staff"><label>Insurance Provider</label><input type="text" name="ins_provider" placeholder="e.g. Star Health"></div>
+                <div class="form-group-staff"><label>Policy Number</label><input type="text" name="ins_policy_no" placeholder="e.g. POL-123456789"></div>
+                <div style="display:flex; gap:15px;">
+                    <div class="form-group-staff" style="flex:1;"><label>Coverage Limit (₹)</label><input type="number" name="ins_limit" placeholder="500000"></div>
+                    <div class="form-group-staff" style="flex:1;"><label>Coverage (%)</label><input type="number" name="ins_percent" placeholder="80" max="100"></div>
+                </div>
+                <div class="form-group-staff"><label>Valid Until</label><input type="date" name="ins_valid_until" min="<?php echo date('Y-m-d'); ?>"></div>
+
                 <button type="submit" style="width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer;">Register Patient</button>
             </form>
         </div>
@@ -663,7 +856,7 @@ $calendar_result = $conn->query($cal_sql);
                 <input type="hidden" name="action" value="book_appointment">
                 <div class="form-group-staff">
                     <label>Select Patient</label>
-                    <select name="patient_id" required style="background: #1e293b; color: white;">
+                    <select name="patient_id" id="b_patient" required style="background: #1e293b; color: white;">
                         <option value="">-- Choose Patient --</option>
                         <?php foreach($patient_list as $p): ?>
                             <option value="<?php echo $p['user_id']; ?>">
@@ -671,11 +864,20 @@ $calendar_result = $conn->query($cal_sql);
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <small id="b_patientError" style="color: red; display: none;">Please select a patient.</small>
                 </div>
                 <!-- <div class="form-group-staff"><label>Patient Name</label><input type="text" name="b_name" required placeholder="Search or Type Name"></div> -->
                 <div class="form-group-staff"><label>Department</label><select name="b_dept" style="background: #1e293b; color: white;"><option>General Medicine</option><option>ENT</option><option>Dental</option><option>Orthopedics</option><option>Pediatrics</option></select></div>
-                <div class="form-group-staff"><label>Date</label><input type="date" name="b_date" required min="<?php echo date('Y-m-d'); ?>"></div>
-                <div class="form-group-staff"><label>Time</label><input type="time" name="b_time" required></div>
+                <div class="form-group-staff">
+                    <label>Date</label>
+                    <input type="date" name="b_date" id="b_date" required min="<?php echo date('Y-m-d'); ?>">
+                    <small id="b_dateError" style="color: red; display: none;">Please select a valid future date.</small>
+                </div>
+                <div class="form-group-staff">
+                    <label>Time</label>
+                    <input type="time" name="b_time" id="b_time" required>
+                    <small id="b_timeError" style="color: red; display: none;">Please select a time.</small>
+                </div>
                 <button type="submit" style="width: 100%; padding: 12px; background: #10b981; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer;">Confirm Booking</button>
             </form>
         </div>
@@ -753,6 +955,41 @@ $calendar_result = $conn->query($cal_sql);
         </div>
     </div>
 
+    <!-- Add Insurance Policy Modal -->
+    <div id="insuranceModal" class="modal-overlay">
+        <div class="modal-box">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
+                <h3 style="color: #fff;">Add Insurance Policy</h3>
+                <i class="fas fa-times" style="cursor: pointer; color: #64748b;" onclick="closeModal('insuranceModal')"></i>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="add_policy">
+                <div class="form-group-staff">
+                    <label>Select Patient</label>
+                    <select name="patient_id" required style="background: #1e293b; color: white;">
+                        <option value="">-- Choose Patient --</option>
+                        <?php foreach($patient_list as $p): ?>
+                            <option value="<?php echo $p['user_id']; ?>">
+                                <?php echo htmlspecialchars($p['name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group-staff"><label>Provider Name</label><input type="text" name="ins_provider" required placeholder="e.g. Star Health"></div>
+                <div class="form-group-staff"><label>Policy Number</label><input type="text" name="ins_policy_no" required></div>
+                <div style="display:flex; gap:15px;">
+                    <div class="form-group-staff" style="flex:1;"><label>Limit (₹)</label><input type="number" name="ins_limit" required></div>
+                    <div class="form-group-staff" style="flex:1;"><label>Cover (%)</label><input type="number" name="ins_percent" required placeholder="80"></div>
+                </div>
+                <div style="display:flex; gap:15px;">
+                    <div class="form-group-staff" style="flex:1;"><label>Valid From</label><input type="date" name="ins_valid_from" required value="<?php echo date('Y-m-d'); ?>"></div>
+                    <div class="form-group-staff" style="flex:1;"><label>Valid Until</label><input type="date" name="ins_valid_until" required></div>
+                </div>
+                <button type="submit" style="width: 100%; padding: 12px; background: #3b82f6; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer;">Add Policy</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -768,6 +1005,83 @@ $calendar_result = $conn->query($cal_sql);
                 event.target.style.display = 'none';
             }
         }
+    </script>
+    <script>
+        // Separate event listener for Book Appointment Form
+        document.querySelector('form[action="?"]').parentNode.parentNode.addEventListener('submit', function(e) {
+             // Since there are multiple forms, we need to be more specific or delegate.
+             // However, `document.querySelector('form[action="?"]')` only selects the first one (likely Registration).
+             // Let's use a more robust way by adding IDs to forms or checking the submitter.
+             // But to keep consistent with the previous patch style, let's attach listeners to all forms and check the hidden action.
+        });
+
+        // Better Approach: Attach listener to ALL forms and switch based on action value
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(event) {
+                const actionInput = form.querySelector('input[name="action"]');
+                if (!actionInput) return;
+
+                let isValid = true;
+                
+                // 1. REGISTRATION FORM
+                if (actionInput.value === 'register_patient') {
+                     const nameInput = document.getElementById('p_name');
+                     const nameError = document.getElementById('nameError');
+                     const nameRegex = /^[a-zA-Z\s]+$/;
+                     if (!nameRegex.test(nameInput.value.trim())) {
+                         nameError.style.display = 'block';
+                         isValid = false;
+                     } else { nameError.style.display = 'none'; }
+
+                     const phoneInput = document.getElementById('p_phone');
+                     const phoneError = document.getElementById('phoneError');
+                     const phoneRegex = /^\d{10}$/;
+                     if (!phoneRegex.test(phoneInput.value.trim())) {
+                         phoneError.style.display = 'block';
+                         isValid = false;
+                     } else { phoneError.style.display = 'none'; }
+                     
+                     const ageInput = document.getElementById('p_age');
+                     const ageError = document.getElementById('ageError');
+                     if (ageInput.value < 0 || ageInput.value > 150) {
+                         ageError.style.display = 'block';
+                         isValid = false;
+                     } else { ageError.style.display = 'none'; }
+                }
+
+                // 2. BOOKING FORM
+                if (actionInput.value === 'book_appointment') {
+                    const patientInput = document.getElementById('b_patient');
+                    const patientError = document.getElementById('b_patientError');
+                    if (patientInput.value === "") {
+                        patientError.style.display = 'block';
+                        isValid = false;
+                    } else { patientError.style.display = 'none'; }
+
+                    const dateInput = document.getElementById('b_date');
+                    const dateError = document.getElementById('b_dateError');
+                    const selectedDate = new Date(dateInput.value);
+                    const today = new Date();
+                    today.setHours(0,0,0,0); // reset time part
+                    
+                    if (!dateInput.value || selectedDate < today) {
+                        dateError.style.display = 'block';
+                        isValid = false;
+                    } else { dateError.style.display = 'none'; }
+
+                    const timeInput = document.getElementById('b_time');
+                    const timeError = document.getElementById('b_timeError');
+                    if (!timeInput.value) {
+                         timeError.style.display = 'block';
+                         isValid = false;
+                    } else { timeError.style.display = 'none'; }
+                }
+
+                if (!isValid) {
+                    event.preventDefault();
+                }
+            });
+        });
     </script>
     <?php 
     // Set staff_type for the modal

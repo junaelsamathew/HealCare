@@ -2,12 +2,11 @@
 session_start();
 include 'includes/db_connect.php';
 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
+include 'includes/email_config.php';
 
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
 
 $email = $_SESSION['pending_email'] ?? '';
 $action = $_POST['action'] ?? '';
@@ -88,16 +87,7 @@ if (isset($_POST['resend_otp'])) {
     // Copied from auth_handler.php mail logic
     $mail = new PHPMailer(true);
     try {
-        $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = 'healcare.mail.services@gmail.com';
-        $mail->Password   = 'yiuwcrykatkfzdwv';
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        $mail->Port       = 465;
-        $mail->SMTPOptions = array('ssl' => array('verify_peer'=>false,'verify_peer_name'=>false,'allow_self_signed'=>true));
-        
-        $mail->setFrom('healcare.mail.services@gmail.com', 'HealCare HR');
+        configureDefaultMail($mail);
         $mail->addAddress($email, $_SESSION['pending_app_data']['name']);
         $mail->isHTML(true);
         $mail->Subject = 'Verify Your Email - HealCare Application';

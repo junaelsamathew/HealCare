@@ -1,6 +1,10 @@
 <?php
 session_start();
 include 'includes/db_connect.php';
+include 'includes/email_config.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'staff') {
     header("Location: login.php");
@@ -11,28 +15,119 @@ $user_id = $_SESSION['user_id'];
 $msg = "";
 $msg_type = "";
 
+// Authorization Check for Stock Management
+$is_authorized_pharmacist = false;
+if ($_SESSION['user_role'] == 'admin') {
+    $is_authorized_pharmacist = true;
+} elseif ($_SESSION['user_role'] == 'staff') {
+    // Check staff_type from registrations table
+    $auth_q = $conn->query("SELECT staff_type FROM registrations WHERE registration_id = (SELECT registration_id FROM users WHERE user_id = $user_id)");
+    if ($auth_q && $auth_q->num_rows > 0) {
+        $st = $auth_q->fetch_assoc()['staff_type'];
+        // Check for Pharmacist (or similar roles if any)
+        if (stripos($st, 'Pharmacist') !== false || stripos($st, 'Admin') !== false) {
+             $is_authorized_pharmacist = true;
+        }
+    }
+}
+
 // Handle POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'add_stock') {
-        $name = mysqli_real_escape_string($conn, $_POST['med_name']);
-        $type = mysqli_real_escape_string($conn, $_POST['med_type']);
-        $mf = mysqli_real_escape_string($conn, $_POST['manufacturer']);
-        $batch = mysqli_real_escape_string($conn, $_POST['batch_no']);
-        $exp = mysqli_real_escape_string($conn, $_POST['expiry']);
-        $qty = (int)$_POST['quantity'];
-        $price = (float)$_POST['price'];
-        $loc = mysqli_real_escape_string($conn, $_POST['location']);
+        if (!$is_authorized_pharmacist) {
+             $msg = "Unauthorized Access: Only Authorized Pharmacists can add stock.";
+             $msg_type = "error";
+        } elseif (!isset($_POST['verified_check'])) {
+             $msg = "Error: You must verify the stock details.";
+             $msg_type = "error";
+        } else {
+            $name = mysqli_real_escape_string($conn, $_POST['med_name']);
+            $invoice_ref = mysqli_real_escape_string($conn, $_POST['supplier_invoice']);
+            $type = mysqli_real_escape_string($conn, $_POST['med_type']);
+            $mf = mysqli_real_escape_string($conn, $_POST['manufacturer']);
+            $batch = mysqli_real_escape_string($conn, $_POST['batch_no']);
+            $exp = mysqli_real_escape_string($conn, $_POST['expiry']);
+            $qty = (int)$_POST['quantity'];
+            $price = (float)$_POST['price'];
+            $loc = mysqli_real_escape_string($conn, $_POST['location']);
+    
+            $sql = "INSERT INTO pharmacy_stock (medicine_name, medicine_type, manufacturer, batch_number, expiry_date, quantity, unit_price, location, last_restocked_date) 
+                    VALUES ('$name', '$type', '$mf', '$batch', '$exp', $qty, $price, '$loc', CURDATE())";
+            
+            if ($conn->query($sql)) {
+                $new_stock_id = $conn->insert_id;
+                // Log Addition
+                $log_details = "Inv: $invoice_ref, Batch: $batch, Expiry: $exp";
+                $conn->query("INSERT INTO pharmacy_logs (stock_id, medicine_name, action_type, quantity, performed_by, details) VALUES ($new_stock_id, '$name', 'Added', $qty, $user_id, '$log_details')");
 
-        $sql = "INSERT INTO pharmacy_stock (medicine_name, medicine_type, manufacturer, batch_number, expiry_date, quantity, unit_price, location, last_restocked_date) 
-                VALUES ('$name', '$type', '$mf', '$batch', '$exp', $qty, $price, '$loc', CURDATE())";
-        
-        if ($conn->query($sql)) {
             $msg = "New stock added successfully!";
             $msg_type = "success";
         } else {
             $msg = "Error adding stock: " . $conn->error;
             $msg_type = "error";
         }
+        }
+    } elseif (isset($_POST['action']) && $_POST['action'] === 'notify_admin') {
+        // Fetch out of stock items
+        $oos_sql = "SELECT medicine_name, manufacturer FROM pharmacy_stock WHERE quantity = 0";
+        $oos_res = $conn->query($oos_sql);
+        
+        if ($oos_res && $oos_res->num_rows > 0) {
+            $items_list = "";
+            while($row = $oos_res->fetch_assoc()) {
+                $items_list .= "<li><strong>" . htmlspecialchars($row['medicine_name']) . "</strong> (" . htmlspecialchars($row['manufacturer']) . ")</li>";
+            }
+            
+            // Get Admin Emails
+            $admin_emails = [];
+            $adm_res = $conn->query("SELECT email FROM users WHERE role = 'admin'");
+            while($row = $adm_res->fetch_assoc()) {
+                $admin_emails[] = $row['email'];
+            }
+            // Add fallback hardcoded admin
+            if(!in_array('admin@gmail.com', $admin_emails)) $admin_emails[] = 'admin@gmail.com';
+            
+            $mail = new PHPMailer(true);
+            try {
+                configureDefaultMail($mail);
+                $mail->setFrom('system@healcare.com', 'HealCare Pharmacy');
+                foreach($admin_emails as $email) {
+                    $mail->addAddress($email);
+                }
+                
+                $mail->isHTML(true);
+                $mail->Subject = 'URGENT: Medicine Stock Shortage Alert';
+                $mail->Body = "
+                <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>
+                    <h2 style='color: #ef4444;'>Stock Shortage Alert</h2>
+                    <p>The following medicines are currently <strong>OUT OF STOCK</strong> in the pharmacy:</p>
+                    <ul>$items_list</ul>
+                    <p>Please initiate procurement process immediately.</p>
+                    <p style='color: #64748b; font-size: 12px;'>Sent by Pharmacist Dashboard</p>
+                </div>";
+                
+                $mail->send();
+                
+                // Log Notification to DB if table exists
+                $chk_n = $conn->query("SHOW TABLES LIKE 'notifications'");
+                if($chk_n && $chk_n->num_rows > 0) {
+                     $n_msg = "Stock Alert: " . $oos_res->num_rows . " medicines are out of stock.";
+                     // Assuming admin user_id is 0 or find one. Let's start with 0.
+                     $conn->query("INSERT INTO notifications (user_id, message, is_read, created_at) VALUES (0, '" . mysqli_real_escape_string($conn, $n_msg) . "', 0, NOW())");
+                }
+
+                $msg = "Admin notified of stock shortages successfully via Email!";
+                $msg_type = "success";
+            
+            } catch (Exception $e) {
+                $msg = "Error sending notification: " . $mail->ErrorInfo;
+                $msg_type = "error";
+            }
+        } else {
+            $msg = "No out-of-stock items found to report.";
+            $msg_type = "info";
+        }
+
     } elseif (isset($_POST['action']) && $_POST['action'] === 'edit_stock') {
         $id = (int)$_POST['stock_id'];
         $name = mysqli_real_escape_string($conn, $_POST['med_name']);
@@ -77,34 +172,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->begin_transaction();
             try {
                 // 1. Smart Stock Deduction Logic
-                $presc_res = $conn->query("SELECT medicine_details FROM prescriptions WHERE prescription_id = $id");
+                // 1. Smart Stock Deduction Logic
+                $presc_res = $conn->query("SELECT medicine_details, duration FROM prescriptions WHERE prescription_id = $id");
                 if ($presc_res && $presc_res->num_rows > 0) {
-                    $presc_text = strtolower($presc_res->fetch_assoc()['medicine_details']);
+                    $p_data = $presc_res->fetch_assoc();
                     
-                    // Fetch all available stock (Order by expiry for FIFO)
-                    $stock_q = $conn->query("SELECT stock_id, medicine_name, quantity FROM pharmacy_stock WHERE quantity > 0 ORDER BY expiry_date ASC");
-                    while ($item = $stock_q->fetch_assoc()) {
-                        $med_name = strtolower($item['medicine_name']);
-                        // Check if this medicine is in the current prescription
-                        if (strpos($presc_text, $med_name) !== false) {
-                            // Calculate quantity needed (Parity with billing logic)
-                            $days = 5; 
-                            if (preg_match('/(\d+)\s*days?/i', $presc_text, $matches)) $days = intval($matches[1]);
-                            elseif (preg_match('/(\d+)\s*weeks?/i', $presc_text, $matches)) $days = intval($matches[1]) * 7;
+                    // Split multiple medicines (comma separated)
+                    // Note: This simple split assumes medicine names don't contain commas. 
+                    // If they might, we'd need a more robust delimiter or regex.
+                    $med_strs = explode(', ', $p_data['medicine_details']);
+                    $dur_strs = explode(', ', $p_data['duration']); 
 
-                            $per_day = 2;
-                            if (preg_match('/(\d+)-(\d+)-(\d+)/', $presc_text, $f_matches)) {
-                                $per_day = intval($f_matches[1]) + intval($f_matches[2]) + intval($f_matches[3]);
-                            } elseif (strpos($presc_text, 'od') !== false) { $per_day = 1; }
-                            elseif (strpos($presc_text, 'bd') !== false || strpos($presc_text, 'bid') !== false) { $per_day = 2; }
-                            elseif (strpos($presc_text, 'tds') !== false || strpos($presc_text, 'tid') !== false) { $per_day = 3; }
-                            
-                            $needed = $days * $per_day;
-                            $stock_id = $item['stock_id'];
-                            
-                            // Perform Deduction (Ensure we don't go below zero)
-                            $conn->query("UPDATE pharmacy_stock SET quantity = GREATEST(0, quantity - $needed) WHERE stock_id = $stock_id");
-                        }
+                    foreach($med_strs as $idx => $med_str) {
+                         if(empty(trim($med_str))) continue;
+
+                         // Parse Name: "Paracetamol (500mg) - 1-0-1" -> "Paracetamol"
+                         $med_name = $med_str;
+                         // Extract name before '('
+                         if(strpos($med_str, '(') !== false) {
+                             $med_name = trim(substr($med_str, 0, strpos($med_str, '(')));
+                         } elseif(strpos($med_str, '-') !== false) {
+                             // Fallback if no brackets but has hyphen: "Paracetamol - 1-0-1"
+                             $med_name = trim(substr($med_str, 0, strpos($med_str, '-')));
+                         }
+                         $med_name_safe = mysqli_real_escape_string($conn, $med_name);
+
+                         // Parse Duration (Default 5 days if missing)
+                         $dur_str = $dur_strs[$idx] ?? '5 days';
+                         $days = intval($dur_str);
+                         if($days <= 0) $days = 5; 
+
+                         // Parse Frequency for daily count
+                         $freq_part = '';
+                         if(strrpos($med_str, '-') !== false) {
+                             $freq_part = trim(substr($med_str, strrpos($med_str, '-') + 1));
+                         }
+                         
+                         $per_day = 0;
+                         // Regex for "1-0-1", "1-1-1", etc
+                         if (preg_match('/(\d+)-(\d+)-(\d+)/', $freq_part, $f_matches)) {
+                             $per_day = intval($f_matches[1]) + intval($f_matches[2]) + intval($f_matches[3]);
+                         } elseif (preg_match('/(\d+)-(\d+)/', $freq_part, $f_matches)) { 
+                             $per_day = intval($f_matches[1]) + intval($f_matches[2]);
+                         }
+                         
+                         // Text based
+                         if ($per_day == 0) {
+                             if (stripos($med_str, 'qid') !== false) { $per_day = 4; }
+                             elseif (stripos($med_str, 'tds') !== false || stripos($med_str, 'tid') !== false) { $per_day = 3; }
+                             elseif (stripos($med_str, 'bd') !== false || stripos($med_str, 'bid') !== false) { $per_day = 2; }
+                             elseif (stripos($med_str, 'od') !== false) { $per_day = 1; }
+                             else { $per_day = 2; } // Default assumption
+                         }
+
+                         $qty_needed = $days * $per_day;
+
+                         // Find Stock - FIFO (First Expiring First Out)
+                         // Matches medicine name at start of stock name
+                         $stock_q = $conn->query("SELECT stock_id, quantity, medicine_name FROM pharmacy_stock WHERE medicine_name LIKE '$med_name_safe%' AND quantity > 0 ORDER BY expiry_date ASC LIMIT 1");
+                         
+                         if($stock_q && $stock_q->num_rows > 0) {
+                             $stock = $stock_q->fetch_assoc();
+                             $s_id = $stock['stock_id'];
+                             $real_name = $stock['medicine_name'];
+                             
+                             // Deduct from batch
+                             $conn->query("UPDATE pharmacy_stock SET quantity = GREATEST(0, quantity - $qty_needed) WHERE stock_id = $s_id");
+                             
+                             // Log Dispense
+                             if ($conn->affected_rows > 0) {
+                                 $log_details = "RX #$id";
+                                 $conn->query("INSERT INTO pharmacy_logs (stock_id, medicine_name, action_type, quantity, performed_by, details) VALUES ($s_id, '$real_name', 'Dispensed', $qty_needed, $user_id, '$log_details')");
+                             }
+                         }
                     }
                 }
 
@@ -197,7 +337,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             
@@ -225,6 +365,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="?section=history" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'history') ? 'active' : ''; ?>"><i class="fas fa-history"></i> Dispensed History</a>
             <a href="?section=reports" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'reports') ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Pharmacy Reports</a>
             <a href="?section=alerts" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'alerts') ? 'active' : ''; ?>"><i class="fas fa-bell"></i> Expiry Alerts</a>
+            <a href="?section=logs" class="nav-item <?php echo (isset($_GET['section']) && $_GET['section'] == 'logs') ? 'active' : ''; ?>"><i class="fas fa-list-alt"></i> Stock Logs</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
 
@@ -272,11 +413,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             JOIN registrations rd ON ud.registration_id = rd.registration_id
                             LEFT JOIN doctors d ON ud.user_id = d.user_id
                             LEFT JOIN billing b ON p.prescription_id = b.reference_id AND (b.bill_type LIKE 'Pharmacy%')
-                            WHERE p.status IN ('Pending', 'Awaiting Payment') OR p.status IS NULL
+                            WHERE p.status IN ('Requested', 'Awaiting Payment', 'Paid')
                             ORDER BY 
                                 CASE 
-                                    WHEN p.status = 'Awaiting Payment' THEN 1 
-                                    ELSE 2 
+                                    WHEN p.status = 'Requested' THEN 1
+                                    WHEN p.status = 'Awaiting Payment' THEN 2
+                                    ELSE 3 
                                 END ASC, p.prescription_date DESC
                         ";
                         $presc_res = $conn->query($presc_sql);
@@ -383,9 +525,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
             <?php elseif ($_GET['section'] == 'reports'): ?>
-                <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Pharmacy Reports</h1>
-                    <p style="color:#64748b; font-size:14px;">Access medicine sales, stock usage, and expiry analytics.</p>
+                <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="color:#fff; font-size: 28px;">Pharmacy Reports</h1>
+                        <p style="color:#64748b; font-size:14px;">Access medicine sales, stock usage, and expiry analytics.</p>
+                    </div>
+                     <button onclick="openReportModal()" style="background: #4fc3f7; color: #020617; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-upload"></i> Upload Report
+                    </button>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px;">
@@ -445,13 +592,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <h1 style="color:#fff; font-size: 28px;">Inventory Management</h1>
                         <p style="color:#64748b; font-size:14px;">Track medicine stock, batches, and expiry dates.</p>
                     </div>
-                    <button class="btn-action-main" onclick="openModal('addStockModal')" style="background: #4fc3f7; color: #020617; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;"><i class="fas fa-plus"></i> Add New Stock</button>
+                    <?php if($is_authorized_pharmacist): ?>
+                        <button class="btn-action-main" onclick="openModal('addStockModal')" style="background: #4fc3f7; color: #020617; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;"><i class="fas fa-plus"></i> Add New Stock</button>
+                    <?php endif; ?>
                 </div>
 
+                <?php
+                // Fetch high-level counts
+                $count_total = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock")->fetch_assoc()['c'];
+                $count_low = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE quantity > 0 AND quantity < 20")->fetch_assoc()['c'];
+                $count_out = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE quantity = 0")->fetch_assoc()['c'];
+                $count_avail = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE quantity >= 20")->fetch_assoc()['c'];
+                ?>
+
+                <!-- Global Out of Stock Alert -->
+                 <?php if ($count_out > 0): ?>
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px dashed #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <div style="background:#ef4444; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div>
+                                <strong style="color: #ef4444; display: block; font-size:16px;">Critical Stock Alert</strong>
+                                <span style="color: #cbd5e1; font-size: 14px;">Warning: <strong><?php echo $count_out; ?></strong> medicines are completely out of stock.</span>
+                            </div>
+                        </div>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="notify_admin">
+                            <button type="submit" style="background: #ef4444; color: white; border: none; padding: 10px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; display:flex; align-items:center; gap:8px; transition: 0.3s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                                <i class="fas fa-paper-plane"></i> Notify Admin Now
+                            </button>
+                        </form>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Inventory Summary Cards -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px;">
+                    <div style="background: #0f172a; border: 1px solid var(--border-soft); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span style="color: #94a3b8; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">TOTAL MEDICINES</span>
+                            <h3 style="color: #fff; font-size: 24px; margin: 5px 0 0 0;"><?php echo $count_total; ?></h3>
+                        </div>
+                        <div style="background: rgba(79, 195, 247, 0.1); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4fc3f7;">
+                            <i class="fas fa-pills" style="font-size: 18px;"></i>
+                        </div>
+                    </div>
+                    <div style="background: #0f172a; border: 1px solid var(--border-soft); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span style="color: #94a3b8; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">AVAILABLE (IN STOCK)</span>
+                            <h3 style="color: #10b981; font-size: 24px; margin: 5px 0 0 0;"><?php echo $count_avail; ?></h3>
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.1); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #10b981;">
+                            <i class="fas fa-check-circle" style="font-size: 18px;"></i>
+                        </div>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.3); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span style="color: #f59e0b; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">LOW STOCK (REORDER)</span>
+                            <h3 style="color: #f59e0b; font-size: 24px; margin: 5px 0 0 0;"><?php echo $count_low; ?></h3>
+                        </div>
+                        <div style="background: rgba(245, 158, 11, 0.1); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #f59e0b;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 18px;"></i>
+                        </div>
+                    </div>
+                     <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.3); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span style="color: #ef4444; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">OUT OF STOCK</span>
+                            <h3 style="color: #ef4444; font-size: 24px; margin: 5px 0 0 0;"><?php echo $count_out; ?></h3>
+                        </div>
+                        <div style="background: rgba(239, 68, 68, 0.1); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ef4444;">
+                            <i class="fas fa-times-circle" style="font-size: 18px;"></i>
+                        </div>
+                    </div>
+                </div>
+
+
                 <div style="background: #0f172a; border: 1px solid var(--border-soft); border-radius: 12px; padding: 25px;">
-                    <!-- Search Form -->
+                    <!-- Filter Tabs -->
+                    <div style="margin-bottom: 20px; display: flex; gap: 10px; border-bottom: 1px solid var(--border-soft); padding-bottom: 15px;">
+                        <a href="?section=inventory&status=all" style="color: <?php echo (!isset($_GET['status']) || $_GET['status'] == 'all') ? '#4fc3f7' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (!isset($_GET['status']) || $_GET['status'] == 'all') ? '#4fc3f7' : 'transparent'; ?>;">All Medicines</a>
+                        <a href="?section=inventory&status=instock" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'instock') ? '#10b981' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'instock') ? '#10b981' : 'transparent'; ?>;">In Stock</a>
+                        <a href="?section=inventory&status=low" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'low') ? '#f59e0b' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'low') ? '#f59e0b' : 'transparent'; ?>;">Low Stock</a>
+                         <a href="?section=inventory&status=out" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'out') ? '#ef4444' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'out') ? '#ef4444' : 'transparent'; ?>;">Out of Stock (Needed)</a>
+                    </div>
+                    
+                    <?php if (isset($_GET['status']) && $_GET['status'] == 'out' && $count_out > 0): ?>
+                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px dashed #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <strong style="color: #ef4444; display: block; margin-bottom: 4px;">Action Required</strong>
+                                <span style="color: #cbd5e1; font-size: 13px;">You have <?php echo $count_out; ?> medicines out of stock. Notify admin to reorder.</span>
+                            </div>
+                            <form method="POST">
+                                <input type="hidden" name="action" value="notify_admin">
+                                <button type="submit" style="background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                                    <i class="fas fa-bell"></i> Notify Admin
+                                </button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
+
                     <form method="GET" style="margin-bottom: 20px; display: flex; gap: 15px;">
                         <input type="hidden" name="section" value="inventory">
+                        <input type="hidden" name="status" value="<?php echo htmlspecialchars($_GET['status'] ?? 'all'); ?>">
                         <input type="text" name="search" value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>" placeholder="Search medicine..." style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); padding: 10px 15px; border-radius: 8px; color: white; width: 300px;">
                         <select name="category" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-soft); padding: 10px 15px; border-radius: 8px; color: white;">
                              <option value="">All Categories</option>
@@ -486,6 +728,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <?php
                             $search_term = mysqli_real_escape_string($conn, $_GET['search'] ?? '');
                             $cat_term = mysqli_real_escape_string($conn, $_GET['category'] ?? '');
+                            $status_filter = $_GET['status'] ?? 'all';
                             
                             $where_clauses = [];
                             if($search_term) {
@@ -493,6 +736,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             }
                             if($cat_term) {
                                 $where_clauses[] = "medicine_type = '$cat_term'";
+                            }
+                            
+                            // Status Filters
+                            if($status_filter == 'instock') {
+                                $where_clauses[] = "quantity >= 20";
+                            } elseif($status_filter == 'low') {
+                                $where_clauses[] = "quantity > 0 AND quantity < 20";
+                            } elseif($status_filter == 'out') {
+                                $where_clauses[] = "quantity = 0";
                             }
                             
                             $where_sql = "";
@@ -519,7 +771,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <td>$".htmlspecialchars($item['unit_price'])."</td>
                                             <td style='font-weight:bold;'>".htmlspecialchars($item['quantity'])."</td>
                                             <td><span style='color: $status_color; font-size: 11px; border: 1px solid $status_color; padding: 2px 8px; border-radius: 10px;'>$status_text</span></td>
-                                            <td><button type='button' data-medicine='$item_json' onclick='openEditModal(this)' style='background:none; border:none; color:#4fc3f7; cursor:pointer;'><i class='fas fa-edit'></i></button></td>
+                                            <td>
+                                                <button type='button' data-medicine='$item_json' onclick='openEditModal(this)' style='background:none; border:none; color:#4fc3f7; cursor:pointer;'><i class='fas fa-edit'></i></button>";
+                                                
+                                        if($item['quantity'] == 0) {
+                                           echo "<button type='button' onclick=\"openModal('addStockModal'); document.getElementsByName('med_name')[0].value='".addslashes($item['medicine_name'])."'; document.getElementsByName('med_type')[0].value='".addslashes($item['medicine_type'])."';\" style='background:none; border:none; color:#10b981; cursor:pointer; margin-left:5px;' title='Restock'><i class='fas fa-plus-circle'></i></button>";
+                                        }
+
+                                        echo "</td>
                                         </tr>";
                                     }
                                 } else {
@@ -634,6 +893,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </table>
                 </div>
 
+            <?php elseif ($_GET['section'] == 'logs'): ?>
+                <div style="margin-bottom: 30px;">
+                    <h1 style="color:#fff; font-size: 28px;">Stock Movement Logs</h1>
+                    <p style="color:#64748b; font-size:14px;">Track all medicines added to and dispensed from the pharmacy.</p>
+                </div>
+
+                <div style="background: #0f172a; border: 1px solid var(--border-soft); border-radius: 12px; padding: 25px;">
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                        <a href="?section=logs&filter=all" style="padding: 8px 15px; background: <?php echo (!isset($_GET['filter']) || $_GET['filter']=='all') ? '#4fc3f7' : 'rgba(255,255,255,0.05)'; ?>; color: <?php echo (!isset($_GET['filter']) || $_GET['filter']=='all') ? '#020617' : '#94a3b8'; ?>; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold;">All Activity</a>
+                        <a href="?section=logs&filter=added" style="padding: 8px 15px; background: <?php echo (isset($_GET['filter']) && $_GET['filter']=='added') ? '#10b981' : 'rgba(255,255,255,0.05)'; ?>; color: <?php echo (isset($_GET['filter']) && $_GET['filter']=='added') ? '#fff' : '#94a3b8'; ?>; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold;">Stock Added</a>
+                        <a href="?section=logs&filter=dispensed" style="padding: 8px 15px; background: <?php echo (isset($_GET['filter']) && $_GET['filter']=='dispensed') ? '#f59e0b' : 'rgba(255,255,255,0.05)'; ?>; color: <?php echo (isset($_GET['filter']) && $_GET['filter']=='dispensed') ? '#fff' : '#94a3b8'; ?>; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold;">Dispensed</a>
+                    </div>
+
+                    <table class="inventory-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Action</th>
+                                <th>Medicine Name</th>
+                                <th>Quantity</th>
+                                <th>Details</th>
+                                <th>Performed By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            $filter = $_GET['filter'] ?? 'all';
+                            $where_sql = "";
+                            if($filter == 'added') $where_sql = "WHERE action_type = 'Added'";
+                            elseif($filter == 'dispensed') $where_sql = "WHERE action_type = 'Dispensed'";
+
+                            $log_sql = "SELECT l.*, u.username FROM pharmacy_logs l LEFT JOIN users u ON l.performed_by = u.user_id $where_sql ORDER BY l.log_date DESC LIMIT 100";
+                            $log_res = $conn->query($log_sql);
+
+                            if($log_res && $log_res->num_rows > 0) {
+                                while($row = $log_res->fetch_assoc()) {
+                                    $action_color = ($row['action_type'] == 'Added') ? '#10b981' : '#f59e0b';
+                                    $qty_sign = ($row['action_type'] == 'Added') ? '+' : '-';
+                                    
+                                    echo "<tr>
+                                        <td>".date('M d, Y h:i A', strtotime($row['log_date']))."</td>
+                                        <td><span style='color: $action_color; font-weight: bold; border: 1px solid $action_color; padding: 2px 8px; border-radius: 10px; font-size: 11px;'>".strtoupper($row['action_type'])."</span></td>
+                                        <td><strong>".htmlspecialchars($row['medicine_name'])."</strong></td>
+                                        <td style='color: $action_color; font-weight: bold;'>$qty_sign".htmlspecialchars($row['quantity'])."</td>
+                                        <td style='color: #94a3b8; font-size: 12px;'>".htmlspecialchars($row['details'])."</td>
+                                        <td style='font-size: 12px;'>".htmlspecialchars($row['username'] ?? 'Unknown')."</td>
+                                    </tr>";
+                                }
+                            } else {
+                                echo "<tr><td colspan='6' style='text-align:center; padding: 30px;'>No logs found.</td></tr>";
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
+
             <?php endif; ?>
         </main>
     </div>
@@ -651,6 +966,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div style="margin-bottom:15px;">
                     <label style="color:#94a3b8; font-size:12px; display:block; mb-1;">Medicine Name</label>
                     <input type="text" name="med_name" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px;">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label style="color:#94a3b8; font-size:12px; display:block; mb-1;">Supplier Invoice No.</label>
+                    <input type="text" name="supplier_invoice" required placeholder="Enter Invoice Number" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px;">
+                </div>
+                <div style="margin-bottom:15px; background:rgba(16, 185, 129, 0.1); padding:10px; border-radius:6px; border:1px dashed #10b981;">
+                    <label style="color:#10b981; font-size:12px; display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" name="verified_check" required style="width:16px; height:16px;">
+                        I verify that I have checked the physical stock, invoice, batch, expiry, quantity, and price.
+                    </label>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                     <div>
@@ -936,5 +1261,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             initBrandAnimation();
         });
     </script>
+    <!-- Report Upload Modal Integration -->
+    <?php 
+    $staff_type = 'pharmacist';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

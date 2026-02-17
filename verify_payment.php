@@ -1,6 +1,11 @@
 <?php
 session_start();
 include 'includes/db_connect.php';
+include 'includes/email_config.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
 
 // --- RAZORPAY CONFIG ---
 $key_secret = "2ISLOGjYRAekJBSbyBEiJt6V";
@@ -44,10 +49,10 @@ if ($generated_signature == $signature) {
             // 3. Handle Inpatient/Pharmacy/Lab Redirection
             if ($bill_data['bill_type'] == 'Inpatient Final' || strpos($bill_data['bill_type'], 'Pharmacy') !== false || strpos($bill_data['bill_type'], 'Clinic Bill') !== false || strpos($bill_data['bill_type'], 'Lab') !== false || strpos($bill_data['bill_type'], 'Medicine') !== false) {
                 
-                // If it's a pharmacy/complete bill, update prescription status to 'Ready'
+                // If it's a pharmacy/complete bill, update prescription status to 'Paid'
                 $ref_id = $bill_data['reference_id'] ?? null;
                 if ($ref_id && (strpos($bill_data['bill_type'], 'Pharmacy') !== false || strpos($bill_data['bill_type'], 'Clinic Bill') !== false)) {
-                    $conn->query("UPDATE prescriptions SET status = 'Awaiting Payment' WHERE prescription_id = $ref_id");
+                    $conn->query("UPDATE prescriptions SET status = 'Paid' WHERE prescription_id = $ref_id");
                 }
                 
                 $conn->commit();
@@ -92,22 +97,9 @@ if ($generated_signature == $signature) {
 
             // --- SEND CONFIRMATION EMAIL ---
             if (!empty($pat_email)) {
-                require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-                require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-                require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
-
                 try {
-                $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
-                $mail->SMTPAuth   = true;
-                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                $mail->Password   = 'yiuwcrykatkfzdwv';
-                $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS;
-                $mail->Port       = 465;
-                $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-
-                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                $mail = new PHPMailer(true);
+                configureDefaultMail($mail);
                 $mail->addAddress($pat_email, $pat);
 
                 $email_booking_number = date('Y', strtotime($date)) . "/" . str_pad($row['appointment_id'], 6, '0', STR_PAD_LEFT);
@@ -158,7 +150,7 @@ if ($generated_signature == $signature) {
                     </div>
                     <div style='background: #f1f5f9; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;'>
                         <p style='margin: 0; font-size: 12px; color: #64748b;'>Kanjirapally, Kottayam, Kerala - 686507</p>
-                        <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency WhatsApp: (+91) 807 545 4467 | Web: www.healcare.com</p>
+                        <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency WhatsApp: (+91) 953 904 5609 | Web: www.healcare.com</p>
                     </div>
                 </div>
                 ";

@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $bill_type = $_POST['bill_type']; // 'Lab Test', 'Pharmacy', etc.
     $description = $_POST['description'] ?? '';
     $ref_id = intval($_POST['reference_id'] ?? $_POST['ref_id']); // Handle both just in case
+    $pay_mode = $_POST['payment_mode'] ?? 'Cash';
     
     // Handle Combined Bill (Pharmacy + Lab)
     if ($bill_type === 'Combined') {
@@ -159,17 +160,51 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $debug_log = 'c:/xampp/htdocs/HealCare/billing_debug.log';
     file_put_contents($debug_log, date('Y-m-d H:i:s') . " - Attempting Insert: Patient: $patient_id, Ref: $ref_id, Type: $bill_type, Amt: $amount, Appt: " . ($appt_id ?: 'NULL') . "\n", FILE_APPEND);
 
+    // Insurance Logic
+    include_once 'includes/InsuranceHandler.php';
+    $ins_handler = new InsuranceHandler($conn);
+    
+    $ins_covered = 0.00;
+    $pat_payable = $amount;
+    $policy_id = null;
+    $claim_id = null; // Will be set after bill insert or handled differently? 
+    // Actually claim needs bill_id, so we insert bill first then claim, then update bill with claim_id?
+    // Or insert claim with null bill_id then update?
+    // Let's Insert Bill First with 0 claim_id, then Create Claim, then Update Bill.
+    
+    // Calculate Coverage First
+    if ($pay_mode === 'Insurance') {
+        $policy = $ins_handler->getActivePolicy($patient_id);
+        if ($policy) {
+            $policy_id = $policy['policy_id'];
+            $coverage = $ins_handler->calculateCoverage($amount, $policy);
+            $ins_covered = floatval($coverage['covered']);
+            $pat_payable = floatval($coverage['payable']);
+        }
+    }
+
     // Prepare Insert
-    $stmt = $conn->prepare("INSERT INTO billing (patient_id, doctor_id, appointment_id, reference_id, bill_type, description, total_amount, payment_status, bill_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    // Added payment_mode, insurance_amount, patient_payable_amount
+    $stmt = $conn->prepare("INSERT INTO billing (patient_id, doctor_id, appointment_id, reference_id, bill_type, description, total_amount, payment_status, bill_date, payment_mode, insurance_amount, patient_payable_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     if(!$stmt) {
         file_put_contents($debug_log, "Prepare Failed: " . $conn->error . "\n", FILE_APPEND);
         die("System Error: Prepare Failed");
     }
     
-    $stmt->bind_param("iiiissdss", $patient_id, $doctor_id, $appt_id, $ref_id, $bill_type, $description, $amount, $payment_status, $bill_date);
+    $stmt->bind_param("iiiissdssddd", $patient_id, $doctor_id, $appt_id, $ref_id, $bill_type, $description, $amount, $payment_status, $bill_date, $pay_mode, $ins_covered, $pat_payable);
     
     if ($stmt->execute()) {
         $bill_id = $conn->insert_id;
+        
+        // Create Insurance Claim if applicable
+        if ($pay_mode === 'Insurance' && $policy_id) {
+            $claim_id = $ins_handler->createClaim($bill_id, $policy_id, $patient_id, $amount, $ins_covered, $pat_payable);
+            if ($claim_id) {
+                // Update Bill with Claim ID
+                $conn->query("UPDATE billing SET insurance_claim_id = $claim_id WHERE bill_id = $bill_id");
+            }
+        }
+
         // Explicit Commit just in case
         $conn->commit(); 
         

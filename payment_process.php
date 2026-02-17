@@ -3,13 +3,11 @@ ob_start();
 session_start();
 include 'includes/db_connect.php';
 
+include 'includes/email_config.php';
+
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
-
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
 
 // Fetch bill data
 $bill_id = isset($_REQUEST['bill_id']) ? (int)$_REQUEST['bill_id'] : 0;
@@ -107,16 +105,23 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         $doc_name = (stripos($raw_doc_name, 'Dr.') === 0) ? $raw_doc_name : 'Dr. ' . $raw_doc_name;
                     }
 
-                    // 3. Get Patient Details (Name & Email)
+                // 3. Get Patient Details (Name, Email & Phone)
                     $pat_name = "Patient";
                     $pat_email = "";
+                    $pat_phone = "";
                     
-                    $q_pp = $conn->query("SELECT name FROM patient_profiles WHERE user_id = $pat_id");
+                    $q_pp = $conn->query("SELECT name, phone FROM patient_profiles WHERE user_id = $pat_id");
                     if ($q_pp && $q_pp->num_rows > 0) {
-                        $pat_name = $q_pp->fetch_assoc()['name'];
+                        $p_row = $q_pp->fetch_assoc();
+                        $pat_name = $p_row['name'];
+                        $pat_phone = $p_row['phone'];
                     } else {
-                         $q_pr = $conn->query("SELECT name FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE u.user_id = $pat_id");
-                         if ($q_pr && $q_pr->num_rows > 0) $pat_name = $q_pr->fetch_assoc()['name'];
+                         $q_pr = $conn->query("SELECT r.name, r.phone FROM registrations r JOIN users u ON r.registration_id = u.registration_id WHERE u.user_id = $pat_id");
+                         if ($q_pr && $q_pr->num_rows > 0) {
+                             $p_row = $q_pr->fetch_assoc();
+                             $pat_name = $p_row['name'];
+                             $pat_phone = $p_row['phone'];
+                         }
                     }
 
                     // Get Email from Users table
@@ -130,16 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     // 4. Send Email if we have email
                     if (!empty($pat_email)) {
                         $mail = new PHPMailer(true);
-                        $mail->isSMTP();
-                        $mail->Host       = 'smtp.gmail.com';
-                        $mail->SMTPAuth   = true;
-                        $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                        $mail->Password   = 'yiuwcrykatkfzdwv';
-                        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-                        $mail->Port       = 465;
-                        $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-
-                        $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare Hospital');
+                        configureDefaultMail($mail);
                         $mail->addAddress($pat_email, $pat_name);
 
                         $email_booking_number = date('Y', strtotime($date_str)) . "/" . str_pad($appt_id, 6, '0', STR_PAD_LEFT);
@@ -191,7 +187,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             </div>
                             <div style='background: #f1f5f9; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;'>
                                 <p style='margin: 0; font-size: 12px; color: #64748b;'>Kanjirapally, Kottayam, Kerala - 686507</p>
-                                <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency WhatsApp: (+91) 807 545 4467 | Web: www.healcare.com</p>
+                                <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency WhatsApp: (+91) 953 904 5609 | Web: www.healcare.com</p>
                             </div>
                         </div>
                         ";
@@ -205,6 +201,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     } else {
                         file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - SKIPPING: No Email Found for Pat ID $pat_id\n", FILE_APPEND);
                     }
+
+                    // --- SEND WHATSAPP NOTIFICATION ---
+                    if (!empty($pat_phone)) {
+                        include_once 'includes/whatsapp_helper.php';
+                        $wa_msg = "*HealCare Hospital Appointment Confirmed*\n\nHello *$pat_name*,\n\nYour appointment (ID: *$bk_id*) with *$doc_name* is confirmed.\n\n📅 *Date:* $display_date\n⏰ *Time:* $display_time\n🔢 *Token:* #$token_num\n\nPlease arrive 15 mins early.\n\nThank you,\n_HealCare Hospital_";
+                        sendWhatsAppMessage($pat_phone, $wa_msg);
+                    }
+
                 } else {
                     file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - ERROR: Appointment ID $appt_id not found in DB.\n", FILE_APPEND);
                 }
@@ -214,6 +218,27 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // ------------------------------------------------------------
             // ------------------------------------------------------------
         } elseif ($bill_type == 'Canteen') {
+            // Fetch orders to process stock reduction
+            $stmt_orders = $conn->prepare("SELECT menu_id, quantity FROM canteen_orders WHERE patient_id = ? AND order_status = 'Pending Payment' AND order_date = CURDATE()");
+            $stmt_orders->bind_param("i", $patient_id);
+            $stmt_orders->execute();
+            $result_orders = $stmt_orders->get_result();
+
+            while ($order = $result_orders->fetch_assoc()) {
+                $menu_id = $order['menu_id'];
+                $quantity = $order['quantity']; // Assuming quantity column exists based on previous verification
+
+                // Decrement stock
+                $stmt_stock = $conn->prepare("UPDATE canteen_menu SET stock_quantity = GREATEST(stock_quantity - ?, 0) WHERE menu_id = ?");
+                $stmt_stock->bind_param("ii", $quantity, $menu_id);
+                $stmt_stock->execute();
+
+                // Update availability status if stock reached 0
+                $stmt_status = $conn->prepare("UPDATE canteen_menu SET availability = CASE WHEN stock_quantity > 0 THEN 'Available' ELSE 'Out of Stock' END WHERE menu_id = ?");
+                $stmt_status->bind_param("i", $menu_id);
+                $stmt_status->execute();
+            }
+
             // Update Canteen Orders to 'Placed' for this patient for today that were pending payment
             // Note: This is a simplification. Ideally, we'd link orders nicely.
             $stmt = $conn->prepare("UPDATE canteen_orders SET order_status = 'Placed' WHERE patient_id = ? AND order_status = 'Pending Payment' AND order_date = CURDATE()");

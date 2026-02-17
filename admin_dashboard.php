@@ -1,14 +1,12 @@
-<?php
+﻿<?php
 session_start();
 include 'includes/db_connect.php';
+
+include 'includes/email_config.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
-
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/Exception.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/PHPMailer.php';
-require 'phpmailserver/PHPMailer-master/PHPMailer-master/src/SMTP.php';
 
 // Simple Auth Check
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
@@ -128,17 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             // --- SEND CREDENTIALS VIA EMAIL ---
             $mail = new PHPMailer(true);
-            //Server settings
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-            $mail->Password   = 'yiuwcrykatkfzdwv'; // App Password
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = 465;
-            $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-            
-            $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare HR');
+            configureDefaultMail($mail);
             $mail->addAddress($email, $name);
             $mail->isHTML(true);
             $mail->Subject = 'Welcome to HealCare - Your Official Credentials';
@@ -189,16 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $name = $row['name'];
                 
                 $mail = new PHPMailer(true);
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
-                $mail->SMTPAuth   = true;
-                $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-                $mail->Password   = 'yiuwcrykatkfzdwv';
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-                $mail->Port       = 465;
-                $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-                
-                $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare HR');
+                configureDefaultMail($mail);
                 $mail->addAddress($email, $name);
                 $mail->isHTML(true);
                 $mail->Subject = 'Update on your HealCare Application';
@@ -301,16 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             // --- SEND CREDENTIALS VIA EMAIL ---
             $mail = new PHPMailer(true);
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'junaelsamathew2028@mca.ajce.in';
-            $mail->Password   = 'yiuwcrykatkfzdwv';
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-            $mail->Port       = 465;
-            $mail->SMTPOptions = array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true));
-            
-            $mail->setFrom('junaelsamathew2028@mca.ajce.in', 'HealCare HR');
+            configureDefaultMail($mail);
             $mail->addAddress($email, $name);
             $mail->isHTML(true);
             $mail->Subject = 'Official Account Created - HealCare';
@@ -645,6 +615,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $success_msg = "Appointment #$aid updated to $status successfully!";
         } else {
             $error_msg = "Error updating appointment: " . $conn->error;
+        }
+    } elseif ($action == 'update_blood_stock') {
+        $bid = (int)$_POST['blood_id'];
+        $units = (int)$_POST['units'];
+        $type = $_POST['operation']; // 'add' or 'remove'
+        
+        if ($type == 'add') {
+            $sql = "UPDATE blood_bank SET units_available = units_available + $units, last_updated = NOW() WHERE blood_id = $bid";
+        } else {
+            $sql = "UPDATE blood_bank SET units_available = GREATEST(0, units_available - $units), last_updated = NOW() WHERE blood_id = $bid";
+        }
+        
+        if ($conn->query($sql)) {
+            $success_msg = "Blood stock updated successfully!";
+        } else {
+            $error_msg = "Error updating blood stock: " . $conn->error;
         }
     }
 }
@@ -1806,7 +1792,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -1876,6 +1862,12 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <a href="?section=room-management" class="nav-link <?php echo $section == 'room-management' ? 'active' : ''; ?>">
                 <i class="fas fa-bed"></i> Room Management
             </a>
+            <a href="?section=blood-bank" class="nav-link <?php echo $section == 'blood-bank' ? 'active' : ''; ?>">
+                <i class="fas fa-tint"></i> Blood Bank Inventory
+            </a>
+            <a href="admin_insurance.php" class="nav-link">
+                <i class="fas fa-shield-alt"></i> Insurance Claims
+            </a>
         </div>
 
         <div class="nav-section">
@@ -1893,8 +1885,14 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <a href="?section=analytics" class="nav-link <?php echo $section == 'analytics' ? 'active' : ''; ?>">
                 <i class="fas fa-project-diagram"></i> Operational Intelligence
             </a>
+            <a href="?section=feedback-analysis" class="nav-link <?php echo $section == 'feedback-analysis' ? 'active' : ''; ?>">
+                <i class="fas fa-comment-dots"></i> Feedback Analysis
+            </a>
             <a href="?section=complaints" class="nav-link <?php echo $section == 'complaints' ? 'active' : ''; ?>">
                 <i class="fas fa-exclamation-triangle"></i> Complaint Logs
+            </a>
+            <a href="platform_analytics.php" class="nav-link">
+                <i class="fas fa-chart-line"></i> Platform Analytics
             </a>
         </div>
 
@@ -1996,7 +1994,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                         <p style="margin-bottom: 5px;">Low Stock Alert (<?php echo $pharmacy_alerts; ?>)</p>
                                         <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px; color: var(--text-gray);">
                                             <?php foreach($low_stock_list as $item): ?>
-                                                <li style="margin-bottom: 2px;">• <?php echo htmlspecialchars($item['medicine_name']); ?> <strong style="color: var(--accent-red);">(<?php echo $item['quantity']; ?>)</strong></li>
+                                                <li style="margin-bottom: 2px;">â€¢ <?php echo htmlspecialchars($item['medicine_name']); ?> <strong style="color: var(--accent-red);">(<?php echo $item['quantity']; ?>)</strong></li>
                                             <?php endforeach; ?>
                                             <?php if($pharmacy_alerts > 5): ?>
                                                 <li><em>...and <?php echo ($pharmacy_alerts - 5); ?> more</em></li>
@@ -2013,7 +2011,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                         <p style="margin-bottom: 5px;">Expiry Alert (<?php echo $expiry_alerts; ?>)</p>
                                         <ul style="list-style: none; padding: 0; margin: 0; font-size: 12px; color: var(--text-gray);">
                                             <?php foreach($expiry_list as $item): ?>
-                                                <li style="margin-bottom: 2px;">• <?php echo htmlspecialchars($item['medicine_name']); ?> 
+                                                <li style="margin-bottom: 2px;">â€¢ <?php echo htmlspecialchars($item['medicine_name']); ?> 
                                                 <?php if($item['days_left'] < 0): ?>
                                                     <strong style="color: var(--accent-red);">(EXPIRED)</strong>
                                                 <?php else: ?>
@@ -2086,7 +2084,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                     </div>
                     <div class="stat-card-title">Pharmacy Alerts</div>
                     <div class="stat-card-value" style="color: var(--accent-red);"><?php echo $pharmacy_alerts; ?></div>
-                    <div class="stat-card-subtitle">Low stock items • Click to view</div>
+                    <div class="stat-card-subtitle">Low stock items â€¢ Click to view</div>
                 </div>
             </div>
 
@@ -2199,7 +2197,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             </div>
                             <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin-bottom: 15px;"><?php echo htmlspecialchars($p['package_description']); ?></p>
                             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 15px; border-top: 1px solid #f1f5f9;">
-                                <div style="color: #1e293b; font-weight: 800; font-size: 18px;">₹<?php echo number_format($p['discounted_price'], 0); ?></div>
+                                <div style="color: #1e293b; font-weight: 800; font-size: 18px;">â‚¹<?php echo number_format($p['discounted_price'], 0); ?></div>
                                  <?php if ($p['discount_percentage'] > 0): ?>
                                     <div style="font-size: 11px; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
                                 <?php endif; ?>
@@ -2448,7 +2446,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             </td>
                             <td>
                                 <?php if($d['bill_id']): ?>
-                                    <span style="color: #10b981; font-weight: 700;">₹<?php echo number_format($d['total_amount'], 2); ?></span>
+                                    <span style="color: #10b981; font-weight: 700;">â‚¹<?php echo number_format($d['total_amount'], 2); ?></span>
                                 <?php else: ?>
                                     <span style="color: #94a3b8;">N/A</span>
                                 <?php endif; ?>
@@ -3449,7 +3447,11 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 </div>
 
                 <?php
-                $doctors_sql = "SELECT d.*, r.name, u.username, u.email 
+                $doctors_sql = "SELECT d.*, r.name, u.username, u.email,
+                                (SELECT COUNT(*) FROM doctor_leaves dl 
+                                 WHERE dl.doctor_id = d.user_id 
+                                 AND dl.status = 'Approved' 
+                                 AND CURDATE() BETWEEN dl.start_date AND dl.end_date) as is_on_leave
                                 FROM doctors d 
                                 JOIN users u ON d.user_id = u.user_id 
                                 JOIN registrations r ON u.registration_id = r.registration_id 
@@ -3459,6 +3461,12 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 if ($doctors_res && $doctors_res->num_rows > 0):
                     $current_dept = '';
                     while($doc = $doctors_res->fetch_assoc()):
+                        // Override availability status if on leave
+                        $status = $doc['availability_status'] ?: 'Available';
+                        if ($doc['is_on_leave'] > 0) {
+                            $status = 'On Leave';
+                        }
+
                         if ($current_dept != $doc['department']):
                             $current_dept = $doc['department'];
                             echo '<div style="background: rgba(59, 130, 246, 0.05); padding: 10px 20px; border-radius: 8px; margin: 30px 0 15px; border-left: 4px solid var(--primary-blue);">';
@@ -3475,9 +3483,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                     <h4 style="margin: 0; font-size: 16px;">DR. <?php echo htmlspecialchars($doc['name']); ?></h4>
                                     <p style="font-size: 12px; color: var(--text-gray);"><?php echo htmlspecialchars($doc['specialization']); ?> • <?php echo htmlspecialchars($doc['username']); ?></p>
                                     <span class="badge badge-<?php 
-                                        echo ($doc['availability_status'] == 'Available' ? 'active' : ($doc['availability_status'] == 'Busy' ? 'pending' : 'rejected')); 
+                                        echo ($status == 'Available' ? 'active' : ($status == 'Busy' ? 'pending' : 'rejected')); 
                                     ?>" style="margin-top: 5px; display: inline-block;">
-                                        <?php echo $doc['availability_status'] ?: 'Available'; ?>
+                                        <?php echo $status; ?>
                                     </span>
                                 </div>
                             </div>
@@ -3488,9 +3496,9 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                     <input type="hidden" name="action" value="update_doctor_availability">
                                     <input type="hidden" name="doctor_id" value="<?php echo $doc['user_id']; ?>">
                                     <select name="availability_status" onchange="this.form.submit()" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: var(--darkest-blue); color: white; border: 1px solid var(--border-color);">
-                                        <option value="Available" <?php echo $doc['availability_status'] == 'Available' ? 'selected' : ''; ?>>Available</option>
-                                        <option value="Busy" <?php echo $doc['availability_status'] == 'Busy' ? 'selected' : ''; ?>>Busy</option>
-                                        <option value="On Leave" <?php echo $doc['availability_status'] == 'On Leave' ? 'selected' : ''; ?>>On Leave</option>
+                                        <option value="Available" <?php echo $status == 'Available' ? 'selected' : ''; ?>>Available</option>
+                                        <option value="Busy" <?php echo $status == 'Busy' ? 'selected' : ''; ?>>Busy</option>
+                                        <option value="On Leave" <?php echo $status == 'On Leave' ? 'selected' : ''; ?>>On Leave</option>
                                     </select>
                                 </form>
                             </div>
@@ -3830,7 +3838,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             <div class="card-content">
                                 <span class="food-category-badge"><?php echo explode(' / ', $m['item_category'])[0]; ?></span>
                                 <h3 class="food-name"><?php echo htmlspecialchars($m['item_name']); ?></h3>
-                                <div class="food-price">₹<?php echo number_format($m['price'], 0); ?></div>
+                                <div class="food-price">â‚¹<?php echo number_format($m['price'], 0); ?></div>
                                 <div style="font-size: 11px; color: #94a3b8; margin-top: 10px; display: flex; align-items: center; gap: 5px;">
                                     <i class="fas fa-carrot" style="color: #10b981;"></i> <?php echo $m['diet_type']; ?>
                                 </div>
@@ -3875,7 +3883,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Price (₹)</label>
+                                <label>Price (â‚¹)</label>
                                 <input type="number" step="0.01" name="price" id="item_price" required>
                             </div>
                         </div>
@@ -3979,8 +3987,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             </div>
 
                             <div style="display: flex; align-items: center; gap: 15px; margin-top: auto; padding-top: 25px; border-top: 1px solid #f1f5f9;">
-                                <div style="font-size: 30px; font-weight: 800; color: #1e293b;">₹<?php echo number_format($p['discounted_price'], 0); ?></div>
-                                <div style="font-size: 16px; text-decoration: line-through; color: #94a3b8; font-weight: 500;">₹<?php echo number_format($p['original_price'], 0); ?></div>
+                                <div style="font-size: 30px; font-weight: 800; color: #1e293b;">â‚¹<?php echo number_format($p['discounted_price'], 0); ?></div>
+                                <div style="font-size: 16px; text-decoration: line-through; color: #94a3b8; font-weight: 500;">â‚¹<?php echo number_format($p['original_price'], 0); ?></div>
                                 <div style="font-size: 12px; background: #fee2e2; color: #ef4444; padding: 4px 10px; border-radius: 6px; font-weight: 700;"><?php echo $p['discount_percentage']; ?>% OFF</div>
                             </div>
                             
@@ -4067,12 +4075,12 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             </div>
                             
                             <div class="form-group">
-                                <label><i class="fas fa-tag" style="color: #64748b;"></i> Actual Price (₹)</label>
+                                <label><i class="fas fa-tag" style="color: #64748b;"></i> Actual Price (â‚¹)</label>
                                 <input type="number" name="actual_price" id="pkg_actual" placeholder="0.00" oninput="calculateDiscount()" required>
                             </div>
 
                             <div class="form-group">
-                                <label><i class="fas fa-gift" style="color: #f59e0b;"></i> Offer Price (₹)</label>
+                                <label><i class="fas fa-gift" style="color: #f59e0b;"></i> Offer Price (â‚¹)</label>
                                 <input type="number" name="discount_price" id="pkg_discount" placeholder="0.00" oninput="calculateDiscount()" required>
                             </div>
 
@@ -4232,8 +4240,8 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             </div>
                             <div class="form-group" style="background: rgba(37, 211, 102, 0.1); padding: 15px; border-radius: 12px; border: 1px solid rgba(37, 211, 102, 0.2);">
                                 <label style="color: #25d366;">Central Emergency WhatsApp</label>
-                                <div style="font-size: 20px; font-weight: 700; color: white;">(+91) 807 545 4467</div>
-                                <a href="https://wa.me/918075454467" target="_blank" class="btn btn-primary" style="width: 100%; margin-top: 15px; background: #25d366; border: none; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
+                                <div style="font-size: 20px; font-weight: 700; color: white;">(+91) 953 904 5609</div>
+                                <a href="https://wa.me/919539045609" target="_blank" class="btn btn-primary" style="width: 100%; margin-top: 15px; background: #25d366; border: none; font-weight: 700; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px;">
                                     <i class="fab fa-whatsapp"></i> MESSAGE EMERGENCY
                                 </a>
                             </div>
@@ -4829,6 +4837,231 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <!-- Include Report Upload Modal -->
             <?php include 'includes/report_upload_modal.php'; ?>
 
+
+        <?php elseif ($section == 'blood-bank'): ?>
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Blood Bank Inventory</h1>
+                    <p>Track and manage blood unit availability</p>
+                </div>
+                <button class="btn btn-primary" onclick="window.print()"><i class="fas fa-print"></i> Stock Report</button>
+            </div>
+
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title"><i class="fas fa-heartbeat"></i> Unit Availability</h3>
+                    <div style="font-size: 13px; color: #94a3b8;">Real-time status of blood groups</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 20px;">
+                    <?php
+                    $blood_stock = $conn->query("SELECT * FROM blood_bank ORDER BY 
+                        CASE blood_group 
+                            WHEN 'A+' THEN 1 WHEN 'A-' THEN 2 
+                            WHEN 'B+' THEN 3 WHEN 'B-' THEN 4 
+                            WHEN 'O+' THEN 5 WHEN 'O-' THEN 6 
+                            WHEN 'AB+' THEN 7 WHEN 'AB-' THEN 8 
+                        END");
+                    
+                    if ($blood_stock):
+                        while ($bg = $blood_stock->fetch_assoc()):
+                            $is_low = $bg['units_available'] <= $bg['low_stock_threshold'];
+                            $bg_color = $is_low ? '#ef4444' : '#10b981';
+                            $bg_bg = $is_low ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)';
+                    ?>
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid <?php echo $is_low ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255, 255, 255, 0.05)'; ?>; border-radius: 16px; padding: 20px; position: relative; overflow: hidden;">
+                        <?php if ($is_low): ?>
+                        <div style="position: absolute; top: 10px; right: 10px; font-size: 18px; color: #ef4444; animation: pulse 2s infinite;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="width: 50px; height: 50px; background: <?php echo $bg_bg; ?>; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: <?php echo $bg_color; ?>;">
+                                <?php echo $bg['blood_group']; ?>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px;">
+                            <div style="font-size: 32px; font-weight: 700; color: #fff;"><?php echo $bg['units_available']; ?></div>
+                            <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Units Available</div>
+                        </div>
+
+                        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px;">
+                            <button onclick="updateStock(<?php echo $bg['blood_id']; ?>, 'add')" style="flex: 1; padding: 8px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); color: #60a5fa; border-radius: 8px; cursor: pointer; transition: 0.2s;">
+                                <i class="fas fa-plus"></i> Add
+                            </button>
+                            <button onclick="updateStock(<?php echo $bg['blood_id']; ?>, 'remove')" style="flex: 1; padding: 8px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; border-radius: 8px; cursor: pointer; transition: 0.2s;">
+                                <i class="fas fa-minus"></i> Use
+                            </button>
+                        </div>
+                    </div>
+                    <?php 
+                        endwhile; 
+                    endif;
+                    ?>
+                </div>
+
+                <!-- Update Modal -->
+                <div id="stockModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+                    <div style="background: #1e293b; padding: 30px; border-radius: 16px; width: 400px; border: 1px solid rgba(255,255,255,0.1);">
+                        <h3 style="margin-top: 0; color: #fff;">Update Stock</h3>
+                        <p style="color: #94a3b8; font-size: 14px; margin-bottom: 20px;">Enter the number of units to <span id="opTypeDisplay"></span>.</p>
+                        
+                        <form method="POST">
+                            <input type="hidden" name="action" value="update_blood_stock">
+                            <input type="hidden" name="blood_id" id="modalBloodId">
+                            <input type="hidden" name="operation" id="modalOpType"> <!-- add or remove -->
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label style="display: block; color: #cbd5e1; font-size: 13px; margin-bottom: 8px;">Units</label>
+                                <input type="number" name="units" min="1" value="1" required style="width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: #fff; font-size: 16px;">
+                            </div>
+                            
+                            <div style="display: flex; gap: 15px;">
+                                <button type="button" onclick="document.getElementById('stockModal').style.display='none'" style="flex: 1; padding: 12px; background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px; cursor: pointer;">Cancel</button>
+                                <button type="submit" class="btn btn-primary" style="flex: 1;">Update</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <script>
+                    function updateStock(id, type) {
+                        document.getElementById('stockModal').style.display = 'flex';
+                        document.getElementById('modalBloodId').value = id;
+                        document.getElementById('modalOpType').value = type;
+                        document.getElementById('opTypeDisplay').textContent = type;
+                        if(type === 'add') {
+                            document.getElementById('opTypeDisplay').style.color = '#10b981';
+                        } else {
+                            document.getElementById('opTypeDisplay').style.color = '#ef4444';
+                        }
+                    }
+                </script>
+            </div>
+
+
+
+        <?php elseif ($section == 'feedback-analysis'): ?>
+            <!-- Feedback Analysis Section -->
+            <div class="top-bar">
+                <div class="page-title">
+                    <h1>Patient Feedback Analysis</h1>
+                    <p>Review hospital performance through patient perspective</p>
+                </div>
+            </div>
+
+            <?php
+            // Fetch Feedack Metrics
+            $feedback_stats = $conn->query("SELECT 
+                AVG(cleanliness) as avg_clean,
+                AVG(CASE WHEN doctor_rating = 'Yes' THEN 5 WHEN doctor_rating = 'Somewhat' THEN 3 ELSE 1 END) as avg_doc,
+                AVG(CASE WHEN experience = 'Excellent' THEN 5 WHEN experience = 'Good' THEN 4 WHEN experience = 'Average' THEN 3 ELSE 1 END) as avg_exp,
+                AVG(CASE WHEN staff_response = 'Yes' THEN 5 ELSE 1 END) as avg_staff,
+                COUNT(*) as total_count
+                FROM patient_feedback")->fetch_assoc();
+            
+            $recent_feedback = $conn->query("SELECT f.*, r.name as patient_name 
+                FROM patient_feedback f 
+                JOIN users u ON f.patient_id = u.user_id 
+                JOIN registrations r ON u.registration_id = r.registration_id 
+                ORDER BY f.created_at DESC LIMIT 10");
+            ?>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--accent-green);">
+                            <i class="fas fa-smile"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-title">Avg. Experience</div>
+                    <div class="stat-card-value" style="color: var(--accent-green);"><?php echo number_format($feedback_stats['avg_exp'] ?? 0, 1); ?>/5</div>
+                    <div class="stat-card-subtitle">General satisfaction</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon" style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue);">
+                            <i class="fas fa-user-md"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-title">Doctor Rating</div>
+                    <div class="stat-card-value" style="color: var(--primary-blue);"><?php echo number_format($feedback_stats['avg_doc'] ?? 0, 1); ?>/5</div>
+                    <div class="stat-card-subtitle">Consultation quality</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon" style="background: rgba(6, 182, 212, 0.1); color: #06b6d4;">
+                            <i class="fas fa-sparkles"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-title">Cleanliness</div>
+                    <div class="stat-card-value" style="color: #06b6d4;"><?php echo number_format($feedback_stats['avg_clean'] ?? 0, 1); ?>/5</div>
+                    <div class="stat-card-subtitle">Hospital hygiene</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <div class="stat-card-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--accent-orange);">
+                            <i class="fas fa-user-nurse"></i>
+                        </div>
+                    </div>
+                    <div class="stat-card-title">Staff Response</div>
+                    <div class="stat-card-value" style="color: var(--accent-orange);"><?php echo number_format($feedback_stats['avg_staff'] ?? 0, 1); ?>/5</div>
+                    <div class="stat-card-subtitle">Nurse responsiveness</div>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Visual Satisfaction Pulse</h3>
+                    <div style="font-size: 13px; color: var(--text-gray);">Aggregated ratings across key departments</div>
+                </div>
+                <div style="height: 400px; position: relative;">
+                    <canvas id="feedbackChart"></canvas>
+                </div>
+            </div>
+
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Patient Voice & Comments</h3>
+                    <div style="font-size: 13px; color: var(--text-gray);">Latest 10 submissions</div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <?php if ($recent_feedback && $recent_feedback->num_rows > 0): ?>
+                        <?php while($f = $recent_feedback->fetch_assoc()): ?>
+                            <div style="padding: 20px; border: 1px solid var(--border-color); border-radius: 16px; margin-bottom: 15px; background: rgba(255,255,255,0.02); display: flex; gap: 20px; transition: 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                                <div style="width: 50px; height: 50px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0;">
+                                    <?php echo substr($f['patient_name'], 0, 1); ?>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <h4 style="margin: 0; font-size: 16px;"><?php echo htmlspecialchars($f['patient_name']); ?></h4>
+                                        <span style="font-size: 12px; color: var(--text-gray);"><i class="fas fa-clock"></i> <?php echo date('M d, Y', strtotime($f['created_at'])); ?></span>
+                                    </div>
+                                    <div style="display: flex; gap: 15px; margin-bottom: 12px; flex-wrap: wrap;">
+                                        <span style="font-size: 11px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 3px 8px; border-radius: 6px;">Exp: <?php echo htmlspecialchars($f['experience']); ?></span>
+                                        <span style="font-size: 11px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 3px 8px; border-radius: 6px;">Doc: <?php echo htmlspecialchars($f['doctor_rating']); ?></span>
+                                        <span style="font-size: 11px; background: rgba(245, 158, 11, 0.1); color: #f59e0b; padding: 3px 8px; border-radius: 6px;">Clean: <?php echo $f['cleanliness']; ?>/5</span>
+                                        <span style="font-size: 11px; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 3px 8px; border-radius: 6px;">Staff: <?php echo htmlspecialchars($f['staff_response']); ?></span>
+                                    </div>
+                                    <p style="margin: 0; font-size: 14px; color: #cbd5e1; line-height: 1.6; font-style: <?php echo $f['comments'] ? 'normal' : 'italic'; ?>;">
+                                        <?php echo $f['comments'] ? '"'.htmlspecialchars($f['comments']).'"' : 'No written feedback provided.'; ?>
+                                    </p>
+                                </div>
+                            </div>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <div style="text-align: center; padding: 40px; color: var(--text-gray);">
+                            <i class="fas fa-comment-slash" style="font-size: 40px; margin-bottom: 15px; opacity: 0.3;"></i>
+                            <p>No feedback records found in the system.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
 
         <?php elseif ($section == 'complaints'): ?>
             <!-- Complaint Logs -->
@@ -5499,7 +5732,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                                 displayColors: false,
                                 callbacks: {
                                     label: function(context) {
-                                        return 'Revenue: ₹' + context.raw.toLocaleString();
+                                        return 'Revenue: â‚¹' + context.raw.toLocaleString();
                                     }
                                 }
                             }
@@ -5686,6 +5919,73 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                 const firstError = document.querySelector('.is-invalid');
                 if (firstError) {
                     firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
+    });
+    <?php endif; ?>
+    <?php if ($section == 'feedback-analysis'): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('feedbackChart');
+        if (!ctx) return;
+
+        const data = {
+            labels: ['Experience', 'Consultation', 'Cleanliness', 'Staff Response'],
+            datasets: [{
+                label: 'Avg. Rating',
+                data: [
+                    <?php echo $feedback_stats['avg_exp'] ?? 0; ?>,
+                    <?php echo $feedback_stats['avg_doc'] ?? 0; ?>,
+                    <?php echo $feedback_stats['avg_clean'] ?? 0; ?>,
+                    <?php echo $feedback_stats['avg_staff'] ?? 0; ?>
+                ],
+                backgroundColor: [
+                    'rgba(16, 185, 129, 0.4)',
+                    'rgba(59, 130, 246, 0.4)',
+                    'rgba(6, 182, 212, 0.4)',
+                    'rgba(245, 158, 11, 0.4)'
+                ],
+                borderColor: [
+                    '#10b981',
+                    '#3b82f6',
+                    '#06b6d4',
+                    '#f59e0b'
+                ],
+                borderWidth: 2,
+                borderRadius: 12
+            }]
+        };
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        padding: 15,
+                        cornerRadius: 12,
+                        callbacks: {
+                            label: function(context) {
+                                return 'Rating: ' + Number(context.parsed.y).toFixed(1) + ' / 5.0';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 5,
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8' }
+                    }
                 }
             }
         });

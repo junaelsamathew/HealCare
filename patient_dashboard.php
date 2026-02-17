@@ -1,34 +1,9 @@
-<?php
+﻿<?php
 session_start();
 include 'includes/db_connect.php';
 
 // Get section
-$section = $_GET['section'] ?? 'dashboard';
 
-// Fetch Operational Intelligence for Patients
-$occ_res = $conn->query("SELECT w.ward_name, w.capacity, 
-                        (SELECT COUNT(*) FROM rooms r WHERE r.ward_id = w.ward_id AND r.status='Occupied') as occupied
-                        FROM wards w");
-$occ_labels = []; $occ_occupied = []; $occ_capacity = [];
-if($occ_res) {
-    while($or = $occ_res->fetch_assoc()) {
-        $occ_labels[] = $or['ward_name'];
-        $occ_occupied[] = (int)$or['occupied'];
-        $occ_capacity[] = (int)$or['capacity'];
-    }
-}
-
-$peak_res = $conn->query("SELECT HOUR(appointment_time) as hr, COUNT(*) as count 
-                          FROM appointments 
-                          WHERE appointment_time IS NOT NULL 
-                          GROUP BY hr ORDER BY hr");
-$peak_labels = []; $peak_counts = [];
-if($peak_res) {
-    while($pr = $peak_res->fetch_assoc()) {
-        $peak_labels[] = date("g A", strtotime($pr['hr'] . ":00"));
-        $peak_counts[] = (int)$pr['count'];
-    }
-}
 
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
     header("Location: login.php");
@@ -99,6 +74,25 @@ while ($row = $notif_res->fetch_assoc()) {
     $row['time'] = $time_str;
     $row['unread'] = (bool)$row['unread'];
     $notifications_db[] = $row;
+}
+
+// Fetch Insurance Info
+include_once 'includes/InsuranceHandler.php';
+$ins_handler = new InsuranceHandler($conn);
+$active_policy = $ins_handler->getActivePolicy($user_id);
+$remaining_limit = 0;
+if ($active_policy) {
+    $used = $ins_handler->getUsedLimit($active_policy['policy_id']);
+    $remaining_limit = $active_policy['coverage_limit'] - $used;
+}
+
+// Fetch Recent Claims
+$recent_claims = [];
+$claims_res = $conn->query("SELECT * FROM insurance_claims WHERE patient_id = $user_id ORDER BY created_at DESC LIMIT 5");
+if ($claims_res) {
+    while ($cl = $claims_res->fetch_assoc()) {
+        $recent_claims[] = $cl;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -394,29 +388,58 @@ while ($row = $notif_res->fetch_assoc()) {
     </style>
 </head>
 <body>
-    <!-- Universal Header -->
-    <div class="reception-top-bar" style="background: #fff; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee;">
-        <a href="index.php" class="logo-main" style="text-decoration: none; display: flex; align-items: center; gap: 10px;">
-            <img src="images/healcare_logo.jpg" alt="HealCare" style="height: 50px;">
-            <span class="animated-brand" style="color: #020617; font-weight: 800; letter-spacing: -1px; font-size: 24px; margin: 0;">HEALCARE HOSPITAL</span>
-        </a>
-        <div style="display: flex; gap: 40px; align-items: center;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
-                    <i class="fas fa-phone-alt"></i>
-                </div>
-                <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
-                </div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; border: 1px solid #020617; display: flex; align-items: center; justify-content: center; color: #020617;">
-                    <i class="fas fa-map-marker-alt"></i>
-                </div>
-                <div style="display: flex; flex-direction: column; line-height: 1.2;">
-                    <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">LOCATION</span>
-                    <span style="font-size: 13px; color: #3b82f6; font-weight: 600;">Kanjirapally, Kottayam</span>
+    <!-- Top Bar -->
+    <div class="top-bar" style="background-color: #ffffff; padding: 15px 0; border-bottom: 1px solid #e0e0e0; font-family: 'Poppins', sans-serif;">
+        <div class="container" style="max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+            <div class="top-bar-content" style="display: flex; justify-content: space-between; align-items: center;">
+                <a href="index.php" class="logo" style="text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                    <img src="images/healcare_logo.jpg" alt="HealCare Logo" class="logo-img" style="height: 65px; width: auto; object-fit: contain;"> 
+                    <style>
+                        @keyframes revealLetter {
+                            0% { opacity: 0; transform: translateY(10px); }
+                            100% { opacity: 1; transform: translateY(0); }
+                        }
+                    </style>
+                    <span class="animated-brand" style="font-size: 28px; font-weight: 700; color: #0a1f44; font-family: 'Poppins', sans-serif;">
+                        <?php 
+                        $text = "HEALCARE HOSPITAL";
+                        $chars = str_split($text);
+                        foreach ($chars as $index => $char) {
+                            $delay = $index * 0.1;
+                            if ($char === ' ') {
+                                echo "&nbsp;";
+                            } else {
+                                echo "<span style='display:inline-block; opacity:0; animation: revealLetter 0.5s forwards {$delay}s;'>$char</span>";
+                            }
+                        }
+                        ?>
+                    </span>
+                </a>
+                <div class="top-info" style="display: flex; gap: 40px;">
+                    <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                        <div class="info-icon" style="width: 40px; height: 40px; border: 2px solid #0a1f44; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0a1f44;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                            </svg>
+                        </div>
+                        <div class="info-text" style="display: flex; flex-direction: column;">
+                            <span class="info-label" style="font-size: 11px; font-weight: 600; color: #0a1f44; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;">WHATSAPP</span>
+                            <a href="https://wa.me/919539045609" target="_blank" class="info-value" style="text-decoration: none; color: #25d366; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                        </div>
+                    </div>
+
+                    <div class="info-item" style="display: flex; align-items: center; gap: 10px;">
+                        <div class="info-icon" style="width: 40px; height: 40px; border: 2px solid #0a1f44; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #0a1f44;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                                <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="info-text" style="display: flex; flex-direction: column;">
+                            <span class="info-label" style="font-size: 11px; font-weight: 600; color: #0a1f44; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;">LOCATION</span>
+                            <span class="info-value" style="font-size: 13px; color: #1e90ff; font-weight: 500; font-family: 'Poppins', sans-serif;">Kanjirapally, Kottayam</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -469,7 +492,7 @@ while ($row = $notif_res->fetch_assoc()) {
                 <a href="billing.php" class="nav-link"><i class="fas fa-file-invoice-dollar"></i> Billing</a>
                 <a href="canteen.php" class="nav-link"><i class="fas fa-utensils"></i> Canteen</a>
                 <a href="patient_ambulance.php" class="nav-link"><i class="fas fa-ambulance"></i> Ambulance Service</a>
-                <a href="?section=hospital_insights" class="nav-link <?php echo isset($_GET['section']) && $_GET['section'] == 'hospital_insights' ? 'active' : ''; ?>"><i class="fas fa-chart-line"></i> Hospital Insights</a>
+
                 <a href="patient_feedback.php" class="nav-link"><i class="fas fa-comment-dots"></i> Patient Feedback</a>
                 <a href="settings.php" class="nav-link"><i class="fas fa-cog"></i> Profile</a>
             </nav>
@@ -492,30 +515,7 @@ while ($row = $notif_res->fetch_assoc()) {
                 <h1 style="display: none;">Patient Dashboard</h1>
             </div>
 
-            <?php if ($section == 'hospital_insights'): ?>
-                <!-- Hospital Core Performance Visuals (Mirrored from Admin) -->
-                <div class="content_section" style="margin-bottom: 30px;">
-                    <div class="section-head">
-                        <h3><i class="fas fa-project-diagram" style="color:#3b82f6;"></i> Hospital Operational Intelligence</h3>
-                        <p style="color: #64748b; font-size: 13px;">Transparency in our hospital operations and availability</p>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 25px; margin-bottom: 30px;">
-                        <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
-                            <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Live Ward Occupancy</h4>
-                            <div style="flex: 1; position: relative; min-height: 0;">
-                                <canvas id="chartOccupancy"></canvas>
-                            </div>
-                        </div>
-                        <div style="background: rgba(15, 23, 42, 0.5); padding: 25px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); height: 400px; display: flex; flex-direction: column;">
-                            <h4 style="font-size: 13px; color: #94a3b8; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Average Peak Consultation Hours</h4>
-                            <div style="flex: 1; position: relative; min-height: 0;">
-                                <canvas id="chartPeakHours"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            <?php else: ?>
+
                 <?php if(isset($_GET['msg']) && $_GET['msg'] == 'package_booked'): ?>
             <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid #10b981; padding: 15px 20px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px; animation: slideDown 0.4s ease-out;">
                 <div style="width: 40px; height: 40px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">
@@ -548,22 +548,34 @@ while ($row = $notif_res->fetch_assoc()) {
                     $queue_display = '#' . $q_res->fetch_assoc()['queue_number'];
                 }
 
+                
                 // 4. Bed Status
                 $bed_display = 'Not Admitted';
                 $bed_color = '#94a3b8'; // gray
+                $ward_info = '';
                 
-                // Check admissions table instead of appointments
-                $admit_sql = "SELECT status FROM admissions WHERE patient_id = $user_id AND status IN ('Admitted', 'Pending') ORDER BY request_date DESC LIMIT 1";
+                // Check admissions table
+                $admit_sql = "SELECT a.*, r.room_number, w.ward_name 
+                             FROM admissions a 
+                             LEFT JOIN rooms r ON a.room_id = r.room_id 
+                             LEFT JOIN wards w ON r.ward_id = w.ward_id
+                             WHERE a.patient_id = $user_id AND a.status IN ('Admitted', 'Pending', 'In-Treatment') 
+                             ORDER BY a.request_date DESC LIMIT 1";
                 $adm_chk = $conn->query($admit_sql);
                 
                 if ($adm_chk && $adm_chk->num_rows > 0) {
-                    $adm_status = $adm_chk->fetch_assoc()['status'];
-                    if ($adm_status == 'Admitted') {
+                    $adm_data = $adm_chk->fetch_assoc();
+                    $adm_status = $adm_data['status'];
+                    if ($adm_status == 'Admitted' || $adm_status == 'In-Treatment') {
                         $bed_display = 'Admitted';
                         $bed_color = '#10b981'; // green
+                        if ($adm_data['room_number']) {
+                            $ward_info = $adm_data['ward_name'] . " - Rm " . $adm_data['room_number'];
+                        }
                     } elseif ($adm_status == 'Pending') {
-                        $bed_display = 'Pending';
+                        $bed_display = 'Admission Pending';
                         $bed_color = '#f59e0b'; // orange
+                        $ward_info = 'Awaiting Room Assignment';
                     }
                 }
                 ?>
@@ -584,6 +596,59 @@ while ($row = $notif_res->fetch_assoc()) {
                     <span class="stat-label">Bed Status</span>
                 </div>
             </div>
+
+            <!-- Insurance Quick View (New) -->
+            <?php if ($active_policy): ?>
+            <div class="content-section" style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05)); border-color: rgba(59, 130, 246, 0.2);">
+                <div class="section-head" style="margin-bottom: 20px;">
+                    <h3 style="color: #60a5fa;"><i class="fas fa-shield-alt"></i> Insurance Coverage</h3>
+                    <span class="badge" style="background:#3b82f6; color:white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;">ACTIVE POLICY</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px;">
+                    <div>
+                        <small style="color: #94a3b8;">Provider</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;"><?php echo htmlspecialchars($active_policy['provider_name']); ?></h4>
+                        <small style="color: #64748b;"><?php echo htmlspecialchars($active_policy['policy_number']); ?></small>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Coverage</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;"><?php echo $active_policy['coverage_percentage']; ?>%</h4>
+                        <small style="color: #64748b;">Co-pay applied</small>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Total Limit</small>
+                        <h4 style="margin: 0; font-size: 16px; color: white;">₹<?php echo number_format($active_policy['coverage_limit']); ?></h4>
+                    </div>
+                    <div>
+                        <small style="color: #94a3b8;">Remaining Balance</small>
+                        <h4 style="margin: 0; font-size: 16px; color: #10b981;">₹<?php echo number_format($remaining_limit); ?></h4>
+                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 5px; overflow: hidden;">
+                            <?php 
+                            $percent = ($active_policy['coverage_limit'] > 0) ? ($remaining_limit / $active_policy['coverage_limit']) * 100 : 0;
+                            ?>
+                            <div style="width: <?php echo $percent; ?>%; height: 100%; background: #10b981;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <?php if (!empty($recent_claims)): ?>
+                <div style="margin-top: 20px; border-top: 1px solid rgba(59, 130, 246, 0.1); padding-top: 15px;">
+                    <small style="color: #64748b; display: block; margin-bottom: 10px; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Recent Claims</small>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <?php foreach($recent_claims as $cl): ?>
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; background: rgba(0,0,0,0.1); padding: 8px 12px; border-radius: 6px;">
+                            <span>Claim #<?php echo $cl['claim_id']; ?> (<?php echo date('d M', strtotime($cl['created_at'])); ?>)</span>
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <span style="color: #94a3b8;">₹<?php echo number_format($cl['covered_amount']); ?></span>
+                                <span class="status-badge status-<?php echo $cl['status']; ?>" style="font-size: 10px; padding: 2px 8px;"><?php echo $cl['status']; ?></span>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
 
             <!-- Health Trends Chart -->
             <div class="chart-container">
@@ -670,7 +735,7 @@ while ($row = $notif_res->fetch_assoc()) {
                     </div>
                     <div>
                         <small style="color: #94a3b8;">Est. Room Charges</small>
-                        <h4 style="margin: 0; font-size: 16px; color: #f59e0b;">₹<?php echo number_format($est_bill); ?></h4>
+                        <h4 style="margin: 0; font-size: 16px; color: #f59e0b;">â‚¹<?php echo number_format($est_bill); ?></h4>
                         <small style="color: #64748b;">(Excl. medicines/procedures)</small>
                     </div>
                 </div>
@@ -754,7 +819,7 @@ while ($row = $notif_res->fetch_assoc()) {
                             <div class="dash-item" style="display: flex; justify-content: space-between; align-items: center;">
                                 <div class="doc-info">
                                     <h4 style="margin-bottom: 8px;"><?php echo htmlspecialchars($doc_display_name); ?> <span class="status-badge status-<?php echo $appt['status']; ?>" style="font-size: 10px;"><?php echo htmlspecialchars($appt['status']); ?></span></h4>
-                                    <p style="color: #94a3b8; font-size: 14px;"><?php echo htmlspecialchars($specialty); ?> • <?php echo $appt_time; ?></p>
+                                    <p style="color: #94a3b8; font-size: 14px;"><?php echo htmlspecialchars($specialty); ?> â€¢ <?php echo $appt_time; ?></p>
                                     <div style="margin-top: 10px; color: #4fc3f7; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 15px;">
                                         <span><i class="fas fa-ticket-alt"></i> Token #<?php echo htmlspecialchars($appt['queue_number'] ?? 'N/A'); ?></span>
                                         <?php if($appt['consultation_mode'] == 'Online'): ?>
@@ -797,7 +862,7 @@ while ($row = $notif_res->fetch_assoc()) {
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                                             <div>
                                                 <h4 style="color: #4fc3f7; margin-bottom: 5px;"><?php echo htmlspecialchars($record['diagnosis']); ?></h4>
-                                                <p style="font-size: 12px; color: #94a3b8;">Consulted with <?php echo htmlspecialchars($record['doctor_name']); ?> • <?php echo date('M d, Y', strtotime($record['created_at'])); ?></p>
+                                                <p style="font-size: 12px; color: #94a3b8;">Consulted with <?php echo htmlspecialchars($record['doctor_name']); ?> â€¢ <?php echo date('M d, Y', strtotime($record['created_at'])); ?></p>
                                             </div>
                                             <span class="status-badge status-Completed">Visit Completed</span>
                                         </div>
@@ -816,7 +881,7 @@ while ($row = $notif_res->fetch_assoc()) {
                                                 </a>
                                                 <?php if($record['bill_id'] && $record['bill_status'] != 'Paid'): ?>
                                                     <a href="payment_gateway.php?bill_id=<?php echo $record['bill_id']; ?>" class="download-btn" style="background:#f59e0b; color:#000; border:none;">
-                                                        <i class="fas fa-credit-card"></i> Pay ₹<?php echo number_format($record['bill_amount']); ?>
+                                                        <i class="fas fa-credit-card"></i> Pay â‚¹<?php echo number_format($record['bill_amount']); ?>
                                                     </a>
                                                 <?php endif; ?>
                                             </div>
@@ -884,7 +949,7 @@ while ($row = $notif_res->fetch_assoc()) {
                                             <span style="display: block; font-size: 13px; font-weight: 600;"><?php echo htmlspecialchars($amb['driver_name']); ?></span>
                                             <small style="color: #94a3b8; font-size: 10px;"><?php echo htmlspecialchars($amb['location']); ?></small>
                                         </div>
-                                        <a href="https://wa.me/918075454467" target="_blank" style="color: #25d366; font-weight: 700; font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 5px;">
+                                        <a href="https://wa.me/919539045609" target="_blank" style="color: #25d366; font-weight: 700; font-size: 12px; text-decoration: none; display: flex; align-items: center; gap: 5px;">
                                             <i class="fab fa-whatsapp"></i> WHATSAPP
                                         </a>
                                     </div>
@@ -958,7 +1023,7 @@ while ($row = $notif_res->fetch_assoc()) {
                                             </div>
                                             <p style="margin: 4px 0 8px; font-size: 11px; color: #94a3b8; line-height: 1.4;"><?php echo htmlspecialchars($p['package_description']); ?></p>
                                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                <span style="font-weight: 700; color: #10b981; font-size: 13px;">₹<?php echo number_format($p['discounted_price']); ?></span>
+                                                <span style="font-weight: 700; color: #10b981; font-size: 13px;">â‚¹<?php echo number_format($p['discounted_price']); ?></span>
                                                 <a href="health_packages.php?open=<?php echo urlencode($p['package_name']); ?>" style="font-size: 11px; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 6px; text-decoration: none; font-weight: 600;">Book Now</a>
                                             </div>
                                         </div>
@@ -1014,7 +1079,7 @@ while ($row = $notif_res->fetch_assoc()) {
                 </div>
             </div>
 
-            <?php endif; ?>
+
         </main>
     </div>
 
@@ -1143,10 +1208,10 @@ while ($row = $notif_res->fetch_assoc()) {
                                     tooltipItems.forEach(function(tooltipItem) {
                                         // Simple Insight Logic
                                         if(tooltipItem.dataset.label.includes('Systolic') && tooltipItem.raw > 120) {
-                                            return '⚠️ BP slightly elevated';
+                                            return 'âš ï¸ BP slightly elevated';
                                         }
                                         if(tooltipItem.dataset.label.includes('Heart') && tooltipItem.raw > 100) {
-                                            return '⚠️ High Pulse Rate';
+                                            return 'âš ï¸ High Pulse Rate';
                                         }
                                     });
                                 }
@@ -1170,69 +1235,7 @@ while ($row = $notif_res->fetch_assoc()) {
         });
 
         // Initialize Operational Intelligence Charts
-        <?php if ($section == 'hospital_insights'): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const ctxOcc = document.getElementById('chartOccupancy').getContext('2d');
-            new Chart(ctxOcc, {
-                type: 'bar',
-                data: {
-                    labels: <?php echo json_encode($occ_labels); ?>,
-                    datasets: [
-                        {
-                            label: 'Occupied',
-                            data: <?php echo json_encode($occ_occupied); ?>,
-                            backgroundColor: '#ef4444',
-                            borderRadius: 6
-                        },
-                        {
-                            label: 'Available',
-                            data: <?php echo json_encode(array_map(function($c, $o) { return $c - $o; }, $occ_capacity, $occ_occupied)); ?>,
-                            backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                            borderRadius: 6
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8' } },
-                        y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
-                    },
-                    plugins: {
-                        legend: { labels: { color: '#cbd5e1' } }
-                    }
-                }
-            });
 
-            const ctxPeak = document.getElementById('chartPeakHours').getContext('2d');
-            new Chart(ctxPeak, {
-                type: 'line',
-                data: {
-                    labels: <?php echo json_encode($peak_labels); ?>,
-                    datasets: [{
-                        label: 'Appointments',
-                        data: <?php echo json_encode($peak_counts); ?>,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-        });
-        <?php endif; ?>
 
         // Brand Animation
         function initBrandAnimation() {
@@ -1337,7 +1340,7 @@ while ($row = $notif_res->fetch_assoc()) {
                             <i class="${notif.icon}"></i>
                         </div>
                         <div class="notif-content">
-                            <h4>${notif.title} ${notif.priority === 'High' ? '<span style="color:#ef4444; font-size:10px;">●</span>' : ''}</h4>
+                            <h4>${notif.title} ${notif.priority === 'High' ? '<span style="color:#ef4444; font-size:10px;">â—</span>' : ''}</h4>
                             <p>${notif.message}</p>
                             <span class="notif-time">${notif.time}</span>
                         </div>

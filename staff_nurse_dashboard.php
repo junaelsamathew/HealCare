@@ -58,6 +58,75 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
         $error = "Note addition failed: " . $conn->error;
     }
 }
+
+// Handle Medication Administration
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['administer_medication'])) {
+    $prescription_id = intval($_POST['prescription_id']);
+    $patient_id = intval($_POST['patient_id']);
+    $medicine_name = $_POST['medicine_name'];
+    $dosage = $_POST['dosage'] ?? '';
+    $nurse_id = $_SESSION['user_id'];
+    
+    $stmt = $conn->prepare("INSERT INTO medication_logs (prescription_id, patient_id, nurse_id, medicine_name, dosage, administered_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    $stmt->bind_param("iiiss", $prescription_id, $patient_id, $nurse_id, $medicine_name, $dosage);
+    
+    if ($stmt->execute()) {
+        header("Location: staff_nurse_dashboard.php?section=medication&status=success&msg=Medication+Administered");
+        exit();
+    } else {
+        $error = "Administration failed: " . $conn->error;
+    }
+}
+
+// Handle General Nursing Note Submission
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_general_note'])) {
+    $nurse_id = $_SESSION['user_id'];
+    $category = $_POST['category'];
+    $priority = $_POST['priority'];
+    $content = $conn->real_escape_string($_POST['content']);
+    
+    $stmt = $conn->prepare("INSERT INTO nursing_notes (nurse_id, note_type, priority, content) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("isss", $nurse_id, $category, $priority, $content);
+    
+    if ($stmt->execute()) {
+        header("Location: staff_nurse_dashboard.php?section=notes&msg=Note+Added");
+        exit();
+    } else {
+        $error = "Note addition failed: " . $conn->error;
+    }
+}
+
+// Handle Note Deletion (Soft Delete)
+if (isset($_GET['delete_note_id'])) {
+    $note_id = intval($_GET['delete_note_id']);
+    // Ensure only the creator or admin can delete (simplified here: only creator)
+    $conn->query("UPDATE nursing_notes SET deleted_at = NOW(), status = 'deleted' WHERE id = $note_id AND nurse_id = {$_SESSION['user_id']}");
+    header("Location: staff_nurse_dashboard.php?section=notes&msg=Note+Deleted");
+    exit();
+}
+
+// Helper Function: Time Ago
+function time_ago($datetime) {
+    if (empty($datetime)) return "Just now";
+    $time_ago = strtotime($datetime);
+    $current_time = time();
+    $time_difference = $current_time - $time_ago;
+    $seconds = $time_difference;
+    $minutes = round($seconds / 60);
+    $hours = round($seconds / 3600);
+    $days = round($seconds / 86400);
+    $weeks = round($seconds / 604800);
+    $months = round($seconds / 2629440);
+    $years = round($seconds / 31553280);
+
+    if ($seconds <= 60) return "Just Now";
+    else if ($minutes <= 60) return "$minutes mins ago";
+    else if ($hours <= 24) return "$hours hours ago";
+    else if ($days <= 7) return "$days days ago";
+    else if ($weeks <= 4.3) return "$weeks weeks ago";
+    else if ($months <= 12) return "$months months ago";
+    else return "$years years ago";
+}
 ?>
 
 <!DOCTYPE html>
@@ -159,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             
@@ -183,10 +252,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
     <div class="dashboard-body">
         <aside class="side-nav">
             <a href="?section=patients" class="nav-item active"><i class="fas fa-hospital-user"></i> My Patients</a>
-            <a href="?section=vitals" class="nav-item"><i class="fas fa-heartbeat"></i> Vitals Monitor</a>
+
             <a href="?section=notes" class="nav-item"><i class="fas fa-notes-medical"></i> Nursing Notes</a>
-            <a href="?section=medication" class="nav-item"><i class="fas fa-syringe"></i> Medication</a>
-            <a href="?section=handover" class="nav-item"><i class="fas fa-clock"></i> Shift handover</a>
+
+
             <a href="?section=reports" class="nav-item"><i class="fas fa-chart-line"></i> Nursing Reports</a>
             <a href="staff_settings.php" class="nav-item"><i class="fas fa-cog"></i> Profile Settings</a>
         </aside>
@@ -311,7 +380,91 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                     </div>
                 </div>
 
-                <h3 style="color:#fff; margin-bottom: 25px;">Live Department Queue - Assigned Patients</h3>
+                <!-- Inpatient Ward Section -->
+                <div style="margin-bottom: 40px;">
+                    <h3 style="color:#fff; margin-bottom: 25px;"><i class="fas fa-procedures"></i> Inpatient Ward Management</h3>
+                    <div class="patient-list-container">
+                        <?php
+                        $sql_inpatients = "SELECT a.*, r.name as patient_name, u.user_id as patient_id, 
+                                                 rm.room_number, w.ward_name, d.name as doctor_name
+                                          FROM admissions a
+                                          JOIN users u ON a.patient_id = u.user_id
+                                          JOIN registrations r ON u.registration_id = r.registration_id
+                                          JOIN rooms rm ON a.room_id = rm.room_id
+                                          JOIN wards w ON rm.ward_id = w.ward_id
+                                          LEFT JOIN users du ON a.doctor_id = du.user_id
+                                          LEFT JOIN registrations d ON du.registration_id = d.registration_id
+                                          WHERE a.status = 'Admitted'
+                                          ORDER BY rm.room_number ASC";
+                        $res_inpatients = $conn->query($sql_inpatients);
+
+                        if ($res_inpatients && $res_inpatients->num_rows > 0):
+                            while($inpt = $res_inpatients->fetch_assoc()):
+                                $pid = $inpt['patient_id'];
+                                // Fetch latest vitals for a quick view
+                                $latest_v = $conn->query("SELECT * FROM patient_vitals WHERE patient_id = $pid ORDER BY recorded_at DESC LIMIT 1")->fetch_assoc();
+                        ?>
+                            <div class="patient-card" style="border-left: 4px solid #10b981;">
+                                <div class="token-badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">ROOM <?php echo $inpt['room_number']; ?></div>
+                                <div style="border-right: 1px solid var(--border-soft); padding-right: 30px;">
+                                    <span style="font-size:11px; color:#10b981; font-weight:800; text-transform:uppercase;">Admitted - <?php echo $inpt['ward_name']; ?></span>
+                                    <h4 style="color:#fff; margin: 10px 0; font-size: 18px;"><?php echo htmlspecialchars($inpt['patient_name']); ?></h4>
+                                    <p style="font-size: 13px; color: #64748b; margin-bottom: 15px;">ID: HC-P-<?php echo $pid; ?> | Doc: Dr. <?php echo htmlspecialchars($inpt['doctor_name']); ?></p>
+                                    
+                                    <?php if ($latest_v): ?>
+                                        <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                                            <div>BP: <span style="color:#fff;"><?php echo $latest_v['blood_pressure_systolic'].'/'.$latest_v['blood_pressure_diastolic']; ?></span></div>
+                                            <div>HR: <span style="color:#fff;"><?php echo $latest_v['heart_rate']; ?></span></div>
+                                            <div style="grid-column: 1/-1; color: #94a3b8; font-size: 9px; margin-top: 5px;">Last Update: <?php echo date('h:i A', strtotime($latest_v['recorded_at'])); ?></div>
+                                        </div>
+                                    <?php else: ?>
+                                        <div style="font-size: 11px; color: #64748b; font-style: italic;">No vitals recorded yet.</div>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 10px;">
+                                    <h5 style="color: #94a3b8; font-size: 11px; text-transform: uppercase;">Update Observations</h5>
+                                    <form method="POST">
+                                        <input type="hidden" name="patient_id" value="<?php echo $pid; ?>">
+                                        <div class="vital-inputs" style="grid-template-columns: repeat(2, 1fr);">
+                                            <div class="form-group-staff"><label>HR</label><input type="text" name="heart_rate" placeholder="80" required></div>
+                                            <div class="form-group-staff"><label>BP</label><input type="text" name="blood_pressure" placeholder="120/80" required></div>
+                                            <div class="form-group-staff"><label>Temp</label><input type="text" name="temperature" placeholder="37" required></div>
+                                            <div class="form-group-staff"><label>SpO2</label><input type="text" name="oxygen_saturation" placeholder="98" required></div>
+                                        </div>
+                                        <button type="submit" name="update_vitals" style="width: 100%; margin-top: 10px; padding: 8px; background: #10b981; border: none; border-radius: 8px; color: #fff; font-weight: 700; cursor: pointer;">Update Vitals</button>
+                                    </form>
+                                    
+                                    <div style="border-top: 1px dashed var(--border-soft); margin-top: 5px; padding-top: 10px;">
+                                        <h5 style="color: #94a3b8; font-size: 11px; text-transform: uppercase; margin-bottom: 5px;">Active Prescriptions</h5>
+                                        <?php
+                                        $sql_rx = "SELECT * FROM prescriptions WHERE patient_id = $pid ORDER BY prescription_date DESC LIMIT 3";
+                                        $res_rx = $conn->query($sql_rx);
+                                        if ($res_rx && $res_rx->num_rows > 0):
+                                            while($rx = $res_rx->fetch_assoc()):
+                                        ?>
+                                            <div style="font-size: 11px; color: #cbd5e1; margin-bottom: 3px; display: flex; justify-content: space-between;">
+                                                <span><?php echo htmlspecialchars($rx['medicine_details']); ?></span>
+                                                <form method="POST" style="display:inline;">
+                                                    <input type="hidden" name="patient_id" value="<?php echo $pid; ?>">
+                                                    <input type="hidden" name="prescription_id" value="<?php echo $rx['prescription_id']; ?>">
+                                                    <input type="hidden" name="medicine_name" value="<?php echo $rx['medicine_details']; ?>">
+                                                    <button type="submit" name="administer_medication" style="background: transparent; border: 1px solid #3b82f6; color: #3b82f6; padding: 2px 5px; border-radius: 4px; font-size: 9px; cursor: pointer;">Give</button>
+                                                </form>
+                                            </div>
+                                        <?php endwhile; else: ?>
+                                            <div style="font-size: 10px; color: #64748b;">No active meds.</div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endwhile; else: ?>
+                            <p style="color: #64748b; font-size: 14px; text-align: center; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px;">No inpatients currently admitted to your ward.</p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <h3 style="color:#fff; margin-bottom: 25px;">Live Department Queue - Outpatients</h3>
 
 
                 <div class="patient-list-container">
@@ -400,160 +553,290 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
                     <?php endif; ?>
                 </div>
 
-            <?php elseif ($_GET['section'] == 'vitals'): ?>
-                <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Vitals Monitoring</h1>
-                    <p style="color:#64748b; font-size:14px;">Quick vitals entry for assigned patients.</p>
-                </div>
-                <div class="stat-card-new">
-                    <h3 style="color:#fff; margin-bottom:20px;">Select Patient</h3>
-                    <select name="patient_id" style="width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border-soft); color: #fff; border-radius: 8px;">
-                        <option value="">-- Select Patient --</option>
-                        <?php
-                        // Fetch Active Patients for Vitals (Admitted or Appt Today)
-                        $today_v = date('Y-m-d');
-                        $sql_v_pt = "SELECT u.user_id as patient_id, r.name, 
-                                            a.status, a.appointment_id,
-                                            w.ward_name, rm.room_number
-                                     FROM appointments a
-                                     JOIN users u ON a.patient_id = u.user_id
-                                     JOIN registrations r ON u.registration_id = r.registration_id
-                                     LEFT JOIN admissions adm ON a.appointment_id = adm.app_id
-                                     LEFT JOIN rooms rm ON adm.room_id = rm.room_id
-                                     LEFT JOIN wards w ON rm.ward_id = w.ward_id
-                                     WHERE a.appointment_date = '$today_v' 
-                                     OR a.status = 'Admitted'
-                                     ORDER BY a.status ASC, r.name ASC";
-                        
-                        $res_v_pt = $conn->query($sql_v_pt);
-                        
-                        $seen_patients = []; // Avoid duplicates if patient has multiple appts
-                        
-                        if ($res_v_pt && $res_v_pt->num_rows > 0) {
-                            while ($vpt = $res_v_pt->fetch_assoc()) {
-                                if (in_array($vpt['patient_id'], $seen_patients)) continue;
-                                $seen_patients[] = $vpt['patient_id'];
-                                
-                                $loc = ($vpt['status'] == 'Admitted' && $vpt['ward_name']) 
-                                        ? $vpt['ward_name'] . ' - ' . $vpt['room_number'] 
-                                        : 'Waiting / OPD';
-                                
-                                echo '<option value="'.$vpt['patient_id'].'">' . htmlspecialchars($vpt['name']) . ' (HC-P-'.$vpt['patient_id'].') - ' . $loc . '</option>';
-                            }
-                        } else {
-                            echo '<option disabled>No active patients found</option>';
-                        }
-                        ?>
-                    </select>
-                    
-                    <form method="POST">
-                        <div class="vital-inputs" style="margin-top: 20px;">
-                            <div class="form-group-staff"><label>Heart Rate (BPM)</label><input type="text" name="heart_rate" placeholder="BPM" required></div>
-                            <div class="form-group-staff"><label>BP (Sys/Dia)</label><input type="text" name="blood_pressure" placeholder="120/80" required></div>
-                            <div class="form-group-staff"><label>Temp (°C)</label><input type="text" name="temperature" placeholder="37.0" required></div>
-                            <div class="form-group-staff"><label>SPO2 (%)</label><input type="text" name="oxygen_saturation" placeholder="98" required></div>
-                            <div class="form-group-staff"><label>Notes</label><textarea name="nursing_notes" rows="1" placeholder="Optional notes..."></textarea></div>
-                        </div>
-                        <button type="submit" name="update_vitals" style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Log Vitals</button>
-                    </form>
-                </div>
+
 
             <?php elseif ($_GET['section'] == 'notes'): ?>
+                <!-- Advanced Nursing Notes Module -->
+                <style>
+                    /* Custom Scrollbar for Notes */
+                    .notes-timeline::-webkit-scrollbar { width: 6px; }
+                    .notes-timeline::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); }
+                    .notes-timeline::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+                    .notes-timeline::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+
+                    /* Badges */
+                    .badge-priority { padding: 4px 10px; border-radius: 20px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+                    .badge-critical { background: rgba(239, 68, 68, 0.2); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+                    .badge-moderate { background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+                    .badge-normal   { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+
+                    .badge-category { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; background: rgba(255, 255, 255, 0.05); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.1); display: inline-flex; align-items: center; gap: 5px; }
+                    
+                    /* Timeline Item */
+                    .timeline-item { position: relative; padding-left: 30px; margin-bottom: 25px; transition: 0.3s; }
+                    .timeline-item::before { content: ''; position: absolute; left: 0; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: #3b82f6; border: 2px solid #0f172a; z-index: 2; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+                    .timeline-item::after { content: ''; position: absolute; left: 5px; top: 17px; bottom: -30px; width: 2px; background: rgba(255, 255, 255, 0.05); z-index: 1; }
+                    .timeline-item:last-child::after { display: none; }
+                    
+                    .note-card { 
+                        position: relative;
+                        background: rgba(30, 41, 59, 0.6); 
+                        backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255, 255, 255, 0.05); 
+                        border-radius: 12px; 
+                        padding: 20px; 
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                    }
+                    .note-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); background: rgba(30, 41, 59, 0.8); border-color: rgba(59, 130, 246, 0.3); }
+                    
+                    .note-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+                    .note-meta { display: flex; align-items: center; gap: 10px; font-size: 11px; color: #64748b; }
+                    .note-content { color: #e2e8f0; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+                    
+                    .btn-action-icon { background: transparent; border: none; color: #64748b; cursor: pointer; transition: 0.2s; padding: 5px; border-radius: 5px; }
+                    .btn-action-icon:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+                    
+                    /* Search & Filter Bar */
+                    .top-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; gap: 20px; flex-wrap: wrap; }
+                    .search-box { position: relative; flex: 1; min-width: 250px; }
+                    .search-box input { width: 100%; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 15px 12px 40px; border-radius: 10px; color: #fff; font-size: 14px; transition: 0.3s; }
+                    .search-box input:focus { border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); outline: none; }
+                    .search-box i { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #64748b; }
+                    
+                    .filter-group { display: flex; gap: 10px; }
+                    .filter-select { background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); color: #cbd5e1; padding: 10px 15px; border-radius: 10px; font-size: 13px; cursor: pointer; outline: none; }
+                    
+                    .btn-add-note { background: #3b82f6; color: #fff; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.3s; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2); }
+                    .btn-add-note:hover { background: #2563eb; transform: translateY(-1px); }
+
+                    /* Modal */
+                    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s ease; }
+                    .modal-overlay.active { display: flex; opacity: 1; }
+                    .modal-container { background: #1e293b; width: 90%; max-width: 600px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); transform: scale(0.95); transition: transform 0.3s ease; overflow: hidden; }
+                    .modal-overlay.active .modal-container { transform: scale(1); }
+                    
+                    .modal-header { padding: 20px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); }
+                    .modal-header h3 { margin: 0; color: #fff; font-size: 18px; font-weight: 600; }
+                    .close-modal { background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; transition: 0.2s; }
+                    .close-modal:hover { color: #fff; }
+                    
+                    .modal-body { padding: 25px; }
+                    .form-group { margin-bottom: 20px; }
+                    .form-label { display: block; color: #cbd5e1; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+                    .form-control { width: 100%; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 12px; color: #fff; font-size: 14px; transition: 0.3s; }
+                    .form-control:focus { border-color: #3b82f6; outline: none; }
+                </style>
+
                 <div style="margin-bottom: 30px;">
                     <h1 style="color:#fff; font-size: 28px;">Nursing Notes</h1>
-                    <p style="color:#64748b; font-size:14px;">Clinical observations and care notes.</p>
-                </div>
-                <div class="stat-card-new">
-                     <form method="POST">
-                         <div class="form-group-staff" style="margin-bottom: 20px;">
-                            <label>Patient</label>
-                            <select name="patient_id" style="width: 100%; padding: 12px; background: #020617; border: 1px solid var(--border-soft); color: #fff; border-radius: 8px;" required>
-                                <option value="">-- Select Patient --</option>
-                                <?php
-                                // Exact same logic as Vitals to ensure comprehensive list
-                                $today_notes = date('Y-m-d');
-                                $sql_notes_pt = "SELECT u.user_id as patient_id, r.name, 
-                                                    a.status, a.appointment_id,
-                                                    w.ward_name, rm.room_number
-                                             FROM appointments a
-                                             JOIN users u ON a.patient_id = u.user_id
-                                             JOIN registrations r ON u.registration_id = r.registration_id
-                                             LEFT JOIN admissions adm ON a.appointment_id = adm.app_id
-                                             LEFT JOIN rooms rm ON adm.room_id = rm.room_id
-                                             LEFT JOIN wards w ON rm.ward_id = w.ward_id
-                                             WHERE a.appointment_date = '$today_notes' 
-                                             OR a.status = 'Admitted'
-                                             ORDER BY a.status ASC, r.name ASC";
-                                
-                                $res_notes_pt = $conn->query($sql_notes_pt);
-                                $seen_p_notes = [];
-                                
-                                if ($res_notes_pt && $res_notes_pt->num_rows > 0) {
-                                    while ($npt = $res_notes_pt->fetch_assoc()) {
-                                        if (in_array($npt['patient_id'], $seen_p_notes)) continue;
-                                        $seen_p_notes[] = $npt['patient_id'];
-                                        
-                                        $loc = ($npt['status'] == 'Admitted' && $npt['ward_name']) 
-                                                ? $npt['ward_name'] . ' - ' . $npt['room_number'] 
-                                                : 'Waiting / OPD';
-                                        
-                                        echo '<option value="'.$npt['patient_id'].'">' . htmlspecialchars($npt['name']) . ' (HC-P-'.$npt['patient_id'].') - ' . $loc . '</option>';
-                                    }
-                                } else {
-                                    echo '<option disabled>No active patients found today</option>';
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="form-group-staff">
-                            <label>Note Content</label>
-                            <textarea name="nursing_notes" rows="6" placeholder="Detailed nursing notes..." required></textarea>
-                        </div>
-                        <button type="submit" name="add_note" style="margin-top: 20px; padding: 12px 30px; background: #4fc3f7; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Save Note</button>
-                    </form>
+                    <p style="color:#64748b; font-size:14px;">Clinical observations, shift logs, and critical updates.</p>
                 </div>
 
-            <?php elseif ($_GET['section'] == 'medication'): ?>
-                <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Medication Administration</h1>
-                    <p style="color:#64748b; font-size:14px;">Track and administer prescribed doses.</p>
-                </div>
-                <div class="patient-card">
-                     <h3 style="color:#fff; margin-bottom:15px;">Ravi Sharma - Ward B/15</h3>
-                     <table style="width:100%; color:#cbd5e1; border-collapse:collapse;">
-                        <tr style="border-bottom:1px solid var(--border-soft); text-align:left;"><th style="padding:10px;">Drug</th><th style="padding:10px;">Dose</th><th style="padding:10px;">Time</th><th style="padding:10px;">Status</th></tr>
-                        <tr style="border-bottom:1px solid var(--border-soft);">
-                            <td style="padding:10px;">Paracetamol</td>
-                            <td style="padding:10px;">500mg</td>
-                            <td style="padding:10px;">14:00</td>
-                            <td style="padding:10px;"><span style="color:#4fc3f7;">Due Now</span></td>
-                        </tr>
-                        <tr>
-                            <td style="padding:10px;">Amoxicillin</td>
-                            <td style="padding:10px;">250mg</td>
-                            <td style="padding:10px;">20:00</td>
-                            <td style="padding:10px;"><span style="color:#64748b;">Upcoming</span></td>
-                        </tr>
-                     </table>
-                </div>
-
-            <?php elseif ($_GET['section'] == 'handover'): ?>
-                <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Shift Handover</h1>
-                    <p style="color:#64748b; font-size:14px;">Prepare handover notes for the next shift.</p>
-                </div>
-                 <div class="stat-card-new">
-                    <div class="form-group-staff">
-                        <label>Shift Summary</label>
-                        <textarea rows="8" placeholder="Summarize critical events, pending tasks, and patient status changes..."></textarea>
+                <!-- Control Bar -->
+                <div class="top-toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="noteSearch" placeholder="Search notes..." onkeyup="filterNotes()">
                     </div>
-                     <button style="margin-top: 20px; padding: 12px 30px; background: #10b981; border: none; border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer;">Submit Handover Log</button>
+                    
+                    <div class="filter-group">
+                        <select class="filter-select" id="catFilter" onchange="filterNotes()">
+                            <option value="all">All Categories</option>
+                            <option value="Observation">Observation</option>
+                            <option value="Medication">Medication</option>
+                            <option value="Emergency">Emergency</option>
+                            <option value="General">General</option>
+                            <option value="Shift Handover">Shift Handover</option>
+                        </select>
+                        <select class="filter-select" id="prioFilter" onchange="filterNotes()">
+                            <option value="all">All Priorities</option>
+                            <option value="Critical">Critical</option>
+                            <option value="Moderate">Moderate</option>
+                            <option value="Normal">Normal</option>
+                        </select>
+                        <button class="btn-add-note" onclick="openModal()"><i class="fas fa-plus"></i> New Note</button>
+                    </div>
                 </div>
+
+                <!-- Notes Timeline -->
+                <div class="notes-timeline" id="notesList" style="padding-bottom: 50px;">
+                    <?php
+                    // Fetch Notes
+                    $search_q = ""; 
+                    // In a real scenario, handle GET search params for server-side filtering
+                    // For now, client-side JS filtering is sufficient for moderate data or use AJAX
+                    
+                    $sql_notes = "SELECT n.*, r.name as nurse_name 
+                                  FROM nursing_notes n 
+                                  LEFT JOIN users u ON n.nurse_id = u.user_id 
+                                  LEFT JOIN registrations r ON u.registration_id = r.registration_id 
+                                  WHERE n.status = 'active' 
+                                  ORDER BY n.created_at DESC";
+                    $result_notes = $conn->query($sql_notes);
+
+                    if ($result_notes && $result_notes->num_rows > 0):
+                        while($note = $result_notes->fetch_assoc()):
+                            $prio_class = strtolower($note['priority']);
+                            $cat_icon = match($note['note_type']) {
+                                'Observation' => 'fa-eye',
+                                'Medication' => 'fa-pills',
+                                'Emergency' => 'fa-ambulance',
+                                'Shift Handover' => 'fa-exchange-alt',
+                                default => 'fa-sticky-note'
+                            };
+                    ?>
+                        <div class="timeline-item" data-category="<?php echo htmlspecialchars($note['note_type']); ?>" data-priority="<?php echo htmlspecialchars($note['priority']); ?>" data-content="<?php echo htmlspecialchars(strtolower($note['content'])); ?>">
+                            <div class="note-card">
+                                <div class="note-header">
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <span class="badge-priority badge-<?php echo $prio_class; ?>"><?php echo htmlspecialchars($note['priority']); ?></span>
+                                        <span class="badge-category"><i class="fas <?php echo $cat_icon; ?>"></i> <?php echo htmlspecialchars($note['note_type']); ?></span>
+                                        <?php if($note['note_type'] == 'Shift Handover'): ?>
+                                            <span style="font-size: 10px; color: #a855f7; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-left: 5px;"><i class="fas fa-flag"></i> Handover</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 5px;">
+                                        <?php if($note['nurse_id'] == $_SESSION['user_id']): ?>
+                                            <button class="btn-action-icon" onclick="confirmDelete(<?php echo $note['id']; ?>)" title="Delete Note"><i class="fas fa-trash-alt"></i></button>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                
+                                <div class="note-content"><?php echo nl2br(htmlspecialchars($note['content'])); ?></div>
+                                
+                                <div class="note-meta" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); justify-content: space-between;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div style="width: 20px; height: 20px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-weight: 700;">
+                                            <?php echo substr($note['nurse_name'] ?? 'N', 0, 1); ?>
+                                        </div>
+                                        <span><?php echo htmlspecialchars($note['nurse_name'] ?? 'Unknown Nurse'); ?></span>
+                                    </div>
+                                    <div>
+                                        <i class="far fa-clock"></i> <?php echo time_ago($note['created_at']); ?>
+                                        <span style="opacity: 0.5;">(<?php echo date('M d, H:i', strtotime($note['created_at'])); ?>)</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php 
+                        endwhile;
+                    else:
+                    ?>
+                        <div style="text-align: center; padding: 60px; opacity: 0.5;">
+                            <i class="fas fa-clipboard-list" style="font-size: 48px; margin-bottom: 20px; color: #64748b;"></i>
+                            <h3 style="color: #94a3b8; font-size: 18px;">No Notes Found</h3>
+                            <p style="color: #64748b;">Start adding clinical notes using the "New Note" button.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Add Note Modal -->
+                <div class="modal-overlay" id="addNoteModal">
+                    <div class="modal-container">
+                        <div class="modal-header">
+                            <h3><i class="fas fa-pen-fancy" style="color: #3b82f6; margin-right: 10px;"></i> Add New Clinical Note</h3>
+                            <button class="close-modal" onclick="closeModal()"><i class="fas fa-times"></i></button>
+                        </div>
+                        <form method="POST">
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label class="form-label">Note Category</label>
+                                    <select name="category" class="form-control" required style="background-image: none;">
+                                        <option value="Observation">Observation</option>
+                                        <option value="Medication">Medication Log</option>
+                                        <option value="Emergency">Emergency Event</option>
+                                        <option value="General">General Note</option>
+                                        <option value="Shift Handover">Shift Handover</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Priority Level</label>
+                                    <div style="display: flex; gap: 15px;">
+                                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 13px;">
+                                            <input type="radio" name="priority" value="Normal" checked> <span class="badge-priority badge-normal">Normal</span>
+                                        </label>
+                                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 13px;">
+                                            <input type="radio" name="priority" value="Moderate"> <span class="badge-priority badge-moderate">Moderate</span>
+                                        </label>
+                                        <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 13px;">
+                                            <input type="radio" name="priority" value="Critical"> <span class="badge-priority badge-critical">Critical</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Clinical Note Content</label>
+                                    <textarea name="content" class="form-control" rows="6" placeholder="Enter detailed observations, vitals, or handover details..." required></textarea>
+                                </div>
+                                <div style="display: flex; justify-content: flex-end; gap: 15px; margin-top: 10px;">
+                                    <button type="button" onclick="closeModal()" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-size: 13px;">Cancel</button>
+                                    <button type="submit" name="add_general_note" style="background: #3b82f6; border: none; color: #fff; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; box-shadow: 0 4px 6px rgba(59, 130, 246, 0.2);">Save Note</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <script>
+                    function openModal() {
+                        document.getElementById('addNoteModal').classList.add('active');
+                    }
+                    function closeModal() {
+                        document.getElementById('addNoteModal').classList.remove('active');
+                    }
+                    function confirmDelete(id) {
+                        if(confirm('Are you sure you want to delete this note? This action cannot be undone immediately.')) {
+                            window.location.href = '?section=notes&delete_note_id=' + id;
+                        }
+                    }
+
+                    // Client-Side Filtering
+                    function filterNotes() {
+                        const search = document.getElementById('noteSearch').value.toLowerCase();
+                        const cat = document.getElementById('catFilter').value;
+                        const prio = document.getElementById('prioFilter').value;
+                        
+                        const items = document.querySelectorAll('.timeline-item');
+                        
+                        items.forEach(item => {
+                            const itemCat = item.getAttribute('data-category');
+                            const itemPrio = item.getAttribute('data-priority');
+                            const itemContent = item.getAttribute('data-content');
+                            
+                            let matchesSearch = itemContent.includes(search);
+                            let matchesCat = cat === 'all' || itemCat === cat;
+                            let matchesPrio = prio === 'all' || itemPrio === prio;
+                            
+                            if(matchesSearch && matchesCat && matchesPrio) {
+                                item.style.display = 'block';
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        });
+                    }
+                    
+                    // Close modal on outside click
+                    document.getElementById('addNoteModal').addEventListener('click', function(e) {
+                         if (e.target === this) {
+                             closeModal();
+                         }
+                    });
+                </script>
+
+
+
+
 
             <?php elseif ($_GET['section'] == 'reports'): ?>
-                <div style="margin-bottom: 30px;">
-                    <h1 style="color:#fff; font-size: 28px;">Nursing Reports</h1>
-                    <p style="color:#64748b; font-size:14px;">Vital signs logs and patient care records.</p>
+                <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="color:#fff; font-size: 28px;">Nursing Reports</h1>
+                        <p style="color:#64748b; font-size:14px;">Vital signs logs and patient care records.</p>
+                    </div>
+                     <button onclick="openReportModal()" style="background: #3b82f6; color: #fff; border: none; padding: 12px 25px; border-radius: 10px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-upload"></i> Upload Report
+                    </button>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
@@ -647,5 +930,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_note'])) {
             initBrandAnimation();
         });
     </script>
+    <!-- Report Upload Modal Integration -->
+    <?php 
+    $staff_type = 'nurse';
+    include 'includes/report_upload_modal.php'; 
+    ?>
 </body>
 </html>

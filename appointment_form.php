@@ -20,8 +20,9 @@ $username = $_SESSION['username'];
 $doctors = [];
 $dept_filter = isset($_GET['dept']) ? trim($_GET['dept']) : '';
 
-// Base Query
-$sql = "SELECT d.user_id as id, r.name, d.department as dept, d.experience as exp, d.qualification as qual, r.profile_photo as img, d.consultation_fee 
+// Base Query (Updated to include current leave status)
+$sql = "SELECT d.user_id as id, r.name, d.department as dept, d.experience as exp, d.qualification as qual, r.profile_photo as img, d.consultation_fee,
+        (SELECT COUNT(*) FROM doctor_leaves dl WHERE dl.doctor_id = d.user_id AND dl.status = 'Approved' AND CURDATE() BETWEEN dl.start_date AND dl.end_date) as is_on_leave
         FROM doctors d 
         JOIN users u ON d.user_id = u.user_id 
         JOIN registrations r ON u.registration_id = r.registration_id";
@@ -56,10 +57,6 @@ if ($pre_doc_id) {
         }
     }
 }
-
-// Fixed Token Number for Demo (Or Random)
-$token_number = rand(10, 50);
-
 // Fetch Logged-in User Data
 $user_data = [];
 $is_logged_in = true; // Always true here
@@ -71,7 +68,7 @@ if(isset($_SESSION['user_id'])) {
                        JOIN registrations r ON u.registration_id = r.registration_id 
                        LEFT JOIN patient_profiles p ON u.user_id = p.user_id 
                        WHERE u.user_id = $uid");
-    if($q->num_rows > 0) {
+    if($q && $q->num_rows > 0) {
         $user_data = $q->fetch_assoc();
     }
 }
@@ -80,6 +77,15 @@ if(isset($_SESSION['user_id'])) {
 $selected_date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 $booked_slots = [];
 $max_capacity = 5; // Max patients per time slot
+
+// Token Number Logic (Based on appointments coming)
+$token_number = 1;
+if ($pre_doc_id) {
+    $token_q = $conn->query("SELECT COUNT(*) as total FROM appointments WHERE doctor_id = $pre_doc_id AND appointment_date = '$selected_date' AND status != 'Cancelled'");
+    if($token_q) {
+        $token_number = $token_q->fetch_assoc()['total'] + 1;
+    }
+}
 
 if ($pre_doc_id) {
     $stmt = $conn->prepare("SELECT appointment_time, COUNT(*) as count FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status != 'Cancelled' GROUP BY appointment_time");
@@ -122,17 +128,17 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
     <style>
         /* Specific Styles for Form Elements matching Dashboard Theme */
         .token-alert {
-            background: rgba(245, 158, 11, 0.1);
-            border: 1px solid rgba(245, 158, 11, 0.3);
-            color: #f59e0b;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
             padding: 15px;
             border-radius: 8px;
             margin: 20px 0;
             text-align: center;
             font-size: 1rem;
-            display: none;
+            display: <?php echo $pre_doc_id ? 'block' : 'none'; ?>;
         }
-        .token-number { font-size: 1.4rem; font-weight: 700; color: #fff; }
+        .token-number { font-size: 1.6rem; font-weight: 800; color: #fff; margin: 0 5px; }
 
         .booking-wrapper {
             background: rgba(255,255,255,0.03);
@@ -342,7 +348,7 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
                                 <?php if (!empty($doctors)): ?>
                                     <?php foreach($doctors as $d): ?>
                                         <option value="<?php echo $d['id']; ?>" <?php echo ($pre_doc_id == $d['id']) ? 'selected' : ''; ?>>
-                                            <?php echo $d['name']; ?>
+                                            <?php echo $d['name'] . ($d['is_on_leave'] > 0 ? ' (On Leave)' : ''); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 <?php else: ?>
@@ -360,13 +366,109 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
                         </div>
                     </div>
 
-                    <?php if($selected_doc): ?>
+                    <?php if($selected_doc): 
+                        // 1. Fetch Weekly Schedule
+                        $weekly_schedule = [];
+                        $sch_stmt = $conn->prepare("SELECT day_of_week, start_time, end_time, status FROM doctor_schedules WHERE doctor_id = ?");
+                        if ($sch_stmt) {
+                            $sch_stmt->bind_param("i", $pre_doc_id);
+                            $sch_stmt->execute();
+                            $sch_res = $sch_stmt->get_result();
+                            while($s = $sch_res->fetch_assoc()) $weekly_schedule[$s['day_of_week']] = $s;
+                            $sch_stmt->close();
+                        }
+
+                        // Fallback: If no schedule is set, use a default 9 AM - 4 PM (Mon-Sat)
+                        if (empty($weekly_schedule)) {
+                            $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                            foreach ($days as $d) {
+                                $weekly_schedule[$d] = [
+                                    'day_of_week' => $d,
+                                    'start_time' => '09:00:00',
+                                    'end_time' => '16:00:00',
+                                    'status' => 'Available'
+                                ];
+                            }
+                            $weekly_schedule['Sunday'] = ['status' => 'Not Available'];
+                        }
+
+                        // 2. Fetch Leaves
+                        $leaves = [];
+                        $l_stmt = $conn->prepare("SELECT start_date, end_date FROM doctor_leaves WHERE doctor_id = ? AND status = 'Approved' AND end_date >= CURDATE()");
+                        if ($l_stmt) {
+                            $l_stmt->bind_param("i", $pre_doc_id);
+                            $l_stmt->execute();
+                            $res = $l_stmt->get_result();
+                            while($l = $res->fetch_assoc()) $leaves[] = $l;
+                            $l_stmt->close();
+                        }
+
+                        // 3. Pre-calculate availability for next 21 days (extended to find enough available days)
+                        $avail_dates = [];
+                        $check_date = new DateTime();
+                        $count_found = 0;
+                        for ($i = 0; $i < 21; $i++) {
+                            if ($count_found >= 7) break;
+                            $curr_date_str = $check_date->format('Y-m-d');
+                            $day_name = $check_date->format('l'); // Full day name (Monday, etc.)
+                            
+                            // Check Weekly Schedule Status
+                            $sched = isset($weekly_schedule[$day_name]) ? $weekly_schedule[$day_name] : null;
+                            if (!$sched || $sched['status'] == 'Not Available') {
+                                $check_date->modify('+1 day');
+                                continue; 
+                            }
+
+                            // Check Leave
+                            $is_on_leave = false;
+                            foreach ($leaves as $leave) {
+                                if ($curr_date_str >= $leave['start_date'] && $curr_date_str <= $leave['end_date']) {
+                                    $is_on_leave = true; break;
+                                }
+                            }
+
+                            $total_daily_cap = 45;
+                            $c_stmt = $conn->prepare("SELECT COUNT(*) as booked FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status != 'Cancelled'");
+                            $c_stmt->bind_param("is", $pre_doc_id, $curr_date_str);
+                            $c_stmt->execute();
+                            $booked_count = $c_stmt->get_result()->fetch_assoc()['booked'];
+                            $c_stmt->close();
+
+                            $avail_dates[] = [
+                                'date' => $curr_date_str,
+                                'day' => $check_date->format('D'),
+                                'display' => $check_date->format('M d'),
+                                'slots' => $total_daily_cap - $booked_count,
+                                'on_leave' => $is_on_leave
+                            ];
+                            $count_found++;
+                            $check_date->modify('+1 day');
+                        }
+
+                        // 4. Status for SELECTED DATE
+                        $is_on_leave_today = false;
+                        $is_not_working_today = true;
+                        foreach ($avail_dates as $ad) {
+                            if ($ad['date'] == $selected_date) {
+                                $is_not_working_today = false;
+                                if ($ad['on_leave']) $is_on_leave_today = true;
+                                break;
+                            }
+                        }
+                    ?>
                     <!-- Doctor Info -->
                     <div class="doctor-display">
                         <div class="doc-profile-left">
                             <img src="<?php echo $selected_doc['img']; ?>" class="doc-img" onerror="this.src='images/doctor-1.jpg'">
                             <div class="doc-details">
-                                <h3><?php echo $selected_doc['name']; ?></h3>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <h3><?php echo $selected_doc['name']; ?></h3>
+                                    <?php if ($is_on_leave_today): ?>
+                                        <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; font-size: 10px; border: 1px solid #ef4444; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Not Available Today</span>
+                                    <?php else: ?>
+                                        <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #10b981; font-size: 10px; border: 1px solid #10b981; padding: 3px 8px; border-radius: 4px; font-weight: 700; text-transform: uppercase;">Available</span>
+                                    <?php endif; ?>
+                                </div>
                                 <div class="doc-qual"><?php echo $selected_doc['qual']; ?></div>
                                 <div style="color:var(--primary-blue); font-weight:600; text-transform:uppercase; margin-bottom: 5px;"><?php echo $selected_doc['dept']; ?></div>
                                 <div style="background: rgba(59, 130, 246, 0.1); color: var(--primary-blue); padding: 5px 12px; border-radius: 15px; display: inline-block; font-size: 0.85rem; font-weight: 700;">
@@ -375,41 +477,113 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
                             </div>
                         </div>
                         <div style="flex:1;">
-                            <div style="font-weight:600; margin-bottom:10px; font-size:0.9rem; color:white;">Consulting Days</div>
-                            <table class="consult-table">
-                                <thead>
-                                    <tr>
-                                        <th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>10 - 12</td><td>16 - 17</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <?php if ($is_on_leave_today): ?>
+                                <?php
+                                $next_avail = null;
+                                foreach ($avail_dates as $ad) { if (!$ad['on_leave']) { $next_avail = $ad; break; } }
+                                ?>
+                                <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 15px; color: #ef4444;">
+                                    <h4 style="margin: 0 0 8px; font-size: 15px; display: flex; align-items: center; gap: 8px;"><i class="fas fa-calendar-times"></i> Out of Office</h4>
+                                    <p style="margin: 0; font-size: 13px; color: #94a3b8; line-height: 1.4;">Dr. <?php echo explode(' ', $selected_doc['name'])[1] ?? $selected_doc['name']; ?> is on leave for <b><?php echo date('M d, Y', strtotime($selected_date)); ?></b>.</p>
+                                    <?php if ($next_avail): ?>
+                                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(239, 68, 68, 0.2); display: flex; align-items: center; gap: 10px; color: #10b981;">
+                                            <i class="fas fa-calendar-check"></i>
+                                            <span style="font-size: 13px; font-weight: 600;">Next Available: <?php echo $next_avail['display']; ?> (<?php echo $next_avail['day']; ?>)</span>
+                                            <button type="button" onclick="window.location.href='?doctor_id=<?php echo $pre_doc_id; ?>&dept=<?php echo urlencode($dept_filter); ?>&date=<?php echo $next_avail['date']; ?>'" 
+                                                    style="background: #10b981; color: white; border: none; padding: 4px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.3s;">Select This Date</button>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php elseif ($is_not_working_today): ?>
+                                <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 12px; padding: 15px; color: #f59e0b;">
+                                    <h4 style="margin: 0 0 8px; font-size: 15px;"><i class="fas fa-clock"></i> Not Consulting Today</h4>
+                                    <p style="margin: 0; font-size: 12px; color: #94a3b8;">The selected date is outside this doctor's weekly consultation schedule. Please choose a date from the availability roadmap below.</p>
+                                </div>
+                            <?php else: ?>
+                                <div style="font-weight:600; margin-bottom:10px; font-size:0.9rem; color:white;">Standard Weekly Schedule</div>
+                                <table class="consult-table">
+                                    <thead>
+                                        <tr>
+                                            <th>MON</th><th>TUE</th><th>WED</th><th>THU</th><th>FRI</th><th>SAT</th><th>SUN</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <?php 
+                                            $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+                                            foreach($days as $day): 
+                                                $s = isset($weekly_schedule[$day]) ? $weekly_schedule[$day] : null;
+                                                $time_text = ($s && $s['status'] == 'Available') 
+                                                    ? date('H', strtotime($s['start_time'])) . '-' . date('H', strtotime($s['end_time']))
+                                                    : 'OFF';
+                                                $cell_color = ($time_text == 'OFF') ? 'color: #64748b;' : 'color: #10b981; font-weight: 600;';
+                                            ?>
+                                                <td style="<?php echo $cell_color; ?>"><?php echo $time_text; ?></td>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
                         </div>
                     </div>
 
+                    <div style="margin-bottom: 25px;">
+                        <h3 style="color: white; font-size: 1rem; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-calendar-alt" style="color: #3b82f6;"></i> Doctor's Availability Roadmap
+                            <small style="color: #94a3b8; font-weight: 400; font-size: 0.75rem;">(Next 7 Working Days)</small>
+                        </h3>
+                        <div style="display: flex; gap: 12px; overflow-x: auto; padding: 5px 0 15px;">
+                            <?php
+                            foreach ($avail_dates as $ad) {
+                                $is_selected = ($ad['date'] == $selected_date) ? 'border-color: '.($ad['on_leave'] ? '#ef4444' : '#10b981').'; background: rgba('.($ad['on_leave'] ? '239, 68, 68' : '16, 185, 129').', 0.15);' : '';
+                                $status_color = $ad['on_leave'] ? '#ef4444' : '#10b981';
+                                $status_icon = $ad['on_leave'] ? 'fa-plane-departure' : 'fa-check-circle';
+                                $status_label = $ad['on_leave'] ? 'Leave' : 'Available';
+                                
+                                echo '<div onclick="window.location.href=\'?doctor_id='.$pre_doc_id.'&dept='.urlencode($dept_filter).'&date='.$ad['date'].'\'" 
+                                           style="min-width: 105px; cursor: pointer; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; text-align: center; background: rgba(255,255,255,0.02); transition: 0.3s; '.$is_selected.'">
+                                        <div style="font-weight: 700; color: white; font-size: 0.95rem; margin-bottom: 2px;">'.$ad['display'].'</div>
+                                        <div style="font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">'.$ad['day'].'</div>
+                                        <div style="font-size: 0.7rem; color: '.$status_color.'; margin-top: 8px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                            <i class="fas '.$status_icon.'"></i> '.$status_label.'
+                                        </div>
+                                      </div>';
+                            }
+                            ?>
+                        </div>
+                    </div>
+
+                    <?php if (!$is_on_leave_today && !$is_not_working_today): ?>
                     <button type="button" class="btn-time-slot" onclick="toggleSlots()">Select Time Slot</button>
+                    <?php endif; ?>
 
                     <div class="time-slots-panel" id="slotsPanel" style="<?php echo ($pre_doc_id) ? 'display:block;' : ''; ?>">
-                        <span class="session-title"><i class="fas fa-sun" style="color:#f59e0b;"></i> Morning Session</span>
-                        <div class="slots-container">
-                            <?php renderSlotChip('09:00 AM', $booked_slots, $max_capacity); ?>
-                            <?php renderSlotChip('09:30 AM', $booked_slots, $max_capacity); ?>
-                            <?php renderSlotChip('10:00 AM', $booked_slots, $max_capacity); ?>
-                            <?php renderSlotChip('10:30 AM', $booked_slots, $max_capacity); ?>
-                            <?php renderSlotChip('11:00 AM', $booked_slots, $max_capacity); ?>
-                        </div>
+                        <?php 
+                        $day_name = date('l', strtotime($selected_date));
+                        $sch = isset($weekly_schedule[$day_name]) ? $weekly_schedule[$day_name] : null;
                         
-                        <span class="session-title"><i class="fas fa-moon" style="color:#8b5cf6;"></i> Evening Session</span>
-                        <div class="slots-container">
-                            <?php renderSlotChip('04:00 PM', $booked_slots, $max_capacity); ?>
-                            <?php renderSlotChip('04:30 PM', $booked_slots, $max_capacity); ?>
-                            <?php renderSlotChip('05:00 PM', $booked_slots, $max_capacity); ?>
-                            <?php renderSlotChip('05:30 PM', $booked_slots, $max_capacity); ?>
-                        </div>
+                        // User Request: Strictly 9 AM to 4 PM
+                        if ($sch && $sch['status'] == 'Available'):
+                            $start = new DateTime('09:00:00');
+                            $end = new DateTime('16:00:00');
+                            $interval = new DateInterval('PT30M');
+                            
+                            echo '<span class="session-title"><i class="fas fa-clock" style="color:#3b82f6;"></i> Consulting Hours: 09:00 AM to 04:00 PM</span>';
+                            echo '<div class="slots-container">';
+                            
+                            $curr = clone $start;
+                            while ($curr < $end) {
+                                renderSlotChip($curr->format('h:i A'), $booked_slots, $max_capacity);
+                                $curr->add($interval);
+                            }
+                            echo '</div>';
+                        else:
+                        ?>
+                            <div style="text-align: center; padding: 20px; color: var(--text-gray);">
+                                <i class="fas fa-calendar-times" style="font-size: 2rem; margin-bottom: 10px; display: block;"></i>
+                                <p>No consulting hours defined for this day.</p>
+                            </div>
+                        <?php endif; ?>
                         <input type="hidden" name="time_slot" id="selectedTimeSlot" required>
                     </div>
 

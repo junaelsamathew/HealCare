@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'includes/db_connect.php';
+include 'includes/email_config.php';
 
 // Check auth
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
@@ -38,6 +39,59 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if ($conn->query($update_sql)) {
                 $message = "Appointment #$booking_no has been successfully cancelled.";
                 $msg_type = "success";
+
+                // --- SEND CANCELLATION EMAIL ---
+                try {
+                    // Fetch patient and appointment details for email
+                    $stmt_details = $conn->prepare("SELECT a.*, d.user_id as doctor_user_id, r_doc.name as doctor_name, u_pat.email as patient_email, pp.name as patient_name, pp.phone as patient_phone 
+                                                 FROM appointments a 
+                                                 JOIN users u_pat ON a.patient_id = u_pat.user_id
+                                                 JOIN patient_profiles pp ON u_pat.user_id = pp.user_id
+                                                 JOIN doctors d ON a.doctor_id = d.user_id
+                                                 JOIN users u_doc ON d.user_id = u_doc.user_id
+                                                 JOIN registrations r_doc ON u_doc.registration_id = r_doc.registration_id
+                                                 WHERE a.appointment_id = ?");
+                    $stmt_details->bind_param("i", $booking_no);
+                    $stmt_details->execute();
+                    $details_res = $stmt_details->get_result();
+                    
+                    if ($details_res && $row = $details_res->fetch_assoc()) {
+                        $mail = new PHPMailer(true);
+                        configureDefaultMail($mail);
+                        $mail->addAddress($row['patient_email'], $row['patient_name']);
+                        $mail->isHTML(true);
+                        $mail->Subject = 'Appointment Cancelled - HealCare Hospital';
+                        
+                        $mail->Body = '
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #eee; border-radius: 10px; color: #333;">
+                            <h2 style="color: #ef4444; border-bottom: 2px solid #ef4444; padding-bottom: 10px;">Appointment Cancellation</h2>
+                            <p>Dear <strong>' . htmlspecialchars($row['patient_name']) . '</strong>,</p>
+                            <p>This is to confirm that your appointment has been <strong>cancelled</strong> as per your request.</p>
+                            
+                            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ef4444;">
+                                <p style="margin: 5px 0;"><strong>Booking ID:</strong> BK-' . $booking_no . '</p>
+                                <p style="margin: 5px 0;"><strong>Doctor:</strong> ' . htmlspecialchars($row['doctor_name']) . '</p>
+                                <p style="margin: 5px 0;"><strong>Scheduled Date:</strong> ' . date('d M Y', strtotime($row['appointment_date'])) . '</p>
+                                <p style="margin: 5px 0;"><strong>Scheduled Time:</strong> ' . date('h:i A', strtotime($row['appointment_time'])) . '</p>
+                            </div>
+                            
+                            <p>If you wish to reschedule, please visit our portal again.</p>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                            <p style="font-size: 0.8em; color: #777; text-align: center;">Sent by HealCare Hospital System</p>
+                        </div>';
+                        
+                        $mail->send();
+
+                        // --- SEND WHATSAPP CANCELLATION ---
+                        if (!empty($row['patient_phone'])) {
+                            include_once 'includes/whatsapp_helper.php';
+                            $wa_msg = "*HealCare Hospital Appointment Cancelled*\n\nHello *" . $row['patient_name'] . "*,\n\nYour appointment (ID: *BK-$booking_no*) with *" . $row['doctor_name'] . "* scheduled for " . date('d M Y', strtotime($row['appointment_date'])) . " has been CANCELLED as per your request.\n\nTo reschedule, please visit our website.\n\nThank you,\n_HealCare Hospital_";
+                            sendWhatsAppMessage($row['patient_phone'], $wa_msg);
+                        }
+                    }
+                } catch (Exception $e) {
+                    // Log error or ignore - we don't want to break the success message if email fails
+                }
             } else {
                 $message = "Error cancelling appointment: " . $conn->error;
                 $msg_type = "error";
@@ -159,7 +213,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/918075454467" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 807 545 4467</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
                 </div>
             </div>
             
