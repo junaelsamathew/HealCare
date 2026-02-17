@@ -202,12 +202,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - SKIPPING: No Email Found for Pat ID $pat_id\n", FILE_APPEND);
                     }
 
-                    // --- SEND WHATSAPP NOTIFICATION ---
-                    if (!empty($pat_phone)) {
-                        include_once 'includes/whatsapp_helper.php';
-                        $wa_msg = "*HealCare Hospital Appointment Confirmed*\n\nHello *$pat_name*,\n\nYour appointment (ID: *$bk_id*) with *$doc_name* is confirmed.\n\n📅 *Date:* $display_date\n⏰ *Time:* $display_time\n🔢 *Token:* #$token_num\n\nPlease arrive 15 mins early.\n\nThank you,\n_HealCare Hospital_";
-                        sendWhatsAppMessage($pat_phone, $wa_msg);
-                    }
 
                 } else {
                     file_put_contents('email_debug.log', date('Y-m-d H:i:s') . " - ERROR: Appointment ID $appt_id not found in DB.\n", FILE_APPEND);

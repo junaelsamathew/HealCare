@@ -82,12 +82,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         
                         $mail->send();
 
-                        // --- SEND WHATSAPP CANCELLATION ---
-                        if (!empty($row['patient_phone'])) {
-                            include_once 'includes/whatsapp_helper.php';
-                            $wa_msg = "*HealCare Hospital Appointment Cancelled*\n\nHello *" . $row['patient_name'] . "*,\n\nYour appointment (ID: *BK-$booking_no*) with *" . $row['doctor_name'] . "* scheduled for " . date('d M Y', strtotime($row['appointment_date'])) . " has been CANCELLED as per your request.\n\nTo reschedule, please visit our website.\n\nThank you,\n_HealCare Hospital_";
-                            sendWhatsAppMessage($row['patient_phone'], $wa_msg);
-                        }
                     }
                 } catch (Exception $e) {
                     // Log error or ignore - we don't want to break the success message if email fails
