@@ -397,7 +397,7 @@ session_start();
         <div class="header-info-group">
             <div class="header-info-item">
                 <div class="info-icon-circle"><i class="fab fa-whatsapp"></i></div>
-                <div class="info-details"><span class="info-label">WHATSAPP</span><a href="https://wa.me/919539045609" target="_blank" class="info-value" style="color: #25d366; text-decoration: none;">(+91) 953 904 5609</a></div>
+                <div class="info-details"><span class="info-label">WHATSAPP</span><a href="https://wa.me/919539045609" target="_blank" class="info-value" style="color: #25d366; text-decoration: none;">+91 953 904 5609</a></div>
             </div>
 
             <div class="header-info-item">

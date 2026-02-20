@@ -26,7 +26,7 @@ include 'includes/header.php';
             
             <h4 style="color: #0a1f44; margin-top: 30px; margin-bottom: 15px;">Key Features:</h4>
             <ul class="check-list" style="list-style: none; padding: 0;">
-                <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> <a href="https://wa.me/919539045609" target="_blank" style="text-decoration: none; color: inherit;">24x7 Ambulance WhatsApp (+91 9539045609)</a></li>
+                <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> <a href="https://wa.me/919539045609" target="_blank" style="text-decoration: none; color: inherit;">24x7 Ambulance WhatsApp +91 9539045609</a></li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Trauma Care</li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Cardiac Emergencies</li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Pediatric Emergencies</li>
@@ -53,7 +53,7 @@ include 'includes/header.php';
                         </div>
                     <?php endwhile; else: ?>
                         <div style="grid-column: 1/-1; text-align: center; padding: 20px;">
-                            <a href="https://wa.me/919539045609" target="_blank" style="font-size: 14px; font-weight: bold; color: #25d366; text-decoration: none;">WHATSAPP HOTLINE: (+91) 953 904 5609</a><br>
+                            <a href="https://wa.me/919539045609" target="_blank" style="font-size: 14px; font-weight: bold; color: #25d366; text-decoration: none;">WHATSAPP HOTLINE: +91 953 904 5609</a><br>
                             <small style="color: #777;">No individual ambulance contacts currently listed.</small>
                         </div>
                     <?php endif; ?>

@@ -92,7 +92,7 @@ $display_name = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['name'] : $_S
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                 </div>
             </div>
             
@@ -160,7 +160,7 @@ $display_name = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['name'] : $_S
                     <div class="report-card">
                         <div>
                             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                                <h3 style="font-size: 16px; font-weight: 600; color: #fff; margin: 0;"><?php echo htmlspecialchars($row['test_name']); ?></h3>
+                                <h3 style="font-size: 16px; font-weight: 600; color: #fff; margin: 0;"><?php echo htmlspecialchars(($row['test_name'] === '0' || empty($row['test_name'])) ? 'Lab Report' : $row['test_name']); ?></h3>
                                 <span class="status-badge <?php echo $statusClass; ?>"><?php echo htmlspecialchars($row['status']); ?></span>
                             </div>
                             <p style="font-size: 13px; color: #94a3b8; margin: 0;">
@@ -181,7 +181,7 @@ $display_name = ($res && $res->num_rows > 0) ? $res->fetch_assoc()['name'] : $_S
                             <?php elseif ($row['status'] == 'Completed'): ?>
                                 <span style="font-size: 12px; color: #10b981;">Report Finalized (No File)</span>
                             <?php elseif (($row['status'] == 'Pending' || $row['status'] == 'Requested') && ($row['payment_status'] ?? 'Pending') == 'Paid'): ?>
-                                <button onclick="showAuthQR(<?php echo $row['labtest_id']; ?>, '<?php echo htmlspecialchars($row['test_name']); ?>')" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                                <button onclick="showAuthQR(<?php echo $row['labtest_id']; ?>, '<?php echo htmlspecialchars(($row['test_name'] === '0' || empty($row['test_name'])) ? 'Lab Report' : $row['test_name']); ?>')" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #10b981; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
                                     <i class="fas fa-qrcode"></i> View Authorization Code
                                 </button>
                             <?php elseif (($row['status'] == 'Pending' || $row['status'] == 'Requested') && ($row['payment_status'] ?? 'Pending') != 'Paid'): ?>

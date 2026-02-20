@@ -26,7 +26,7 @@ include 'includes/header.php';
             
             <h4 style="color: #0a1f44; margin-top: 30px; margin-bottom: 15px;">Key Features:</h4>
             <ul class="check-list" style="list-style: none; padding: 0;">
-                <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> 24x7 Ambulance Service (+91 8086611101)</li>
+                <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> 24x7 Ambulance Service +91 8086611101</li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Trauma Care</li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Cardiac Emergencies</li>
                 <li style="margin-bottom: 10px; padding-left: 25px; position: relative;"><i class="fas fa-check" style="position: absolute; left: 0; top: 5px; color: #ff4444;"></i> Pediatric Emergencies</li>

@@ -57,7 +57,7 @@ $date = date('d M, Y', strtotime($bill['bill_date']));
         <div class="header">
             <div class="logo">
                 <h1>+ HEALCARE</h1>
-                <p>Kanjirapally, Kottayam, Kerala<br>Phone: (+91) 9876543210</p>
+                <p>Kanjirapally, Kottayam, Kerala<br>Phone: +91 9876543210</p>
             </div>
             <div class="inv-info">
                 <?php if($bill['payment_status'] == 'Paid'): ?>

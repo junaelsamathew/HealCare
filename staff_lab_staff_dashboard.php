@@ -112,7 +112,7 @@ if (stripos($lab_type, 'Pathology') !== false) {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                 </div>
             </div>
             
@@ -198,11 +198,11 @@ if (stripos($lab_type, 'Pathology') !== false) {
                            rp.name as patient_name, 
                            rd.name as doctor_name
                     FROM lab_tests lo
-                    JOIN users up ON lo.patient_id = up.user_id
-                    JOIN registrations rp ON up.registration_id = rp.registration_id
-                    JOIN users ud ON lo.doctor_id = ud.user_id
-                    JOIN registrations rd ON ud.registration_id = rd.registration_id
-                    WHERE lo.category_id = $category_id AND lo.status = 'Pending'
+                    LEFT JOIN users up ON lo.patient_id = up.user_id
+                    LEFT JOIN registrations rp ON up.registration_id = rp.registration_id
+                    LEFT JOIN users ud ON lo.doctor_id = ud.user_id
+                    LEFT JOIN registrations rd ON ud.registration_id = rd.registration_id
+                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Pending'
                     ORDER BY lo.created_at ASC
                 ";
                 $res_orders = $conn->query($sql_orders);
@@ -289,9 +289,9 @@ if (stripos($lab_type, 'Pathology') !== false) {
                 $sql_proc = "
                     SELECT lo.*, rp.name as patient_name, rd.name as doctor_name
                     FROM lab_tests lo
-                    JOIN users up ON lo.patient_id = up.user_id JOIN registrations rp ON up.registration_id = rp.registration_id
-                    JOIN users ud ON lo.doctor_id = ud.user_id JOIN registrations rd ON ud.registration_id = rd.registration_id
-                    WHERE lo.category_id = $category_id AND lo.status = 'Conducted'
+                    LEFT JOIN users up ON lo.patient_id = up.user_id LEFT JOIN registrations rp ON up.registration_id = rp.registration_id
+                    LEFT JOIN users ud ON lo.doctor_id = ud.user_id LEFT JOIN registrations rd ON ud.registration_id = rd.registration_id
+                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Conducted'
                     ORDER BY lo.updated_at ASC
                 ";
                 $res_proc = $conn->query($sql_proc);
@@ -367,8 +367,8 @@ if (stripos($lab_type, 'Pathology') !== false) {
                 $sql_comp = "
                     SELECT lo.*, rp.name as patient_name
                     FROM lab_tests lo
-                    JOIN users up ON lo.patient_id = up.user_id JOIN registrations rp ON up.registration_id = rp.registration_id
-                    WHERE lo.category_id = $category_id AND lo.status = 'Completed'
+                    LEFT JOIN users up ON lo.patient_id = up.user_id LEFT JOIN registrations rp ON up.registration_id = rp.registration_id
+                    WHERE lo.test_type LIKE '$search_pattern' AND lo.status = 'Completed'
                     ORDER BY lo.updated_at DESC LIMIT 50
                 ";
                 $res_comp = $conn->query($sql_comp);

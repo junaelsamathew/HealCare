@@ -92,12 +92,10 @@
                 <div class="address-box">
                     <p style="color: #444; line-height: 1.6;">
                         <strong>The Director</strong><br>
-                        HealCare Hospital<br>
-                        Kanjirapally P.O., Kanjirapally<br>
-                        Kottaym – 686 518
+                        HealCare Hospital Kanjirapally P.o Kanjirapally ,Kottayam(dist),kerala,india, 686507
                     </p>
                     <br>
-                    <p style="color: #444;">healcarekply@gmail.com</p>
+                    <p style="color: #444;"><a href="mailto:hospitalhealcare@gmail.com" style="color: inherit; text-decoration: none;">hospitalhealcare@gmail.com</a></p>
                     <br>
                     <p style="color: #444;">www.healcarehospital.com</p>
                 </div>

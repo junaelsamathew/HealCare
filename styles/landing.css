@@ -1090,7 +1090,7 @@
 
  .footer-grid {
      display: grid;
-     grid-template-columns: 2fr 1fr 1fr 1fr;
+     grid-template-columns: 2fr 1.2fr 1.2fr;
      gap: 40px;
      margin-bottom: 40px;
  }
@@ -1104,6 +1104,30 @@
      color: #a0aec0;
      font-size: 14px;
      line-height: 1.8;
+ }
+
+ .footer-social {
+     display: flex;
+     gap: 15px;
+     margin-top: 25px;
+ }
+
+ .social-icon {
+     width: 35px;
+     height: 35px;
+     border-radius: 50%;
+     background-color: rgba(255, 255, 255, 0.1);
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     color: #ffffff;
+     text-decoration: none;
+     transition: all 0.3s ease;
+ }
+
+ .social-icon:hover {
+     background-color: #1e90ff;
+     transform: translateY(-3px);
  }
 
  .footer-col h4 {

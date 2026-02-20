@@ -120,6 +120,15 @@ if (isset($_GET['patient_id'])) {
     $current_lab_results = [];
     if (isset($_GET['appt_id'])) {
         $a_id = intval($_GET['appt_id']);
+        // Fetch Appointment Reason
+        $stmt_r = $conn->prepare("SELECT reason FROM appointments WHERE appointment_id = ?");
+        $stmt_r->bind_param("i", $a_id);
+        $stmt_r->execute();
+        $res_r = $stmt_r->get_result();
+        if($row_r = $res_r->fetch_assoc()) {
+            $active_patient['current_reason'] = $row_r['reason'];
+        }
+
         // Fetch official Completed Lab Results
         $stmt_lab_curr = $conn->prepare("SELECT * FROM lab_tests WHERE appointment_id = ? AND status = 'Completed'");
         $stmt_lab_curr->bind_param("i", $a_id);
@@ -612,7 +621,7 @@ include_once 'includes/greeting_logic.php';
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -1085,8 +1094,9 @@ include_once 'includes/greeting_logic.php';
                                                     <div style="font-size: 12px; color: #94a3b8;"><i class="fas fa-user-plus"></i> Registered: <span style="color: #fff;">'.$reg_date.'</span></div>
                                                 </div>
 
-                                                <div style="display: flex; gap: 10px; align-items: center;">
+                                                <div style="display: flex; gap: 15px; align-items: center;">
                                                     <div style="font-size: 13px; color: #fff; font-weight: 600;"><i class="fas fa-clock"></i> Scheduled: '.$p_time.'</div>
+                                                    <div style="font-size: 13px; color: #94a3b8;"><i class="fas fa-info-circle"></i> Reason: <span style="color:#fbbf24;">'.((!empty($appt['reason']) && $appt['reason'] !== '0') ? htmlspecialchars($appt['reason']) : 'General Consultation').'</span></div>
                                                     <div style="flex: 1;"></div>
 
                                                 </div>
@@ -1096,7 +1106,7 @@ include_once 'includes/greeting_logic.php';
                                                     echo '<form method="POST" style="margin:0; display:flex; gap:10px;">
                                                             <input type="hidden" name="update_status" value="1">
                                                             <input type="hidden" name="appt_id" value="'.$a_id.'">
-                                                            <button type="submit" name="new_status" value="Approved" class="btn-consult" style="background:#10b981; flex:1; font-size: 11px; padding: 5px;"><i class="fas fa-check"></i> Accept</button>
+                                                            <button type="submit" name="new_status" value="Scheduled" class="btn-consult" style="background:#10b981; flex:1; font-size: 11px; padding: 5px;"><i class="fas fa-check"></i> Accept</button>
                                                             <button type="submit" name="new_status" value="Cancelled" class="btn-consult" style="background:#ef4444; flex:1; font-size: 11px; padding: 5px;"><i class="fas fa-times"></i> Decline</button>
                                                           </form>';
                                                 } else if($status == 'Approved' || $status == 'Scheduled' || $status == 'Checked-In' || $status == 'Confirmed' || $status == 'Pending Lab' || $status == 'Lab Completed' || $status == 'Waiting') {
@@ -1404,6 +1414,14 @@ include_once 'includes/greeting_logic.php';
                         <i class="fas fa-user-circle"></i> Patient Summary
                     </h4>
                     
+                    <!-- Medical History Section -->
+                    <div style="font-size: 13.5px; line-height: 1.6; color: #cbd5e1; background: rgba(251, 191, 36, 0.05); padding: 18px; border-radius: 12px; border: 1px solid rgba(251, 191, 36, 0.1); margin-bottom: 20px;">
+                        <span style="font-size: 11px; color: #fbbf24; font-weight: 700; text-transform: uppercase;">Current Complaint / Reason</span>
+                        <p style="margin-top: 5px; color: #fff; font-weight: 500;">
+                            <?php echo (!empty($active_patient['current_reason']) && $active_patient['current_reason'] !== '0') ? htmlspecialchars($active_patient['current_reason']) : 'General Consultation / Routine Checkup'; ?>
+                        </p>
+                    </div>
+
                     <!-- Medical History Section -->
                     <div style="font-size: 13.5px; line-height: 1.6; color: #cbd5e1; background: rgba(59, 130, 246, 0.05); padding: 18px; border-radius: 12px; border: 1px solid rgba(59, 130, 246, 0.1); margin-bottom: 20px;">
                         <span style="font-size: 11px; color: #3b82f6; font-weight: 700; text-transform: uppercase;">Medical History</span>

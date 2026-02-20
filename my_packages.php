@@ -156,7 +156,7 @@ $username = $_SESSION['username'];
                         </div>
                         <div class="info-text" style="display: flex; flex-direction: column;">
                             <span class="info-label" style="font-size: 11px; font-weight: 600; color: #0a1f44; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;">WHATSAPP</span>
-                            <a href="https://wa.me/919539045609" target="_blank" class="info-value" style="text-decoration: none; color: #25d366; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                            <a href="https://wa.me/919539045609" target="_blank" class="info-value" style="text-decoration: none; color: #25d366; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                         </div>
                     </div>
 

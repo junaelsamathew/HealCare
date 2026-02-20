@@ -60,23 +60,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $log_details = "Inv: $invoice_ref, Batch: $batch, Expiry: $exp";
                 $conn->query("INSERT INTO pharmacy_logs (stock_id, medicine_name, action_type, quantity, performed_by, details) VALUES ($new_stock_id, '$name', 'Added', $qty, $user_id, '$log_details')");
 
-            $msg = "New stock added successfully!";
-            $msg_type = "success";
-        } else {
+                if (strtotime($exp) < time()) {
+                    $msg = "Warning: Medicine added, but it is already EXPIRED based on the date provided ($exp). It will not be available for dispensing.";
+                    $msg_type = "warning";
+                } else {
+                    $msg = "New stock added successfully!";
+                    $msg_type = "success";
+                }
+            } else {
             $msg = "Error adding stock: " . $conn->error;
             $msg_type = "error";
         }
         }
     } elseif (isset($_POST['action']) && $_POST['action'] === 'notify_admin') {
-        // Fetch out of stock items
-        $oos_sql = "SELECT medicine_name, manufacturer FROM pharmacy_stock WHERE quantity = 0";
-        $oos_res = $conn->query($oos_sql);
+        $alert_type = $_POST['alert_type'] ?? 'shortage';
         
-        if ($oos_res && $oos_res->num_rows > 0) {
+        if ($alert_type === 'shortage') {
+            $items_sql = "SELECT medicine_name, manufacturer, quantity FROM pharmacy_stock WHERE quantity < 20";
+            $subject = 'URGENT: Medicine Stock Shortage & Low Stock Alert';
+            $header_text = 'Stock Shortage / Low Stock Alert';
+            $intro_text = 'The following medicines are <strong>OUT OF STOCK</strong> or <strong>LOW ON STOCK</strong> (< 20 units) in the pharmacy:';
+            $success_msg = "Admin notified of stock shortages/low stock successfully via Email!";
+            $n_msg_prefix = "Inventory Alert: ";
+        } else {
+            $items_sql = "SELECT medicine_name, batch_number, expiry_date FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH) ORDER BY expiry_date ASC";
+            $subject = 'ATTENTION: Medicine Expiry Alert';
+            $header_text = 'Medicine Expiry Warning';
+            $intro_text = 'The following medicines are <strong>EXPIRING SOON</strong> (within 3 months):';
+            $success_msg = "Admin notified of expiring medicines successfully via Email!";
+            $n_msg_prefix = "Expiry Alert: ";
+        }
+
+        $items_res = $conn->query($items_sql);
+        
+        if ($items_res && $items_res->num_rows > 0) {
             $items_list = "";
-            while($row = $oos_res->fetch_assoc()) {
-                $items_list .= "<li><strong>" . htmlspecialchars($row['medicine_name']) . "</strong> (" . htmlspecialchars($row['manufacturer']) . ")</li>";
+            $msg_names = [];
+            while($row = $items_res->fetch_assoc()) {
+                $msg_names[] = $row['medicine_name'];
+                if ($alert_type === 'shortage') {
+                    $status_text = ($row['quantity'] == 0) ? "<span style='color:#ef4444;'>OUT OF STOCK</span>" : "<span style='color:#f59e0b;'>LOW STOCK (" . $row['quantity'] . " left)</span>";
+                    $items_list .= "<li><strong>" . htmlspecialchars($row['medicine_name']) . "</strong> (" . htmlspecialchars($row['manufacturer']) . ") - Status: $status_text</li>";
+                } else {
+                    $items_list .= "<li><strong>" . htmlspecialchars($row['medicine_name']) . "</strong> (Batch: " . htmlspecialchars($row['batch_number']) . ") - Expires on: " . htmlspecialchars($row['expiry_date']) . "</li>";
+                }
             }
+            $med_names_str = implode(', ', array_slice($msg_names, 0, 3));
+            if(count($msg_names) > 3) $med_names_str .= " and " . (count($msg_names) - 3) . " more";
             
             // Get Admin Emails
             $admin_emails = [];
@@ -84,7 +114,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             while($row = $adm_res->fetch_assoc()) {
                 $admin_emails[] = $row['email'];
             }
-            // Add fallback hardcoded admin
             if(!in_array('admin@gmail.com', $admin_emails)) $admin_emails[] = 'admin@gmail.com';
             
             $mail = new PHPMailer(true);
@@ -96,27 +125,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 
                 $mail->isHTML(true);
-                $mail->Subject = 'URGENT: Medicine Stock Shortage Alert';
+                $mail->Subject = $subject;
                 $mail->Body = "
                 <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;'>
-                    <h2 style='color: #ef4444;'>Stock Shortage Alert</h2>
-                    <p>The following medicines are currently <strong>OUT OF STOCK</strong> in the pharmacy:</p>
+                    <h2 style='color: #ef4444;'>$header_text</h2>
+                    <p>$intro_text</p>
                     <ul>$items_list</ul>
-                    <p>Please initiate procurement process immediately.</p>
+                    <p>Please review and take necessary action.</p>
                     <p style='color: #64748b; font-size: 12px;'>Sent by Pharmacist Dashboard</p>
                 </div>";
                 
                 $mail->send();
                 
-                // Log Notification to DB if table exists
                 $chk_n = $conn->query("SHOW TABLES LIKE 'notifications'");
                 if($chk_n && $chk_n->num_rows > 0) {
-                     $n_msg = "Stock Alert: " . $oos_res->num_rows . " medicines are out of stock.";
-                     // Assuming admin user_id is 0 or find one. Let's start with 0.
-                     $conn->query("INSERT INTO notifications (user_id, message, is_read, created_at) VALUES (0, '" . mysqli_real_escape_string($conn, $n_msg) . "', 0, NOW())");
+                     $n_msg = $n_msg_prefix . "$med_names_str (" . $items_res->num_rows . " items total) require urgent attention.";
+                     $n_title = ($alert_type === 'shortage') ? "Critical Stock Shortage" : "Medicine Expiry Warning";
+                     $n_cat = "Inventory";
+                     $n_icon = ($alert_type === 'shortage') ? "fa-box-open" : "fa-hourglass-end";
+                     $n_color = ($alert_type === 'shortage') ? "danger" : "warning";
+                     $n_url = "admin_pharmacy_inventory.php?section=" . (($alert_type === 'shortage') ? "low_stock" : "expiry");
+                     
+                     $conn->query("INSERT INTO notifications (user_id, category, icon, color, title, message, url, priority, unread, created_at) 
+                                  VALUES (0, '$n_cat', '$n_icon', '$n_color', '$n_title', '" . mysqli_real_escape_string($conn, $n_msg) . "', '$n_url', 'High', 1, NOW())");
                 }
 
-                $msg = "Admin notified of stock shortages successfully via Email!";
+                $_SESSION['hide_stock_alert'] = true; // Dismiss until restock or session end
+                $msg = "notification sent to admin";
                 $msg_type = "success";
             
             } catch (Exception $e) {
@@ -124,20 +159,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $msg_type = "error";
             }
         } else {
-            $msg = "No out-of-stock items found to report.";
+            $msg = "No relevant items found to report.";
             $msg_type = "info";
         }
 
     } elseif (isset($_POST['action']) && $_POST['action'] === 'edit_stock') {
         $id = (int)$_POST['stock_id'];
-        $name = mysqli_real_escape_string($conn, $_POST['med_name']);
-        $type = mysqli_real_escape_string($conn, $_POST['med_type']);
-        $mf = mysqli_real_escape_string($conn, $_POST['manufacturer']);
-        $batch = mysqli_real_escape_string($conn, $_POST['batch_no']);
-        $exp = mysqli_real_escape_string($conn, $_POST['expiry']);
-        $qty = (int)$_POST['quantity'];
-        $price = (float)$_POST['price'];
-        $loc = mysqli_real_escape_string($conn, $_POST['location']);
+        $name = mysqli_real_escape_string($conn, $_POST['med_name'] ?? '');
+        $type = mysqli_real_escape_string($conn, $_POST['med_type'] ?? '');
+        $mf = mysqli_real_escape_string($conn, $_POST['manufacturer'] ?? '');
+        $batch = mysqli_real_escape_string($conn, $_POST['batch_no'] ?? '');
+        $exp = mysqli_real_escape_string($conn, $_POST['expiry'] ?? '');
+        $qty = (int)($_POST['quantity'] ?? 0);
+        $price = (float)($_POST['price'] ?? 0.00);
+        $loc = mysqli_real_escape_string($conn, $_POST['location'] ?? '');
 
         $sql = "UPDATE pharmacy_stock SET 
                 medicine_name='$name', 
@@ -228,23 +263,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                          $qty_needed = $days * $per_day;
 
                          // Find Stock - FIFO (First Expiring First Out)
-                         // Matches medicine name at start of stock name
-                         $stock_q = $conn->query("SELECT stock_id, quantity, medicine_name FROM pharmacy_stock WHERE medicine_name LIKE '$med_name_safe%' AND quantity > 0 ORDER BY expiry_date ASC LIMIT 1");
+                         // Matches medicine name at start of stock name - ONLY Active and Non-Expired
+                         $stock_q = $conn->query("SELECT stock_id, quantity, medicine_name FROM pharmacy_stock WHERE medicine_name LIKE '$med_name_safe%' AND quantity > 0 AND status = 'Active' AND expiry_date > CURDATE() ORDER BY expiry_date ASC LIMIT 1");
                          
+                         $s_id = 0; // Default if not found
+                         $log_name = $med_name_safe;
+                         $is_unlisted = true;
+
                          if($stock_q && $stock_q->num_rows > 0) {
                              $stock = $stock_q->fetch_assoc();
                              $s_id = $stock['stock_id'];
-                             $real_name = $stock['medicine_name'];
+                             $log_name = mysqli_real_escape_string($conn, $stock['medicine_name']);
+                             $is_unlisted = false;
                              
                              // Deduct from batch
                              $conn->query("UPDATE pharmacy_stock SET quantity = GREATEST(0, quantity - $qty_needed) WHERE stock_id = $s_id");
-                             
-                             // Log Dispense
-                             if ($conn->affected_rows > 0) {
-                                 $log_details = "RX #$id";
-                                 $conn->query("INSERT INTO pharmacy_logs (stock_id, medicine_name, action_type, quantity, performed_by, details) VALUES ($s_id, '$real_name', 'Dispensed', $qty_needed, $user_id, '$log_details')");
+
+                             // AUTO NOTIFY ADMIN IF HITS ZERO
+                             $check_zero = $conn->query("SELECT quantity, medicine_name FROM pharmacy_stock WHERE stock_id = $s_id");
+                             if($check_zero) {
+                                 $curr = $check_zero->fetch_assoc();
+                                 if($curr['quantity'] < 20) {
+                                      $m_name = mysqli_real_escape_string($conn, $curr['medicine_name']);
+                                      $q_left = $curr['quantity'];
+                                      $n_title = ($q_left == 0) ? "Critical Out of Stock Alert" : "Low Stock Alert";
+                                      $n_color = ($q_left == 0) ? "danger" : "warning";
+                                      $n_msg = ($q_left == 0) ? "URGENT: $m_name is now OUT OF STOCK." : "Attention: $m_name is RUNNING LOW ($q_left units left).";
+                                      $n_icon = ($q_left == 0) ? "fa-box-open" : "fa-exclamation-triangle";
+                                      
+                                      $check_duplicate = $conn->query("SELECT id FROM notifications WHERE title = '$n_title' AND message LIKE '%$m_name%' AND unread = 1 AND DATE(created_at) = CURDATE()");
+                                      if($check_duplicate->num_rows == 0) {
+                                          $conn->query("INSERT INTO notifications (user_id, category, icon, color, title, message, url, priority, unread, created_at) 
+                                                       VALUES (0, 'Inventory', '$n_icon', '$n_color', '$n_title', '$n_msg', 'admin_pharmacy_inventory.php?section=low_stock', 'High', 1, NOW())");
+                                      }
+                                  }
                              }
                          }
+                         
+                         // Always Log Dispense (Even if not in inventory, so pharmacist sees it in logs)
+                         $log_details = ($is_unlisted ? "Unlisted Medicine - " : "") . "RX #$id";
+                         $conn->query("INSERT INTO pharmacy_logs (stock_id, medicine_name, action_type, quantity, performed_by, details) VALUES ($s_id, '$log_name', 'Dispensed', $qty_needed, $user_id, '$log_details')");
                     }
                 }
 
@@ -266,6 +324,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $msg = "Error: Medicine cannot be dispensed until payment is verified as PAID.";
             $msg_type = "error";
         }
+    } elseif (isset($_POST['action']) && $_POST['action'] === 'update_medicine_status') {
+        $sid = (int)$_POST['stock_id'];
+        $new_status = mysqli_real_escape_string($conn, $_POST['new_status']);
+        $reason = mysqli_real_escape_string($conn, $_POST['reason'] ?? 'Manual status update');
+
+        $res = $conn->query("SELECT medicine_name, batch_number FROM pharmacy_stock WHERE stock_id = $sid");
+        if ($res && $row = $res->fetch_assoc()) {
+            $m_name = $row['medicine_name'];
+            $batch = $row['batch_number'];
+
+            if ($conn->query("UPDATE pharmacy_stock SET status = '$new_status' WHERE stock_id = $sid")) {
+                // Log Action
+                $conn->query("INSERT INTO pharmacy_logs (stock_id, medicine_name, action_type, quantity, performed_by, details) 
+                             VALUES ($sid, '$m_name', 'Status Update', 0, $user_id, 'Status changed to $new_status. Reason: $reason')");
+
+                // Notify Admin
+                $n_title = "Medicine Status Flagged: $new_status";
+                $n_color = ($new_status === 'Expired') ? 'danger' : 'warning';
+                $n_icon = ($new_status === 'Expired') ? 'fa-calendar-times' : 'fa-hourglass-half';
+                $n_msg = "Pharmacist flagged $m_name (Batch: $batch) as $new_status. Reason: $reason";
+                
+                $conn->query("INSERT INTO notifications (user_id, category, icon, color, title, message, url, priority, unread, created_at) 
+                             VALUES (0, 'Inventory', '$n_icon', '$n_color', '$n_title', '" . mysqli_real_escape_string($conn, $n_msg) . "', 'admin_pharmacy_inventory.php?section=expiry', 'High', 1, NOW())");
+
+                $msg = "Medicine status updated to $new_status and Admin has been notified.";
+                $msg_type = "success";
+            } else {
+                $msg = "Error updating status: " . $conn->error;
+                $msg_type = "error";
+            }
+        }
     }
 }
 ?>
@@ -277,6 +366,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>Pharmacist Dashboard - HealCare</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <link rel="stylesheet" href="styles/dashboard.css">
     <style>
         :root {
@@ -337,7 +427,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                 </div>
             </div>
             
@@ -353,9 +443,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
-    <div class="secondary-nav">
+    <div class="secondary-nav" style="position: relative;">
         <div style="display: flex; align-items: center; gap: 15px;"><div style="background: #4fc3f7; color:#fff; width:35px; height:35px; display:flex; align-items:center; justify-content:center; border-radius:8px; font-weight:bold;">P</div><h2 style="color:#fff; font-size:20px;">Pharmacy Panel</h2></div>
-        <div style="display: flex; align-items: center;"><span class="staff-label" style="color: #94a3b8; font-size: 14px; margin-right: 15px;"><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']); ?></span><a href="logout.php" style="color: #94a3b8; text-decoration: none; border: 1px solid #4fc3f7; padding: 5px 20px; border-radius: 20px;">Log Out</a></div>
+        <div style="display: flex; align-items: center; gap: 25px;">
+            <div style="position: relative; cursor: pointer; display: flex; align-items: center;" onclick="document.getElementById('staffNotifDropdown').style.display = document.getElementById('staffNotifDropdown').style.display === 'none' ? 'block' : 'none'">
+                <i class="fas fa-bell" style="color: #94a3b8; font-size: 18px;"></i>
+                <?php 
+                $n_q = "SELECT COUNT(*) as c FROM notifications WHERE (user_id = $user_id OR user_id = 0) AND unread = 1";
+                $n_count = $conn->query($n_q)->fetch_assoc()['c'];
+                if($n_count > 0): 
+                ?>
+                <span style="position: absolute; top: -10px; right: -10px; background: #ef4444; color: white; font-size: 10px; padding: 2px 6px; border-radius: 50%; font-weight: 800;"><?php echo $n_count; ?></span>
+                <?php endif; ?>
+            </div>
+            <div id="staffNotifDropdown" style="display:none; position: absolute; top: 100%; right: 180px; width: 320px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; z-index: 1000; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">
+                <div style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); font-weight: 700; color: #fff; font-size: 13px;">Management Alerts</div>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <?php
+                    $notifs = $conn->query("SELECT * FROM notifications WHERE (user_id = $user_id OR user_id = 0) ORDER BY created_at DESC LIMIT 10");
+                    if($notifs && $notifs->num_rows > 0) {
+                        while($n = $notifs->fetch_assoc()) {
+                            $bg = ($n['unread'] == 0) ? 'transparent' : 'rgba(79, 195, 247, 0.05)';
+                            echo "<div style='padding:12px 15px; background:$bg; border-bottom:1px solid rgba(255,255,255,0.02);'>";
+                            echo "<p style='margin:0; font-size:12px; color:#cbd5e1; line-height:1.4;'>".htmlspecialchars($n['message'])."</p>";
+                            echo "<span style='font-size:10px; color:#64748b;'>".date('M d, H:i', strtotime($n['created_at']))."</span>";
+                            echo "</div>";
+                        }
+                    } else {
+                        echo "<div style='padding:20px; color:#64748b; font-size:12px; text-align:center;'>No alerts at this time.</div>";
+                    }
+                    ?>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center;"><span class="staff-label" style="color: #94a3b8; font-size: 14px; margin-right: 15px;"><?php echo htmlspecialchars($_SESSION['full_name'] ?? $_SESSION['username']); ?></span><a href="logout.php" style="color: #94a3b8; text-decoration: none; border: 1px solid #4fc3f7; padding: 5px 20px; border-radius: 20px;">Log Out</a></div>
+        </div>
     </div>
 
     <div class="dashboard-body">
@@ -378,18 +499,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <?php if (!isset($_GET['section']) || $_GET['section'] == 'dashboard'): ?>
                 <?php
-                // Fetch critical stock for the alert banner
-                $crit_sql = "SELECT * FROM pharmacy_stock WHERE quantity < 20 ORDER BY quantity ASC LIMIT 1";
-                $crit_res = $conn->query($crit_sql);
-                $critical_item = ($crit_res && $crit_res->num_rows > 0) ? $crit_res->fetch_assoc() : null;
+                // Fetch ALL stock-out items first
+                $stock_out_list = $conn->query("SELECT medicine_name, batch_number FROM pharmacy_stock WHERE quantity = 0 AND status = 'Active'");
+                $out_count = ($stock_out_list) ? $stock_out_list->num_rows : 0;
                 
-                if ($critical_item): 
-                ?>
-                <div class="stock-alert" id="activeAlert">
-                    <span><i class="fas fa-exclamation-circle"></i> <strong>Critical Stock Alert:</strong> <?php echo htmlspecialchars($critical_item['medicine_name']); ?> (Batch #<?php echo htmlspecialchars($critical_item['batch_number']); ?>) is below threshold.</span>
-                    <button id="notifyBtn" style="background: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 8px; font-size: 11px; font-weight: bold; cursor: pointer; transition: 0.3s;" onclick="notifyAdmin()">Notify Admin</button>
-                </div>
+                // If none out, check for low stock
+                $critical_item = null;
+                if ($out_count == 0) {
+                    $crit_sql = "SELECT * FROM pharmacy_stock WHERE quantity < 20 AND quantity > 0 AND status = 'Active' ORDER BY quantity ASC LIMIT 1";
+                    $crit_res = $conn->query($crit_sql);
+                    $critical_item = ($crit_res && $crit_res->num_rows > 0) ? $crit_res->fetch_assoc() : null;
+                }
+
+                if (!isset($_SESSION['hide_stock_alert']) || $_SESSION['hide_stock_alert'] === false):
+                    if ($out_count > 0): 
+                    ?>
+                    <div class="stock-alert" id="activeAlert" style="background: rgba(239, 68, 68, 0.1); border-color: #ef4444; color: #ef4444; margin-bottom: 25px;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <i class="fas fa-exclamation-circle" style="font-size: 24px;"></i> 
+                            <div>
+                                <strong style="display: block; font-size: 15px; margin-bottom: 2px;">CRITICAL OUT-OF-STOCK ALERT</strong>
+                                <span style="font-size: 13px;">The following medicines are completely empty: 
+                                    <?php 
+                                    $out_names = [];
+                                    while($o = $stock_out_list->fetch_assoc()) $out_names[] = $o['medicine_name'] . " (#" . $o['batch_number'] . ")";
+                                    echo implode(', ', $out_names);
+                                    ?>
+                                </span>
+                            </div>
+                        </div>
+                        <button id="notifyBtn" style="background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;" onclick="notifyAdmin('shortage')">Notify Admin</button>
+                    </div>
+                    <?php elseif ($critical_item): ?>
+                    <div class="stock-alert" id="activeAlert" style="background: rgba(245, 158, 11, 0.1); border-color: #f59e0b; color: #f59e0b; margin-bottom: 25px;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <i class="fas fa-exclamation-triangle" style="font-size: 24px;"></i>
+                            <div>
+                                <strong style="display: block; font-size: 15px; margin-bottom: 2px;">LOW STOCK WARNING</strong>
+                                <span style="font-size: 13px;"><?php echo htmlspecialchars($critical_item['medicine_name']); ?> is below 20 units (<?php echo $critical_item['quantity']; ?> left).</span>
+                            </div>
+                        </div>
+                        <button id="notifyBtn" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;" onclick="notifyAdmin('shortage')">Notify Admin</button>
+                    </div>
+                    <?php endif; ?>
                 <?php endif; ?>
+
+                <?php
+                // --- Analytics Data Fetching for Dashboard ---
+                // 1. Prescription Trends (Last 7 Days)
+                $days_labels = [];
+                $presc_counts = [];
+                for ($i = 6; $i >= 0; $i--) {
+                    $d = date('Y-m-d', strtotime("-$i days"));
+                    $days_labels[] = date('D', strtotime($d));
+                    $pq = $conn->query("SELECT COUNT(*) as c FROM prescriptions WHERE DATE(prescription_date) = '$d'");
+                    $presc_counts[] = ($pq) ? $pq->fetch_assoc()['c'] : 0;
+                }
+                
+                // 2. Pharmacy Health Score Calculation
+                $stock_issues = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE quantity < 20")->fetch_assoc()['c'];
+                $expiry_issues = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH)")->fetch_assoc()['c'];
+                $pending_presc = $conn->query("SELECT COUNT(*) as c FROM prescriptions WHERE status = 'Requested'")->fetch_assoc()['c'];
+                
+                // Simple scoring logic: Start at 100, deduct points for issues
+                $pharmacy_score = max(0, 100 - ($stock_issues * 2) - ($expiry_issues * 3) - ($pending_presc * 5));
+                $score_color = ($pharmacy_score > 80) ? '#10b981' : (($pharmacy_score > 50) ? '#f59e0b' : '#ef4444');
+                $score_text = ($pharmacy_score > 80) ? 'Excellent Condition' : (($pharmacy_score > 50) ? 'Needs Attention' : 'Critical Condition');
+                
+                $js_days_labels = json_encode($days_labels);
+                $js_presc_counts = json_encode($presc_counts);
+                ?>
 
                 <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px;">
                     <!-- Prescription Queue -->
@@ -507,10 +686,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 if($snap_res && $snap_res->num_rows > 0) {
                                     while($s = $snap_res->fetch_assoc()) {
                                         $low_cls = ($s['quantity'] < 20) ? 'stock-low' : '';
+                                        $stock_display = ($s['quantity'] == 0) ? "<span style='color:#ef4444; font-weight:800;'>OUT</span>" : str_pad($s['quantity'], 2, '0', STR_PAD_LEFT);
                                         $exp_format = date('M Y', strtotime($s['expiry_date']));
                                         echo "<tr>
                                             <td>".htmlspecialchars($s['medicine_name'])."</td>
-                                            <td class='$low_cls'>".str_pad($s['quantity'], 2, '0', STR_PAD_LEFT)."</td>
+                                            <td class='$low_cls'>$stock_display</td>
                                             <td>$exp_format</td>
                                         </tr>";
                                     }
@@ -520,6 +700,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 ?>
                             </tbody>
                         </table>
+
+                        <h4 style="color: #fff; margin-top: 30px; margin-bottom: 20px; font-size: 15px;"><i class="fas fa-hourglass-half"></i> Near Expiry Medicines</h4>
+                        <table class="inventory-table">
+                            <thead>
+                                <tr><th>Medicine</th><th>Days Left</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $near_exp_sql = "SELECT medicine_name, DATEDIFF(expiry_date, CURDATE()) as days_left, status FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 2 MONTH) AND status != 'Expired' ORDER BY expiry_date ASC LIMIT 5";
+                                $near_exp_res = $conn->query($near_exp_sql);
+                                if($near_exp_res && $near_exp_res->num_rows > 0) {
+                                    while($ne = $near_exp_res->fetch_assoc()) {
+                                        $exp_clr = ($ne['days_left'] < 30) ? '#ef4444' : '#f59e0b';
+                                        echo "<tr>
+                                            <td style='font-size:12px;'>".htmlspecialchars($ne['medicine_name'])."</td>
+                                            <td style='color: $exp_clr; font-weight:bold; font-size:12px;'>".($ne['days_left'] > 0 ? $ne['days_left'].'d' : 'EXPIRED')."</td>
+                                            <td><span style='font-size:10px; border:1px solid #94a3b8; padding:1px 5px; border-radius:5px;'>".$ne['status']."</span></td>
+                                        </tr>";
+                                    }
+                                } else {
+                                    echo "<tr><td colspan='3' style='text-align:center; font-size:12px; color:#64748b;'>No items expiring soon.</td></tr>";
+                                }
+                                ?>
+                            </tbody>
+                        </table>
+                        <a href="?section=alerts" style="display:block; text-align:center; margin-top:15px; font-size:12px; color:#4fc3f7; text-decoration:none;">View All Expiry Alerts <i class="fas fa-arrow-right"></i></a>
                         <button style="width: 100%; margin-top: 25px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-soft); color: #fff; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 12px;">Full Inventory Report</button>
                     </div>
                 </div>
@@ -602,11 +808,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $count_total = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock")->fetch_assoc()['c'];
                 $count_low = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE quantity > 0 AND quantity < 20")->fetch_assoc()['c'];
                 $count_out = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE quantity = 0")->fetch_assoc()['c'];
+                $count_expiring = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH) AND expiry_date > CURDATE() AND status != 'Inactive'")->fetch_assoc()['c'];
                 $count_avail = $conn->query("SELECT COUNT(*) as c FROM pharmacy_stock WHERE quantity >= 20")->fetch_assoc()['c'];
+                
+                // Fetch Category Data for Charts
+                $cat_labels = [];
+                $cat_data = [];
+                $cat_res = $conn->query("SELECT medicine_type, COUNT(*) as count FROM pharmacy_stock GROUP BY medicine_type ORDER BY count DESC LIMIT 8");
+                if ($cat_res) {
+                    while($row = $cat_res->fetch_assoc()) {
+                        $cat_labels[] = $row['medicine_type'] ?: 'Uncategorized';
+                        $cat_data[] = $row['count'];
+                    }
+                }
+                
+                // Prepare Chart Data
+                $js_cat_labels = json_encode($cat_labels);
+                $js_cat_data = json_encode($cat_data);
+                $js_stock_status_data = json_encode([$count_avail, $count_low, $count_out, $count_expiring]);
                 ?>
 
                 <!-- Global Out of Stock Alert -->
-                 <?php if ($count_out > 0): ?>
+                 <?php if ($count_out > 0 && (!isset($_SESSION['hide_stock_alert']) || $_SESSION['hide_stock_alert'] === false)): ?>
                     <div style="background: rgba(239, 68, 68, 0.1); border: 1px dashed #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
                         <div style="display:flex; align-items:center; gap:15px;">
                             <div style="background:#ef4444; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
@@ -619,7 +842,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                         <form method="POST">
                             <input type="hidden" name="action" value="notify_admin">
+                            <input type="hidden" name="alert_type" value="shortage">
                             <button type="submit" style="background: #ef4444; color: white; border: none; padding: 10px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; display:flex; align-items:center; gap:8px; transition: 0.3s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                                <i class="fas fa-paper-plane"></i> Notify Admin Now
+                            </button>
+                        </form>
+                    </div>
+                <?php endif; ?>
+                
+                <!-- Global Expiry Alert -->
+                <?php if ($count_expiring > 0 && (!isset($_SESSION['hide_stock_alert']) || $_SESSION['hide_stock_alert'] === false)): ?>
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px dashed #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display:flex; align-items:center; gap:15px;">
+                            <div style="background:#f59e0b; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white;">
+                                <i class="fas fa-hourglass-half"></i>
+                            </div>
+                            <div>
+                                <strong style="color: #f59e0b; display: block; font-size:16px;">Medicine Expiry Warning</strong>
+                                <span style="color: #cbd5e1; font-size: 14px;">Attention: <strong><?php echo $count_expiring; ?></strong> medicines are expiring within 3 months.</span>
+                            </div>
+                        </div>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="notify_admin">
+                            <input type="hidden" name="alert_type" value="expiry">
+                            <button type="submit" style="background: #f59e0b; color: white; border: none; padding: 10px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; display:flex; align-items:center; gap:8px; transition: 0.3s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">
                                 <i class="fas fa-paper-plane"></i> Notify Admin Now
                             </button>
                         </form>
@@ -627,7 +873,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php endif; ?>
 
                 <!-- Inventory Summary Cards -->
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 25px;">
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 25px;">
                     <div style="background: #0f172a; border: 1px solid var(--border-soft); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
                         <div>
                             <span style="color: #94a3b8; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">TOTAL MEDICINES</span>
@@ -664,7 +910,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <i class="fas fa-times-circle" style="font-size: 18px;"></i>
                         </div>
                     </div>
+                    <div style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.3); padding: 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span style="color: #f59e0b; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">EXPIRING SOON</span>
+                            <h3 style="color: #f59e0b; font-size: 24px; margin: 5px 0 0 0;"><?php echo $count_expiring; ?></h3>
+                        </div>
+                        <div style="background: rgba(245, 158, 11, 0.1); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #f59e0b;">
+                            <i class="fas fa-hourglass-half" style="font-size: 18px;"></i>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Charts Section -->
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; margin-bottom: 25px;">
+                    <div style="background: #0f172a; border: 1px solid var(--border-soft); border-radius: 12px; padding: 20px;">
+                        <h4 style="color: #fff; margin-bottom: 20px; font-size: 16px; border-bottom: 1px solid var(--border-soft); padding-bottom: 10px;">Medicine Categories Distribution</h4>
+                        <div style="height: 250px;">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                    <div style="background: #0f172a; border: 1px solid var(--border-soft); border-radius: 12px; padding: 20px;">
+                        <h4 style="color: #fff; margin-bottom: 20px; font-size: 16px; border-bottom: 1px solid var(--border-soft); padding-bottom: 10px;">Stock Status Overview</h4>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="stockStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Category Chart
+                    const ctxCat = document.getElementById('categoryChart').getContext('2d');
+                    new Chart(ctxCat, {
+                        type: 'bar',
+                        data: {
+                            labels: <?php echo $js_cat_labels; ?>,
+                            datasets: [{
+                                label: 'Items Count',
+                                data: <?php echo $js_cat_data; ?>,
+                                backgroundColor: 'rgba(79, 195, 247, 0.2)',
+                                borderColor: '#4fc3f7',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                barThickness: 40
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                    ticks: { color: '#94a3b8' }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { color: '#94a3b8' }
+                                }
+                            }
+                        }
+                    });
+
+                    // Stock Status Chart
+                    const ctxStatus = document.getElementById('stockStatusChart').getContext('2d');
+                    new Chart(ctxStatus, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Available', 'Low Stock', 'Out of Stock', 'Expiring'],
+                            datasets: [{
+                                data: <?php echo $js_stock_status_data; ?>,
+                                backgroundColor: [
+                                    '#10b981', // Green
+                                    '#f59e0b', // Amber
+                                    '#ef4444', // Red
+                                    '#fbbf24'  // Yellow
+                                ],
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { color: '#cbd5e1', font: { size: 12 }, boxWidth: 15, padding: 15 }
+                                }
+                            },
+                            cutout: '65%',
+                            layout: {
+                                padding: 10
+                            }
+                        }
+                    });
+                });
+                </script>
 
 
                 <div style="background: #0f172a; border: 1px solid var(--border-soft); border-radius: 12px; padding: 25px;">
@@ -673,18 +1018,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <a href="?section=inventory&status=all" style="color: <?php echo (!isset($_GET['status']) || $_GET['status'] == 'all') ? '#4fc3f7' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (!isset($_GET['status']) || $_GET['status'] == 'all') ? '#4fc3f7' : 'transparent'; ?>;">All Medicines</a>
                         <a href="?section=inventory&status=instock" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'instock') ? '#10b981' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'instock') ? '#10b981' : 'transparent'; ?>;">In Stock</a>
                         <a href="?section=inventory&status=low" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'low') ? '#f59e0b' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'low') ? '#f59e0b' : 'transparent'; ?>;">Low Stock</a>
-                         <a href="?section=inventory&status=out" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'out') ? '#ef4444' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'out') ? '#ef4444' : 'transparent'; ?>;">Out of Stock (Needed)</a>
+                        <a href="?section=inventory&status=out" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'out') ? '#ef4444' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'out') ? '#ef4444' : 'transparent'; ?>;">Out of Stock</a>
+                        <a href="?section=inventory&status=expiry" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'expiry') ? '#f59e0b' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'expiry') ? '#f59e0b' : 'transparent'; ?>;">Expiring Soon</a>
+                        <a href="?section=inventory&status=restocked" style="color: <?php echo (isset($_GET['status']) && $_GET['status'] == 'restocked') ? '#10b981' : '#94a3b8'; ?>; text-decoration: none; padding: 5px 15px; font-size: 14px; font-weight: 600; border-bottom: 2px solid <?php echo (isset($_GET['status']) && $_GET['status'] == 'restocked') ? '#10b981' : 'transparent'; ?>;">Recently Restocked</a>
                     </div>
                     
-                    <?php if (isset($_GET['status']) && $_GET['status'] == 'out' && $count_out > 0): ?>
-                        <div style="background: rgba(239, 68, 68, 0.1); border: 1px dashed #ef4444; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <?php if (isset($_GET['status']) && ($_GET['status'] == 'out' || $_GET['status'] == 'expiry') && ($count_out > 0 || $count_expiring > 0) && (!isset($_SESSION['hide_stock_alert']) || $_SESSION['hide_stock_alert'] === false)): ?>
+                        <?php 
+                        $at = ($_GET['status'] == 'out') ? 'shortage' : 'expiry';
+                        $ac = ($_GET['status'] == 'out') ? $count_out : $count_expiring;
+                        $atxt = ($_GET['status'] == 'out') ? 'out of stock' : 'expiring soon';
+                        $clr = ($_GET['status'] == 'out') ? '#ef4444' : '#f59e0b';
+                        ?>
+                        <div style="background: <?php echo ($at=='shortage'?'rgba(239, 68, 68, 0.1)':'rgba(245, 158, 11, 0.1)'); ?>; border: 1px dashed <?php echo $clr; ?>; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                             <div>
-                                <strong style="color: #ef4444; display: block; margin-bottom: 4px;">Action Required</strong>
-                                <span style="color: #cbd5e1; font-size: 13px;">You have <?php echo $count_out; ?> medicines out of stock. Notify admin to reorder.</span>
+                                <strong style="color: <?php echo $clr; ?>; display: block; margin-bottom: 4px;">Action Required</strong>
+                                <span style="color: #cbd5e1; font-size: 13px;">You have <?php echo $ac; ?> medicines <?php echo $atxt; ?>. Notify admin to take action.</span>
                             </div>
                             <form method="POST">
                                 <input type="hidden" name="action" value="notify_admin">
-                                <button type="submit" style="background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#dc2626'" onmouseout="this.style.background='#ef4444'">
+                                <input type="hidden" name="alert_type" value="<?php echo $at; ?>">
+                                <button type="submit" style="background: <?php echo $clr; ?>; color: white; border: none; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s;">
                                     <i class="fas fa-bell"></i> Notify Admin
                                 </button>
                             </form>
@@ -745,6 +1099,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $where_clauses[] = "quantity > 0 AND quantity < 20";
                             } elseif($status_filter == 'out') {
                                 $where_clauses[] = "quantity = 0";
+                            } elseif($status_filter == 'expiry') {
+                                $where_clauses[] = "expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH) AND expiry_date > CURDATE() AND status != 'Inactive'";
+                            } elseif($status_filter == 'restocked') {
+                                $where_clauses[] = "last_restocked_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND quantity > 0";
                             }
                             
                             $where_sql = "";
@@ -760,26 +1118,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             } else {
                                 if ($stock_res->num_rows > 0) {
                                     while($item = $stock_res->fetch_assoc()) {
-                                        $status_color = ($item['quantity'] < 20) ? '#ef4444' : '#10b981';
-                                        $status_text = ($item['quantity'] < 20) ? 'Low Stock' : 'In Stock';
-                                        $item_json = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
-                                        echo "<tr>
-                                            <td><strong>".htmlspecialchars($item['medicine_name'])."</strong><br><span style='font-size:11px; color:#64748b;'>".htmlspecialchars($item['manufacturer'] ?? '')."</span></td>
-                                            <td>".htmlspecialchars($item['medicine_type'])."</td>
-                                            <td>".htmlspecialchars($item['batch_number'])."</td>
-                                            <td>".htmlspecialchars($item['expiry_date'])."</td>
-                                            <td>$".htmlspecialchars($item['unit_price'])."</td>
-                                            <td style='font-weight:bold;'>".htmlspecialchars($item['quantity'])."</td>
-                                            <td><span style='color: $status_color; font-size: 11px; border: 1px solid $status_color; padding: 2px 8px; border-radius: 10px;'>$status_text</span></td>
-                                            <td>
-                                                <button type='button' data-medicine='$item_json' onclick='openEditModal(this)' style='background:none; border:none; color:#4fc3f7; cursor:pointer;'><i class='fas fa-edit'></i></button>";
-                                                
-                                        if($item['quantity'] == 0) {
-                                           echo "<button type='button' onclick=\"openModal('addStockModal'); document.getElementsByName('med_name')[0].value='".addslashes($item['medicine_name'])."'; document.getElementsByName('med_type')[0].value='".addslashes($item['medicine_type'])."';\" style='background:none; border:none; color:#10b981; cursor:pointer; margin-left:5px;' title='Restock'><i class='fas fa-plus-circle'></i></button>";
+                                        $is_physically_expired = (strtotime($item['expiry_date']) < time());
+                                        
+                                        if ($item['status'] == 'Blocked') {
+                                            $status_color = '#f59e0b';
+                                            $status_text = 'BLOCKED';
+                                        } elseif ($item['status'] == 'Expired' || $is_physically_expired) {
+                                            $status_color = '#ef4444';
+                                            $status_text = 'EXPIRED';
+                                        } elseif ($item['quantity'] == 0) {
+                                            $status_color = '#ef4444';
+                                            $status_text = 'STOCK OUT';
+                                        } elseif ($item['quantity'] < 20) {
+                                            $status_color = '#ef4444';
+                                            $status_text = 'Low Stock';
+                                        } else {
+                                            $status_color = '#10b981';
+                                            $status_text = 'Active';
                                         }
 
-                                        echo "</td>
-                                        </tr>";
+                                        $item_json = htmlspecialchars(json_encode($item), ENT_QUOTES, 'UTF-8');
+                                        ?>
+                                        <tr>
+                                            <td><strong><?php echo htmlspecialchars($item['medicine_name']); ?></strong><br><span style='font-size:11px; color:#64748b;'><?php echo htmlspecialchars($item['manufacturer'] ?? ''); ?></span></td>
+                                            <td><?php echo htmlspecialchars($item['medicine_type']); ?></td>
+                                            <td><?php echo htmlspecialchars($item['batch_number']); ?></td>
+                                            <td><?php echo htmlspecialchars($item['expiry_date']); ?></td>
+                                            <td>₹<?php echo htmlspecialchars($item['unit_price']); ?></td>
+                                            <td style='font-weight:bold;'><?php echo htmlspecialchars($item['quantity']); ?></td>
+                                            <td><span style='color: <?php echo $status_color; ?>; font-size: 11px; border: 1px solid <?php echo $status_color; ?>; padding: 2px 8px; border-radius: 10px;'><?php echo $status_text; ?></span></td>
+                                            <td>
+                                                <div style="display:flex; gap:8px; align-items:center;">
+                                                    <button type='button' data-medicine='<?php echo $item_json; ?>' onclick='openEditModal(this)' style='background:none; border:none; color:#4fc3f7; cursor:pointer;' title="Edit Details"><i class='fas fa-edit'></i></button>
+                                                    
+                                                    <?php if($item['status'] == 'Active' && !$is_physically_expired): ?>
+                                                        <button type="button" onclick="openStatusModal('<?php echo $item['stock_id']; ?>', '<?php echo addslashes($item['medicine_name']); ?>')" style="background:none; border:none; color:#f59e0b; cursor:pointer;" title="Flag Status"><i class="fas fa-flag"></i></button>
+                                                    <?php endif; ?>
+
+                                                    <?php if($item['quantity'] == 0): ?>
+                                                        <button type='button' onclick="openModal('addStockModal'); document.getElementsByName('med_name')[0].value='<?php echo addslashes($item['medicine_name']); ?>'; document.getElementsByName('med_type')[0].value='<?php echo addslashes($item['medicine_type']); ?>';" style='background:none; border:none; color:#10b981; cursor:pointer;' title='Restock'><i class='fas fa-plus-circle'></i></button>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <?php
                                     }
                                 } else {
                                     echo "<tr><td colspan='8' style='text-align:center; padding: 20px;'>No stock items found matching your criteria.</td></tr>";
@@ -853,9 +1235,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
             <?php elseif ($_GET['section'] == 'alerts'): ?>
-                <div style="margin-bottom: 30px;">
-                    <h1 style="color:#ef4444; font-size: 28px;">Expiry Alerts</h1>
-                    <p style="color:#64748b; font-size:14px;">Medicines expiring within the next 3 months.</p>
+                <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="color:#ef4444; font-size: 28px;">Expiry Alerts</h1>
+                        <p style="color:#64748b; font-size:14px;">Medicines expiring within the next 3 months.</p>
+                    </div>
+                    <?php
+                    // Check if there are any expiring items to notify about
+                    $check_exp = $conn->query("SELECT COUNT(*) as count FROM pharmacy_stock WHERE expiry_date <= DATE_ADD(CURDATE(), INTERVAL 3 MONTH)");
+                    if ($check_exp && $check_exp->fetch_assoc()['count'] > 0):
+                    ?>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="notify_admin">
+                        <input type="hidden" name="alert_type" value="expiry">
+                        <button type="submit" style="background: #ef4444; color: white; border: none; padding: 10px 25px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-bell"></i> Notify Admin of Expiry
+                        </button>
+                    </form>
+                    <?php endif; ?>
                 </div>
                 <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid #ef4444; border-radius: 12px; padding: 25px;">
                      <table class="inventory-table">
@@ -866,6 +1263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <th>Expiry Date</th>
                                 <th>Stock Remaining</th>
                                 <th>Days Left</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -877,16 +1275,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             if($alert_res && $alert_res->num_rows > 0) {
                                 while($row = $alert_res->fetch_assoc()) {
                                     $days_color = ($row['days_left'] < 30) ? '#ef4444' : '#f59e0b';
-                                    echo "<tr>
-                                        <td><strong>".htmlspecialchars($row['medicine_name'])."</strong></td>
-                                        <td>".htmlspecialchars($row['batch_number'])."</td>
-                                        <td style='color: $days_color; font-weight:bold;'>".htmlspecialchars($row['expiry_date'])."</td>
-                                        <td>".htmlspecialchars($row['quantity'])."</td>
-                                        <td style='color: $days_color;'>".($row['days_left'] > 0 ? $row['days_left'].' Days' : 'EXPIRED')."</td>
-                                    </tr>";
+                                    $is_physically_expired = ($row['days_left'] <= 0);
+                                    ?>
+                                    <tr>
+                                        <td><strong><?php echo htmlspecialchars($row['medicine_name']); ?></strong></td>
+                                        <td><?php echo htmlspecialchars($row['batch_number']); ?></td>
+                                        <td style='color: <?php echo $days_color; ?>; font-weight:bold;'><?php echo htmlspecialchars($row['expiry_date']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['quantity']); ?></td>
+                                        <td style='color: <?php echo $days_color; ?>;'><?php echo ($row['days_left'] > 0 ? $row['days_left'].' Days' : 'EXPIRED'); ?></td>
+                                        <td>
+                                            <?php if($row['status'] == 'Active' && !$is_physically_expired): ?>
+                                                <button type="button" onclick="openStatusModal('<?php echo $row['stock_id']; ?>', '<?php echo addslashes($row['medicine_name']); ?>')" style="background:none; border:none; color:#f59e0b; cursor:pointer;" title="Flag Status"><i class="fas fa-flag"></i> Flag</button>
+                                            <?php elseif($is_physically_expired && $row['status'] != 'Expired'): ?>
+                                                <form method="POST" style="display:inline;">
+                                                    <input type="hidden" name="action" value="update_medicine_status">
+                                                    <input type="hidden" name="stock_id" value="<?php echo $row['stock_id']; ?>">
+                                                    <input type="hidden" name="new_status" value="Expired">
+                                                    <input type="hidden" name="reason" value="Physically Expired - Automated Cleanup">
+                                                    <button type="submit" style="background:rgba(239, 68, 68, 0.2); border:1px solid #ef4444; color:#ef4444; padding:2px 8px; border-radius:5px; cursor:pointer; font-size:11px;">Set Expired</button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span style="color:#64748b; font-size:11px;"><?php echo $row['status']; ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php
                                 }
                             } else {
-                                echo "<tr><td colspan='5' style='text-align:center; padding: 30px;'>No expiry alerts at this time.</td></tr>";
+                                echo "<tr><td colspan='6' style='text-align:center; padding: 30px;'>No expiry alerts at this time.</td></tr>";
                             }
                             ?>
                         </tbody>
@@ -1121,21 +1537,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     </div>
 
+    <!-- Status Update Modal -->
+    <div id="statusModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#0f172a; padding:30px; border-radius:12px; width:450px; max-width:90%; border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 style="color:white;">Flag Medicine Status</h3>
+                <i class="fas fa-times" style="color:#64748b; cursor:pointer;" onclick="document.getElementById('statusModal').style.display='none'"></i>
+            </div>
+            <form method="POST">
+                <input type="hidden" name="action" value="update_medicine_status">
+                <input type="hidden" name="stock_id" id="status_stock_id">
+                
+                <div style="margin-bottom:15px;">
+                    <label style="color:#94a3b8; font-size:12px; display:block; margin-bottom:5px;">Medicine</label>
+                    <input type="text" id="status_med_name" readonly style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px;">
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <label style="color:#94a3b8; font-size:12px; display:block; margin-bottom:5px;">New Status</label>
+                    <select name="new_status" required style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px;">
+                        <option value="Near Expiry">Near Expiry</option>
+                        <option value="Expired">Expired</option>
+                        <option value="Blocked">Blocked (Safety Concern)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom:20px;">
+                    <label style="color:#94a3b8; font-size:12px; display:block; margin-bottom:5px;">Reason / Note for Admin</label>
+                    <textarea name="reason" required placeholder="Describe why this status is being set..." rows="3" style="width:100%; padding:10px; background:rgba(255,255,255,0.05); border:1px solid #334155; color:white; border-radius:6px; resize:none;"></textarea>
+                </div>
+
+                <button type="submit" style="width:100%; padding:12px; background:#f59e0b; color:#020617; font-weight:bold; border:none; border-radius:8px; cursor:pointer;">Update Status & Notify Admin</button>
+            </form>
+        </div>
+    </div>
+
     <script>
-        function notifyAdmin() {
-            const btn = document.getElementById('notifyBtn');
-            const alertBox = document.getElementById('activeAlert');
-            
-            // UI Feedback
-            btn.innerHTML = '<i class="fas fa-check"></i> Notified';
-            btn.style.background = '#10b981';
-            btn.disabled = true;
-            
-            // Visual confirmation
-            setTimeout(() => {
-                alertBox.style.borderColor = '#10b981';
-                alertBox.style.background = 'rgba(16, 185, 129, 0.1)';
-            }, 500);
+        function openStatusModal(id, name) {
+            document.getElementById('statusModal').style.display = 'flex';
+            document.getElementById('status_stock_id').value = id;
+            document.getElementById('status_med_name').value = name;
+        }
+
+        function notifyAdmin(type) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.style.display = 'none';
+
+            const actionInput = document.createElement('input');
+            actionInput.name = 'action';
+            actionInput.value = 'notify_admin';
+            form.appendChild(actionInput);
+
+            const typeInput = document.createElement('input');
+            typeInput.name = 'alert_type';
+            typeInput.value = type || 'shortage';
+            form.appendChild(typeInput);
+
+            document.body.appendChild(form);
+            form.submit();
         }
 
         function openModal(id) {

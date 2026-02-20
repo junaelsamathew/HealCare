@@ -32,7 +32,7 @@ include 'includes/header.php';
                     </a>
 
                     <!-- 2. Book an Appointment -->
-                    <a href="book_appointment.php" class="action-card primary" style="text-decoration: none; color: inherit;">
+                    <a href="login.php" class="action-card primary" style="text-decoration: none; color: inherit;">
                         <span class="card-text">Book an Appointment</span>
                         <div class="card-icon">
                             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -180,7 +180,7 @@ include 'includes/header.php';
                         <span class="section-subtitle">TEAM OF PROFESSIONALS</span>
                         <h2 class="doctors-title">Meet your doctor</h2>
                         <p class="doctors-description">
-                            HealCare Hospital, a team of around 30 consultant doctors with Experience, Expertise and Academic along with Technology cater to serve the needy with quality care and excellence in medication with an affordable price and uncompromising Nursing Care. 
+                          
                             HealCare Hospital is a small hospital which offers comprehensive medical care in specialized departments including General Medicine / Cardiovascular,Pediatrics, Gynecology, Orthopedics (Bones), ENT, Ophthalmology, and Dermatology.
                             We have a vast pool of dexterous and experienced team of doctor. 
                     </div>
@@ -410,9 +410,9 @@ include 'includes/header.php';
                 <h2>Contact</h2>
             </div>
             <div class="contact-grid">
-                <div class="contact-card">
+                <div class="contact-card dark">
                     <div class="contact-icon">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0a1f44" stroke-width="1.5">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
                         </svg>
                     </div>
@@ -431,26 +431,24 @@ include 'includes/header.php';
                     </div>
                     <h3>LOCATION</h3>
                     <p class="contact-details">
-                        Kanjirapally, Kottayam<br>
-                        Kerala, India 686512
+                        HealCare Hospital Kanjirapally P.o Kanjirapally ,Kottayam(dist),kerala,india, 686507
                     </p>
                 </div>
-                <div class="contact-card">
+                <div class="contact-card dark">
                     <div class="contact-icon">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0a1f44" stroke-width="1.5">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
                             <polyline points="22,6 12,13 2,6"/>
                         </svg>
                     </div>
                     <h3>EMAIL</h3>
                     <p class="contact-details">
-                        info@healcare.com<br>
-                        support@healcare.com
+                        <a href="mailto:hospitalhealcare@gmail.com" style="color: inherit; text-decoration: none;">hospitalhealcare@gmail.com</a><br>
                     </p>
                 </div>
-                <div class="contact-card">
+                <div class="contact-card dark">
                     <div class="contact-icon">
-                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0a1f44" stroke-width="1.5">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <circle cx="12" cy="12" r="10"/>
                             <path d="M12 6v6l4 2"/>
                         </svg>
@@ -472,9 +470,7 @@ include 'includes/header.php';
         <a href="https://wa.me/919539045609" target="_blank" class="float-btn whatsapp-btn">
             <i class="fab fa-whatsapp" style="color: #fff; font-size: 30px;"></i>
         </a>
-        <a href="tel:+919539045609" class="float-btn call-btn">
-            <i class="fas fa-phone-alt" style="color: #fff; font-size: 24px;"></i>
-        </a>
+
     </div>
 
 

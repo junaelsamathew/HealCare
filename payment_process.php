@@ -187,7 +187,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                             </div>
                             <div style='background: #f1f5f9; padding: 30px; text-align: center; border-top: 1px solid #e2e8f0;'>
                                 <p style='margin: 0; font-size: 12px; color: #64748b;'>Kanjirapally, Kottayam, Kerala - 686507</p>
-                                <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency WhatsApp: (+91) 953 904 5609 | Web: www.healcare.com</p>
+                                <p style='margin: 5px 0 0; font-size: 12px; color: #64748b;'>Emergency WhatsApp: +91 953 904 5609 | Web: www.healcare.com</p>
                             </div>
                         </div>
                         ";

@@ -102,7 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                  } catch (Exception $e) { }
              }
 
-             header("Location: doctor_appointments.php?status=" . ($_GET['status'] ?? 'All'));
+             $redirect_status = ($new_status == 'Scheduled') ? 'Approved/Scheduled' : ($_GET['status'] ?? 'All');
+             header("Location: doctor_appointments.php?status=" . $redirect_status);
              exit();
         }
     }
@@ -158,6 +159,7 @@ $res_appts = $conn->query($sql_appts);
             --cat-green: #10b981;
             --cat-blue: #3b82f6;
             --cat-gray: #64748b;
+            --cat-orange: #f59e0b;
         }
 
         .main-content { padding: 40px; }
@@ -234,6 +236,7 @@ $res_appts = $conn->query($sql_appts);
         .border-green::before { background: var(--cat-green); box-shadow: 2px 0 10px rgba(16,185,129,0.3); }
         .border-blue::before { background: var(--cat-blue); box-shadow: 2px 0 10px rgba(59,130,246,0.3); }
         .border-gray::before { background: var(--cat-gray); }
+        .border-orange::before { background: var(--cat-orange); box-shadow: 2px 0 10px rgba(245,158,11,0.3); }
 
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
         
@@ -334,7 +337,7 @@ $res_appts = $conn->query($sql_appts);
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                 </div>
             </div>
 
@@ -397,7 +400,7 @@ $res_appts = $conn->query($sql_appts);
                             if ($status == 'Cancelled') $border_class = 'border-red';
                             elseif ($status == 'Completed' || $status == 'Lab Completed') $border_class = 'border-green';
                             elseif ($status == 'Approved' || $status == 'Scheduled' || $status == 'Confirmed' || $status == 'Pending Lab') $border_class = 'border-blue';
-                            elseif ($status == 'Requested' || $status == 'Pending') $border_class = 'border-blue'; 
+                            elseif ($status == 'Requested' || $status == 'Pending') $border_class = 'border-orange'; 
                             elseif ($status == 'Lab Completed') $border_class = 'border-green';
                             $date_obj = new DateTime($appt['appointment_date']);
                             $day = $date_obj->format('d');
@@ -426,7 +429,7 @@ $res_appts = $conn->query($sql_appts);
                             </div>
                             
                             <div class="info-row">
-                                <span class="info-text"><i class="fas fa-info-circle"></i> Reason: <span class="reason-text"><?php echo htmlspecialchars($appt['reason'] ?? 'General Consultation'); ?></span></span>
+                                <span class="info-text"><i class="fas fa-info-circle"></i> Reason: <span class="reason-text"><?php echo (!empty($appt['reason']) && $appt['reason'] !== '0') ? htmlspecialchars($appt['reason']) : 'General Consultation'; ?></span></span>
                             </div>
 
                              <div class="time-display">
@@ -466,7 +469,7 @@ $res_appts = $conn->query($sql_appts);
                                         <?php endif; ?>
 
                                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                                            <button type="submit" name="status" value="Confirmed" class="btn-card-action btn-card-primary" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2);">
+                                            <button type="submit" name="status" value="Scheduled" class="btn-card-action btn-card-primary" style="background: rgba(16, 185, 129, 0.1); color: #10b981; border-color: rgba(16, 185, 129, 0.2);">
                                                 <i class="fas fa-check-circle"></i> Accept
                                             </button>
                                             <button type="submit" name="status" value="Cancelled" class="btn-card-action" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border-color: rgba(239, 68, 68, 0.2);">

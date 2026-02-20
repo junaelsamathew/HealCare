@@ -135,7 +135,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $appt_type = ($consultation_mode == 'Online') ? 'Online' : 'Walk-in';
         
         $stmt = $conn->prepare("INSERT INTO appointments (patient_id, doctor_id, department, appointment_date, appointment_time, appointment_type, status, queue_number, consultation_fee, reason, consultation_mode) VALUES (?, ?, ?, ?, ?, ?, 'Requested', ?, ?, ?, ?)");
-        $stmt->bind_param("iisssssids", $patient_id, $doctor_id, $department, $date, $appt_time, $appt_type, $token, $doc_fee, $reason, $consultation_mode);
+        $stmt->bind_param("iissssidss", $patient_id, $doctor_id, $department, $date, $appt_time, $appt_type, $token, $doc_fee, $reason, $consultation_mode);
         $stmt->execute();
         
         $appt_id = $conn->insert_id;

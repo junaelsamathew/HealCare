@@ -174,7 +174,7 @@ if (!empty($data['dob'])) {
             <div class="hospital-info">
                 <strong>HealCare Hospital & Diagnostics</strong><br>
                 Kanjirapally, Kottayam, Kerala<br>
-                WhatsApp: (+91) 953 904 5609<br>
+                WhatsApp: +91 953 904 5609<br>
                 Email: support@healcare.com
             </div>
         </div>

@@ -148,10 +148,13 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 <p>Viewing all patients under <?php echo $department; ?> department.</p>
             </div>
 
-            <div class="search-bar">
-                <input type="text" class="search-input" placeholder="Search by Patient Name or ID (e.g. HC-P-2026-0001)...">
-                <button class="btn-view" style="padding: 12px 30px;">Search</button>
-            </div>
+            <form class="search-bar" method="GET">
+                <input type="text" name="search" class="search-input" placeholder="Search by Patient Name or ID (e.g. HC-P-2026-0001)..." value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
+                <button type="submit" name="search_btn" class="btn-view" style="padding: 12px 30px;">Search</button>
+                <?php if(!empty($_GET['search'])): ?>
+                    <a href="doctor_patients.php" class="btn-view" style="padding: 12px 30px; background: #475569; text-decoration: none; display: inline-block;">Clear</a>
+                <?php endif; ?>
+            </form>
 
             <div class="content-section">
                 <table class="patient-table">
@@ -167,25 +170,47 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                     <tbody>
                         <?php
                         // Fetch patients who have had appointments with this doctor
-                        $p_query = "
+                            $search_term = '';
+                            $alt_search = '';
+                            $search_sql = '';
+                            if (isset($_GET['search']) && !empty($_GET['search'])) {
+                                $raw_val = $_GET['search'];
+                                $search_term = '%' . $raw_val . '%';
+                                
+                                // Enhanced Search: If searching for HealCare ID format, try matching numeric ID too
+                                $alt_search = $search_term;
+                                if (preg_match('/HC-P-\d{4}-(\d+)/i', $raw_val, $matches)) {
+                                    $numeric_id = (int)$matches[1];
+                                    $alt_search = '%' . $numeric_id . '%';
+                                }
+                                
+                                $search_sql = " AND (r.name LIKE ? OR p.patient_code LIKE ? OR u.username LIKE ? OR u.user_id LIKE ?)";
+                            }
+
+                            $p_query = "
                             SELECT 
                                 u.user_id as patient_user_id,
                                 r.name as patient_name,
                                 r.email as patient_email,
                                 p.gender,
                                 p.date_of_birth,
+                                p.patient_code,
                                 MAX(a.appointment_date) as last_appointment
                             FROM appointments a
                             JOIN users u ON a.patient_id = u.user_id
                             JOIN registrations r ON u.registration_id = r.registration_id
                             LEFT JOIN patient_profiles p ON u.user_id = p.user_id
-                            WHERE a.doctor_id = ?
+                            WHERE a.doctor_id = ? $search_sql
                             GROUP BY u.user_id
                             ORDER BY last_appointment DESC
                         ";
                         
                         $stmt = $conn->prepare($p_query);
-                        $stmt->bind_param("i", $user_id);
+                        if (!empty($search_term)) {
+                            $stmt->bind_param("issss", $user_id, $search_term, $search_term, $search_term, $alt_search);
+                        } else {
+                            $stmt->bind_param("i", $user_id);
+                        }
                         $stmt->execute();
                         $result = $stmt->get_result();
 
@@ -210,7 +235,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                                 }
                                 
                                 // Generate Display ID (Mocking the format requested: HC-P-YEAR-ID)
-                                $display_id = 'HC-P-' . date('Y') . '-' . str_pad($row['patient_user_id'], 4, '0', STR_PAD_LEFT);
+                                $display_id = !empty($row['patient_code']) ? $row['patient_code'] : 'HC-P-' . date('Y') . '-' . str_pad($row['patient_user_id'], 4, '0', STR_PAD_LEFT);
                         ?>
                         <tr class="patient-row">
                             <td><?php echo $display_id; ?></td>
@@ -229,7 +254,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                         else: ?>
                         <tr>
                             <td colspan="5" style="text-align: center; padding: 30px; color: #94a3b8;">
-                                No assigned patients found. Patients will appear here once they book an appointment with you.
+                                <?php echo !empty($search_term) ? 'No patients found matching your search.' : 'No assigned patients found. Patients will appear here once they book an appointment with you.'; ?>
                             </td>
                         </tr>
                         <?php endif; ?>

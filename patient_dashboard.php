@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 include 'includes/db_connect.php';
 
@@ -108,7 +108,7 @@ if ($claims_res) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- Chart.js for Health Analysis -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 
     <!-- Styles -->
     <link rel="stylesheet" href="styles/dashboard.css">
@@ -424,7 +424,7 @@ if ($claims_res) {
                         </div>
                         <div class="info-text" style="display: flex; flex-direction: column;">
                             <span class="info-label" style="font-size: 11px; font-weight: 600; color: #0a1f44; letter-spacing: 0.5px; font-family: 'Poppins', sans-serif;">WHATSAPP</span>
-                            <a href="https://wa.me/919539045609" target="_blank" class="info-value" style="text-decoration: none; color: #25d366; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                            <a href="https://wa.me/919539045609" target="_blank" class="info-value" style="text-decoration: none; color: #25d366; font-size: 13px; font-weight: 500; font-family: 'Poppins', sans-serif;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                         </div>
                     </div>
 
@@ -617,11 +617,11 @@ if ($claims_res) {
                     </div>
                     <div>
                         <small style="color: #94a3b8;">Total Limit</small>
-                        <h4 style="margin: 0; font-size: 16px; color: white;">₹<?php echo number_format($active_policy['coverage_limit']); ?></h4>
+                        <h4 style="margin: 0; font-size: 16px; color: white;">?<?php echo number_format($active_policy['coverage_limit']); ?></h4>
                     </div>
                     <div>
                         <small style="color: #94a3b8;">Remaining Balance</small>
-                        <h4 style="margin: 0; font-size: 16px; color: #10b981;">₹<?php echo number_format($remaining_limit); ?></h4>
+                        <h4 style="margin: 0; font-size: 16px; color: #10b981;">?<?php echo number_format($remaining_limit); ?></h4>
                         <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 5px; overflow: hidden;">
                             <?php 
                             $percent = ($active_policy['coverage_limit'] > 0) ? ($remaining_limit / $active_policy['coverage_limit']) * 100 : 0;
@@ -639,7 +639,7 @@ if ($claims_res) {
                         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; background: rgba(0,0,0,0.1); padding: 8px 12px; border-radius: 6px;">
                             <span>Claim #<?php echo $cl['claim_id']; ?> (<?php echo date('d M', strtotime($cl['created_at'])); ?>)</span>
                             <div style="display: flex; gap: 15px; align-items: center;">
-                                <span style="color: #94a3b8;">₹<?php echo number_format($cl['covered_amount']); ?></span>
+                                <span style="color: #94a3b8;">?<?php echo number_format($cl['covered_amount']); ?></span>
                                 <span class="status-badge status-<?php echo $cl['status']; ?>" style="font-size: 10px; padding: 2px 8px;"><?php echo $cl['status']; ?></span>
                             </div>
                         </div>
@@ -663,9 +663,10 @@ if ($claims_res) {
                 <div style="display:grid; grid-template-columns: 1fr 2fr; gap:20px; margin-bottom:25px;">
                      <!-- Health Score -->
                      <div class="health-score-card" style="background:rgba(255,255,255,0.02); padding:15px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:15px;">
-                         <div style="position:relative; width:70px; height:70px; display:flex; align-items:center; justify-content:center; border-radius:50%; background:conic-gradient(#10b981 0% 88%, #334155 88% 100%); padding: 3px;">
-                             <div style="width: 100%; height: 100%; background: #0f172a; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <span style="font-weight:700; color:white; font-size: 20px;">88</span>
+                         <div style="position:relative; width:100px; height:100px;">
+                             <canvas id="healthScoreChart"></canvas>
+                             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-weight:700; color:white; font-size: 24px;">88</span>
                              </div>
                          </div>
                          <div>
@@ -735,7 +736,7 @@ if ($claims_res) {
                     </div>
                     <div>
                         <small style="color: #94a3b8;">Est. Room Charges</small>
-                        <h4 style="margin: 0; font-size: 16px; color: #f59e0b;">â‚¹<?php echo number_format($est_bill); ?></h4>
+                        <h4 style="margin: 0; font-size: 16px; color: #f59e0b;">₹<?php echo number_format($est_bill); ?></h4>
                         <small style="color: #64748b;">(Excl. medicines/procedures)</small>
                     </div>
                 </div>
@@ -819,7 +820,7 @@ if ($claims_res) {
                             <div class="dash-item" style="display: flex; justify-content: space-between; align-items: center;">
                                 <div class="doc-info">
                                     <h4 style="margin-bottom: 8px;"><?php echo htmlspecialchars($doc_display_name); ?> <span class="status-badge status-<?php echo $appt['status']; ?>" style="font-size: 10px;"><?php echo htmlspecialchars($appt['status']); ?></span></h4>
-                                    <p style="color: #94a3b8; font-size: 14px;"><?php echo htmlspecialchars($specialty); ?> â€¢ <?php echo $appt_time; ?></p>
+                                    <p style="color: #94a3b8; font-size: 14px;"><?php echo htmlspecialchars($specialty); ?> • <?php echo $appt_time; ?></p>
                                     <div style="margin-top: 10px; color: #4fc3f7; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 15px;">
                                         <span><i class="fas fa-ticket-alt"></i> Token #<?php echo htmlspecialchars($appt['queue_number'] ?? 'N/A'); ?></span>
                                         <?php if($appt['consultation_mode'] == 'Online'): ?>
@@ -862,7 +863,7 @@ if ($claims_res) {
                                         <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
                                             <div>
                                                 <h4 style="color: #4fc3f7; margin-bottom: 5px;"><?php echo htmlspecialchars($record['diagnosis']); ?></h4>
-                                                <p style="font-size: 12px; color: #94a3b8;">Consulted with <?php echo htmlspecialchars($record['doctor_name']); ?> â€¢ <?php echo date('M d, Y', strtotime($record['created_at'])); ?></p>
+                                                <p style="font-size: 12px; color: #94a3b8;">Consulted with <?php echo htmlspecialchars($record['doctor_name']); ?> • <?php echo date('M d, Y', strtotime($record['created_at'])); ?></p>
                                             </div>
                                             <span class="status-badge status-Completed">Visit Completed</span>
                                         </div>
@@ -881,7 +882,7 @@ if ($claims_res) {
                                                 </a>
                                                 <?php if($record['bill_id'] && $record['bill_status'] != 'Paid'): ?>
                                                     <a href="payment_gateway.php?bill_id=<?php echo $record['bill_id']; ?>" class="download-btn" style="background:#f59e0b; color:#000; border:none;">
-                                                        <i class="fas fa-credit-card"></i> Pay â‚¹<?php echo number_format($record['bill_amount']); ?>
+                                                        <i class="fas fa-credit-card"></i> Pay ₹<?php echo number_format($record['bill_amount']); ?>
                                                     </a>
                                                 <?php endif; ?>
                                             </div>
@@ -976,7 +977,7 @@ if ($claims_res) {
                             ?>
                                 <div class="dash-item" style="display: flex; justify-content: space-between; align-items: center; padding: 15px;">
                                     <div>
-                                        <span style="display: block; font-size: 14px; font-weight: 600;"><?php echo htmlspecialchars($lab_order['test_name']); ?></span>
+                                        <span style="display: block; font-size: 14px; font-weight: 600;"><?php echo htmlspecialchars(($lab_order['test_name'] === '0' || empty($lab_order['test_name'])) ? 'Lab Report' : $lab_order['test_name']); ?></span>
                                         <small style="color: #94a3b8; font-size: 11px;"><?php echo date('M d, Y', strtotime($lab_order['created_at'])); ?></small>
                                     </div>
                                     <?php if (!empty($lab_order['report_path'])): ?>
@@ -1023,7 +1024,7 @@ if ($claims_res) {
                                             </div>
                                             <p style="margin: 4px 0 8px; font-size: 11px; color: #94a3b8; line-height: 1.4;"><?php echo htmlspecialchars($p['package_description']); ?></p>
                                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                <span style="font-weight: 700; color: #10b981; font-size: 13px;">â‚¹<?php echo number_format($p['discounted_price']); ?></span>
+                                                <span style="font-weight: 700; color: #10b981; font-size: 13px;">₹<?php echo number_format($p['discounted_price']); ?></span>
                                                 <a href="health_packages.php?open=<?php echo urlencode($p['package_name']); ?>" style="font-size: 11px; background: #3b82f6; color: white; padding: 4px 12px; border-radius: 6px; text-decoration: none; font-weight: 600;">Book Now</a>
                                             </div>
                                         </div>
@@ -1112,128 +1113,10 @@ if ($claims_res) {
     <!-- Chatbot Widget -->
     <?php include 'includes/chatbot_widget.php'; ?>
 
-    <!-- Health Chart Script -->
+
+
+    <!-- Dashboard Scripts -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const ctx = document.getElementById('healthChart').getContext('2d');
-            
-            // Dummy Data Generator for Last 7 Days
-            const days = [];
-            const bpSystolic = [];
-            const bpDiastolic = [];
-            const heartRate = [];
-            const glucose = [];
-            
-            const now = new Date();
-            for (let i = 6; i >= 0; i--) {
-                const d = new Date(now);
-                d.setDate(d.getDate() - i);
-                days.push(d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }));
-                
-                // Randomize slightly for realistic curves
-                bpSystolic.push(Math.floor(115 + Math.random() * 10));
-                bpDiastolic.push(Math.floor(75 + Math.random() * 8));
-                heartRate.push(Math.floor(70 + Math.random() * 12));
-                glucose.push(Math.floor(95 + Math.random() * 15));
-            }
-
-            const healthChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: days,
-                    datasets: [
-                        {
-                            label: 'Systolic BP (mmHg)',
-                            data: bpSystolic,
-                            borderColor: '#ef4444', // Red
-                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        },
-                        {
-                            label: 'Diastolic BP (mmHg)',
-                            data: bpDiastolic,
-                            borderColor: '#f97316', // Orange
-                            backgroundColor: 'rgba(249, 115, 22, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        },
-                        {
-                            label: 'Heart Rate (bpm)',
-                            data: heartRate,
-                            borderColor: '#10b981', // Green
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            borderWidth: 2,
-                            borderDash: [5, 5], // Dashed line for contrast
-                            tension: 0.4,
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        },
-                        {
-                            label: 'Glucose (mg/dL)',
-                            data: glucose,
-                            borderColor: '#a855f7', // Purple
-                            backgroundColor: 'rgba(168, 85, 247, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.4,
-                            hidden: true // Hidden by default to reduce clutter
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false,
-                    },
-                    plugins: {
-                        legend: {
-                            labels: { color: '#cbd5e1', usePointStyle: true, boxWidth: 6 }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-                            titleColor: '#fff',
-                            bodyColor: '#cbd5e1',
-                            borderColor: 'rgba(255,255,255,0.1)',
-                            borderWidth: 1,
-                            padding: 10,
-                            callbacks: {
-                                footer: function(tooltipItems) {
-                                    let sum = 0;
-                                    tooltipItems.forEach(function(tooltipItem) {
-                                        // Simple Insight Logic
-                                        if(tooltipItem.dataset.label.includes('Systolic') && tooltipItem.raw > 120) {
-                                            return 'âš ï¸ BP slightly elevated';
-                                        }
-                                        if(tooltipItem.dataset.label.includes('Heart') && tooltipItem.raw > 100) {
-                                            return 'âš ï¸ High Pulse Rate';
-                                        }
-                                    });
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8' }
-                        },
-                        y: {
-                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                            ticks: { color: '#94a3b8' },
-                            suggestedMin: 60,
-                            suggestedMax: 140
-                        }
-                    }
-                }
-            });
-        });
-
         // Initialize Operational Intelligence Charts
 
 
@@ -1288,25 +1171,138 @@ if ($claims_res) {
             }
             
             initBrandAnimation();
-    // Mock Function for Time Filter Update (For visual only currently)
+
+            // --- Health Score Chart ---
+            const ctxScore = document.getElementById('healthScoreChart');
+            if (ctxScore) {
+                new Chart(ctxScore.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Score', 'Remaining'],
+                        datasets: [{
+                            data: [88, 12],
+                            backgroundColor: ['#10b981', 'rgba(255,255,255,0.05)'],
+                            borderWidth: 0,
+                            borderRadius: 20
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '85%', // Thinner ring
+                        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                        animation: { animateScale: true, animateRotate: true }
+                    }
+                });
+            }
+
+            // --- Health Trend Chart (Line) ---
+            let healthChart;
+            const ctxHealth = document.getElementById('healthChart');
+            
+            // Initial Data for 7 Days
+            const initialLabels = [];
+            const initialDataBP = []; // Systolic
+            const initialDataHR = []; // Heart Rate
+            
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                initialLabels.push(d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }));
+                initialDataBP.push(Math.floor(110 + Math.random() * 20)); // Random 110-130
+                initialDataHR.push(Math.floor(70 + Math.random() * 15));  // Random 70-85
+            }
+
+            if (ctxHealth) {
+                healthChart = new Chart(ctxHealth.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: initialLabels,
+                        datasets: [
+                            {
+                                label: 'Blood Pressure (Sys)',
+                                data: initialDataBP,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4,
+                                fill: true,
+                                pointBackgroundColor: '#1e293b'
+                            },
+                            {
+                                label: 'Heart Rate (BPM)',
+                                data: initialDataHR,
+                                borderColor: '#10b981', // Emerald
+                                backgroundColor: 'rgba(16, 185, 129, 0.05)',
+                                borderWidth: 2,
+                                tension: 0.4,
+                                fill: true,
+                                borderDash: [5, 5],
+                                pointBackgroundColor: '#1e293b'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { 
+                                position: 'top', 
+                                align: 'end',
+                                labels: { color: '#94a3b8', boxWidth: 10, usePointStyle: true } 
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                titleColor: '#fff',
+                                bodyColor: '#cbd5e1',
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                borderWidth: 1
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                                ticks: { color: '#64748b' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#64748b' }
+                            }
+                        },
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        }
+                    }
+                });
+            }
+
+            // Function to update chart time range
             window.updateChartTime = function(range) {
-                // In a real app, this would fetch new data
-                // Here we just re-randomize to show impact
-                const newDays = [];
-                const count = range == '7' ? 7 : 12; // 7 days or 12 points for month
-                for (let i = count-1; i >= 0; i--) {
+                const newLabels = [];
+                const newDataBP = [];
+                const newDataHR = [];
+                const days = range == '7' ? 7 : 30;
+                
+                for (let i = days - 1; i >= 0; i--) {
                     const d = new Date();
-                    d.setDate(d.getDate() - (i * (range == '30' ? 3 : 1)));
-                    newDays.push(d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }));
+                    d.setDate(d.getDate() - i);
+                    newLabels.push(d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }));
+                    newDataBP.push(Math.floor(110 + Math.random() * 20));
+                    newDataHR.push(Math.floor(70 + Math.random() * 15));
                 }
                 
-                healthChart.data.labels = newDays;
-                healthChart.data.datasets.forEach((dataset) => {
-                    dataset.data = Array.from({length: count}, () => Math.floor(60 + Math.random() * 80));
-                });
-                healthChart.update();
+                if (healthChart) {
+                    healthChart.data.labels = newLabels;
+                    healthChart.data.datasets[0].data = newDataBP;
+                    healthChart.data.datasets[1].data = newDataHR;
+                    healthChart.update();
+                }
             }
-        });
 
         /* -------------------------------------------------------------------------- */
         /*                            NOTIFICATION SYSTEM                             */
@@ -1340,7 +1336,7 @@ if ($claims_res) {
                             <i class="${notif.icon}"></i>
                         </div>
                         <div class="notif-content">
-                            <h4>${notif.title} ${notif.priority === 'High' ? '<span style="color:#ef4444; font-size:10px;">â—</span>' : ''}</h4>
+                            <h4>${notif.title} ${notif.priority === 'High' ? '<span style="color:#ef4444; font-size:10px;">●</span>' : ''}</h4>
                             <p>${notif.message}</p>
                             <span class="notif-time">${notif.time}</span>
                         </div>

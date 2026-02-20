@@ -114,7 +114,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 </div>
                 <div style="display: flex; flex-direction: column; line-height: 1.2;">
                     <span style="font-size: 10px; font-weight: 800; color: #020617; text-transform: uppercase; letter-spacing: 0.5px;">WHATSAPP</span>
-                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> (+91) 953 904 5609</a>
+                    <a href="https://wa.me/919539045609" target="_blank" style="font-size: 13px; color: #25d366; font-weight: 600; text-decoration: none;"><i class="fab fa-whatsapp"></i> +91 953 904 5609</a>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -157,10 +157,13 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                 <p>Viewing all patients under <?php echo $department; ?> department.</p>
             </div>
 
-            <div class="search-bar">
-                <input type="text" class="search-input" placeholder="Search by Patient Name or ID (e.g. HC-P-2026-0001)...">
-                <button class="btn-view" style="padding: 12px 30px;">Search</button>
-            </div>
+            <form action="" method="GET" class="search-bar">
+                <input type="text" name="search" class="search-input" placeholder="Search by Patient Name or ID (e.g. HC-P-2026-0001)..." value="<?php echo isset($_GET['search']) ? htmlspecialchars($_GET['search']) : ''; ?>">
+                <button type="submit" class="btn-view" style="padding: 12px 30px;">Search</button>
+                <?php if(!empty($_GET['search'])): ?>
+                    <a href="doctor_patients.php" class="btn-view" style="padding: 12px 30px; background: #475569; text-decoration: none; display: inline-block;">Clear</a>
+                <?php endif; ?>
+            </form>
 
             <div class="content-section">
                 <table class="patient-table">
@@ -177,10 +180,20 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                         <?php
                         // Fetch patients who have had appointments with this doctor
                             $search_term = '';
+                            $alt_search = '';
                             $search_sql = '';
                             if (isset($_GET['search']) && !empty($_GET['search'])) {
-                                $search_term = '%' . $_GET['search'] . '%';
-                                $search_sql = " AND (r.name LIKE ? OR p.patient_code LIKE ? OR u.username LIKE ?)";
+                                $raw_val = $_GET['search'];
+                                $search_term = '%' . $raw_val . '%';
+                                
+                                // Enhanced Search: If searching for HealCare ID format, try matching numeric ID too
+                                $alt_search = $search_term;
+                                if (preg_match('/HC-P-\d{4}-(\d+)/i', $raw_val, $matches)) {
+                                    $numeric_id = (int)$matches[1];
+                                    $alt_search = '%' . $numeric_id . '%';
+                                }
+                                
+                                $search_sql = " AND (r.name LIKE ? OR p.patient_code LIKE ? OR u.username LIKE ? OR u.user_id LIKE ?)";
                             }
 
                             $p_query = "
@@ -203,7 +216,7 @@ if (stripos($doctor_name, 'Dr.') === false && stripos($doctor_name, 'Doctor') ==
                         
                         $stmt = $conn->prepare($p_query);
                         if (!empty($search_term)) {
-                            $stmt->bind_param("isss", $user_id, $search_term, $search_term, $search_term);
+                            $stmt->bind_param("issss", $user_id, $search_term, $search_term, $search_term, $alt_search);
                         } else {
                             $stmt->bind_param("i", $user_id);
                         }

@@ -207,7 +207,7 @@ $report_id = "RPT-" . str_pad($data['record_id'], 5, "0", STR_PAD_LEFT);
             </div>
             <div class="hospital-details">
                 Kanjirapally, Kottayam, Kerala<br>
-                WhatsApp: (+91) 953 904 5609<br>
+                WhatsApp: +91 953 904 5609<br>
                 Email: info@healcare.com
             </div>
         </div>

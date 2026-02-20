@@ -78,29 +78,36 @@ $selected_date = isset($_GET['date']) ? $_GET['date'] : date('Y-m-d');
 $booked_slots = [];
 $max_capacity = 5; // Max patients per time slot
 
-// Token Number Logic (Based on appointments coming)
+// Token Number Logic (Based on actual appointments)
 $token_number = 1;
 if ($pre_doc_id) {
-    $token_q = $conn->query("SELECT COUNT(*) as total FROM appointments WHERE doctor_id = $pre_doc_id AND appointment_date = '$selected_date' AND status != 'Cancelled'");
-    if($token_q) {
-        $token_number = $token_q->fetch_assoc()['total'] + 1;
+    $token_q = $conn->prepare("SELECT COUNT(*) as total FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status NOT IN ('Cancelled')");
+    if ($token_q) {
+        $token_q->bind_param("is", $pre_doc_id, $selected_date);
+        $token_q->execute();
+        $token_number = $token_q->get_result()->fetch_assoc()['total'] + 1;
+        $token_q->close();
     }
 }
 
+// Fetch actual booked slot counts from DB
 if ($pre_doc_id) {
-    $stmt = $conn->prepare("SELECT appointment_time, COUNT(*) as count FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status != 'Cancelled' GROUP BY appointment_time");
+    $stmt = $conn->prepare("SELECT TIME_FORMAT(appointment_time, '%h:%i %p') as time_fmt, COUNT(*) as count FROM appointments WHERE doctor_id = ? AND appointment_date = ? AND status NOT IN ('Cancelled') GROUP BY appointment_time");
     if ($stmt) {
         $stmt->bind_param("is", $pre_doc_id, $selected_date);
         $stmt->execute();
         $slot_res = $stmt->get_result();
         while ($row = $slot_res->fetch_assoc()) {
-            $time_formatted = date('h:i A', strtotime($row['appointment_time']));
-            $booked_slots[$time_formatted] = $row['count'];
+            $t = trim($row['time_fmt']);
+            // Store both formats to ensure matching regardless of leading zero
+            $booked_slots[$t] = $row['count'];
+            $booked_slots[date('h:i A', strtotime($t))] = $row['count'];
         }
+        $stmt->close();
     }
 }
 
-function renderSlotChip($time, $booked_slots, $max_capacity) {
+function renderSlotChip($time, $booked_slots, $max_capacity, $index) {
     $count = isset($booked_slots[$time]) ? $booked_slots[$time] : 0;
     $remaining = $max_capacity - $count;
     if ($remaining < 0) $remaining = 0;
@@ -110,7 +117,7 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
     $label = ($remaining <= 0) ? "Full" : "$remaining Slots Left";
     $onclick = ($remaining > 0) ? "selectSlot(this)" : "return false;";
     
-    echo '<div class="slot-chip ' . $status_class . '" onclick="' . $onclick . '" style="' . ($remaining <= 0 ? 'opacity:0.5; cursor:not-allowed;' : '') . '">';
+    echo '<div class="slot-chip ' . $status_class . '" onclick="' . $onclick . '" data-index="' . $index . '" data-booked="' . $count . '" style="' . ($remaining <= 0 ? 'opacity:0.5; cursor:not-allowed;' : '') . '">';
     echo '<div>' . $time . '</div>';
     echo '<div style="font-size: 10px; font-weight: 600; color:' . $color . '; margin-top: 2px;">' . $label . '</div>';
     echo '</div>';
@@ -136,7 +143,7 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
             margin: 20px 0;
             text-align: center;
             font-size: 1rem;
-            display: <?php echo $pre_doc_id ? 'block' : 'none'; ?>;
+            display: none;
         }
         .token-number { font-size: 1.6rem; font-weight: 800; color: #fff; margin: 0 5px; }
 
@@ -316,8 +323,8 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
                 <p>Select a doctor and schedule your visit</p>
             </div>
 
-            <div id="tokenMsg" class="token-alert">
-                <i class="fas fa-ticket-alt"></i> Your token number is <span class="token-number"><?php echo $token_number; ?></span><br>
+            <div id="tokenMsg" class="token-alert" style="display: none;">
+                <i class="fas fa-ticket-alt"></i> Your token number is <span class="token-number">--</span><br>
                 Please fill in the details below to complete the booking.
             </div>
 
@@ -572,9 +579,11 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
                             echo '<div class="slots-container">';
                             
                             $curr = clone $start;
+                            $slot_index = 0;
                             while ($curr < $end) {
-                                renderSlotChip($curr->format('h:i A'), $booked_slots, $max_capacity);
+                                renderSlotChip($curr->format('h:i A'), $booked_slots, $max_capacity, $slot_index);
                                 $curr->add($interval);
+                                $slot_index++;
                             }
                             echo '</div>';
                         else:
@@ -677,9 +686,12 @@ function renderSlotChip($time, $booked_slots, $max_capacity) {
             el.classList.add('selected');
             document.getElementById('selectedTimeSlot').value = el.querySelector('div:first-child').innerText;
             
-            // Generate a random token number to satisfy non-chronological requirement
-            // Range 10 to 150 to simulate a busy queue
-            let token = Math.floor(Math.random() * 140) + 10;
+            // Calculate Token based on Slot index and current bookings
+            // Formula: (SlotIndex * MaxCapacity) + BookedInSlot + 1
+            let slotIndex = parseInt(el.getAttribute('data-index'));
+            let bookedInSlot = parseInt(el.getAttribute('data-booked'));
+            let maxCapacity = 5;
+            let token = (slotIndex * maxCapacity) + (bookedInSlot + 1);
 
             // Update UI
             document.querySelector('.token-number').innerText = token;

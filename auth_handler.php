@@ -284,7 +284,7 @@ $name = mysqli_real_escape_string($conn, $_POST['fullname']);
             $_SESSION['logged_in'] = true;
             $_SESSION['user_role'] = 'admin';
             $_SESSION['username'] = 'admin';
-            $_SESSION['user_id'] = 0; // Fixed Admin ID
+            $_SESSION['user_id'] = 1; // Match existing DB Admin ID
             $_SESSION['full_name'] = 'Administrator';
 
             $_SESSION['email'] = 'admin@gmail.com';

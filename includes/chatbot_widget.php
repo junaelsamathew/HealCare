@@ -3,7 +3,7 @@
     /* 3D Robot Animation */
     .chatbot-toggler {
         position: fixed;
-        bottom: 170px;
+        bottom: 105px;
         right: 30px;
         height: 70px;
         width: 70px;
@@ -196,7 +196,7 @@
     .chatbot {
         position: fixed;
         right: 30px;
-        bottom: 250px;
+        bottom: 185px;
         width: 380px;
         background: #1e293b;
         border-radius: 15px;
