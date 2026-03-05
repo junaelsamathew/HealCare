@@ -3,6 +3,7 @@ session_start();
 include 'includes/db_connect.php';
 
 if (!isset($_SESSION['logged_in'])) {
+    $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
     exit();
 }
@@ -108,7 +109,8 @@ if ($action == 'update_password') {
 
 } elseif ($action == 'update_professional') {
     if ($role != 'doctor') {
-        header("Location: login.php");
+        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+    header("Location: login.php");
         exit();
     }
 

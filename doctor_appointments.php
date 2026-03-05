@@ -4,6 +4,7 @@ include 'includes/db_connect.php';
 include 'includes/email_config.php';
 
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'doctor') {
+    $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
     exit();
 }

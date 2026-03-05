@@ -4,11 +4,8 @@ include 'includes/db_connect.php';
 
 // Check auth
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
-    $redirect = urlencode(basename($_SERVER['PHP_SELF']));
-    if (!empty($_SERVER['QUERY_STRING'])) {
-        $redirect .= urlencode('?' . $_SERVER['QUERY_STRING']);
-    }
-    header("Location: login.php?redirect=$redirect");
+    $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+    header("Location: login.php");
     exit();
 }
 
@@ -172,8 +169,12 @@ function renderSlotChip($time, $booked_slots, $max_capacity, $index) {
             color: white;
             border-radius: 6px;
             font-size: 0.9rem;
+            color-scheme: dark;
         }
         .filter-control:focus { outline: none; border-color: var(--primary-blue); }
+        .filter-control::-webkit-calendar-picker-indicator, .form-control-input::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+        }
 
         .doctor-display {
             display: flex;

@@ -1,0 +1,33 @@
+ROLE: admin | EMAIL: admin@gmail.com
+ROLE: patient | EMAIL: junaelsamathew2028@mca.ajce.in
+ROLE: doctor | EMAIL: mary.mariam@healcare.com
+ROLE: doctor | EMAIL: leena.jose@healcare.com
+ROLE: doctor | EMAIL: jacob.mathew@healcare.com
+ROLE: doctor | EMAIL: krishnan.manoj@healcare.com
+ROLE: doctor | EMAIL: june.antony@healcare.com
+ROLE: doctor | EMAIL: alan.thomas@healcare.com
+ROLE: doctor | EMAIL: suresh.k@healcare.com
+ROLE: doctor | EMAIL: maria.vineeth@healcare.com
+ROLE: doctor | EMAIL: meenu.thomas@healcare.com
+ROLE: doctor | EMAIL: kurian.thomas@healcare.com
+ROLE: Nurse | EMAIL: gigi.tony@healcare.com
+ROLE: Lab Staff | EMAIL: ciya.john@healcare.com
+ROLE: Pharmacist | EMAIL: mini.jose@healcare.com
+ROLE: Receptionist | EMAIL: ancy.james@healcare.com
+ROLE: Canteen Staff | EMAIL: riya.shibu@healcare.com
+ROLE: Lab Staff | EMAIL: kevin.manuel@healcare.com
+ROLE: patient | EMAIL: augustinejoyaljoseph@gmail.com
+ROLE: patient | EMAIL: akshaykrishnar2028@mca.ajce.in
+ROLE: patient | EMAIL: junaelsamathew@gmail.com
+ROLE: patient | EMAIL: krishnavenirnair2028@mca.ajce.in
+ROLE: patient | EMAIL: jeweltreasaraphel2028@mca.ajce.in
+ROLE: patient | EMAIL: diviniamarioantony2028@mca.ajce.in
+ROLE: lab_staff | EMAIL: 47.nandanapramod@gmail.com
+ROLE: lab_staff | EMAIL: alenchacko2004@gmail.com
+ROLE: patient | EMAIL: augustinejoyaljose@gmail.com
+ROLE: patient | EMAIL: reibinchackothomas2028@mca.ajce.in
+ROLE: patient | EMAIL: justinmanoj267@gmail.com
+ROLE: patient | EMAIL: elsamathewjuna@gmail.com
+ROLE: patient | EMAIL: 
+ROLE: patient | EMAIL: 
+ROLE: patient | EMAIL: 

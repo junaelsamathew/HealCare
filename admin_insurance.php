@@ -4,6 +4,7 @@ include 'includes/db_connect.php';
 
 // Auth Check (Admin Only)
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'admin') {
+    $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
     exit();
 }

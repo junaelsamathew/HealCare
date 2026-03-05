@@ -7,7 +7,8 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
     if (isset($_SESSION['username']) && $_SESSION['username'] === 'admin') {
         // Allow
     } else {
-        header("Location: login.php");
+        $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
+    header("Location: login.php");
         exit();
     }
 }

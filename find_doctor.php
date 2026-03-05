@@ -223,11 +223,7 @@ include 'includes/header.php';
                     </div>
                     <a href="public_doctor_profile.php?email=<?php echo urlencode($row['email']); ?>" class="btn-book-now" style="background: transparent; border: 1px solid #0c2d6a; color: #0c2d6a; margin-right: 10px; display: inline-block;">View Profile</a>
                     
-                    <?php 
-                    $redirect_url = urlencode("appointment_form.php?doctor_id=" . $row['user_id']);
-                    $book_link = $is_logged_in ? "appointment_form.php?doctor_id=" . $row['user_id'] : "login.php?redirect=" . $redirect_url;
-                    ?>
-                    <a href="<?php echo $book_link; ?>" class="btn-book-now">Book Now</a>
+                    <a href="appointment_form.php?doctor_id=<?php echo $row['user_id']; ?>" class="btn-book-now">Book Now</a>
                 </div>
             <?php endwhile; ?>
         <?php else: ?>
@@ -303,12 +299,7 @@ include 'includes/header.php';
         
         let btn = document.getElementById('modalBookBtn');
         if (btn) {
-            if (isLoggedIn) {
-                btn.href = "appointment_form.php?doctor_id=" + data.id;
-            } else {
-                let redirect = encodeURIComponent("appointment_form.php?doctor_id=" + data.id);
-                btn.href = "login.php?redirect=" + redirect;
-            }
+            btn.href = "appointment_form.php?doctor_id=" + data.id;
         }
 
         document.getElementById('profileModal').style.display = 'flex';

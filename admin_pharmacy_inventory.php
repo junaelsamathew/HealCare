@@ -5,6 +5,7 @@ include 'includes/email_config.php';
 
 // Auth Check
 if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
+    $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
     exit();
 }

@@ -4,6 +4,7 @@ include 'includes/db_connect.php';
 
 // Check if logged in
 if (!isset($_SESSION['logged_in'])) {
+    $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
     exit();
 }

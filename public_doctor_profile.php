@@ -248,11 +248,9 @@ $about = $doc['bio'] ?? $doc['additional_details'] ?? 'Expert medical consultati
                     <img src="<?php echo $photo; ?>" alt="<?php echo htmlspecialchars($name); ?>">
                 </div>
                 <?php 
-                    $redirect_url = urlencode("appointment_form.php?doctor_id=" . $doc['user_id']);
                     $is_logged_in = isset($_SESSION['user_id']);
-                    $book_link = $is_logged_in ? "appointment_form.php?doctor_id=" . $doc['user_id'] : "login.php?redirect=" . $redirect_url;
                 ?>
-                <a href="<?php echo $book_link; ?>" class="btn-book-appointment">BOOK AN APPOINTMENT</a>
+                <a href="appointment_form.php?doctor_id=<?php echo $doc['user_id']; ?>" class="btn-book-appointment">BOOK AN APPOINTMENT</a>
             </div>
 
             <!-- Right Column: Info & Accordions -->

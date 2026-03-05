@@ -5,6 +5,7 @@ include 'includes/email_config.php';
 
 // Check auth
 if (!isset($_SESSION['logged_in']) || $_SESSION['user_role'] != 'patient') {
+    $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
     header("Location: login.php");
     exit();
 }
