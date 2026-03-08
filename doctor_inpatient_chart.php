@@ -33,13 +33,18 @@ $age = $dob->diff(new DateTime())->y;
 
 // Handle New Note
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['daily_note'])) {
-    $note = $_POST['daily_note'];
-    $plan = $_POST['plan'];
-    $stmt_add = $conn->prepare("INSERT INTO inpatient_treatment (admission_id, doctor_id, daily_notes, treatment_plan) VALUES (?, ?, ?, ?)");
-    $stmt_add->bind_param("iiss", $adm_id, $doctor_id, $note, $plan);
-    $stmt_add->execute();
-    header("Location: doctor_inpatient_chart.php?admission_id=$adm_id&msg=Note Added");
-    exit();
+    $note = trim($_POST['daily_note']);
+    $plan = trim($_POST['plan']);
+    
+    if (!empty($note)) {
+        $stmt_add = $conn->prepare("INSERT INTO inpatient_treatment (admission_id, doctor_id, daily_notes, treatment_plan) VALUES (?, ?, ?, ?)");
+        $stmt_add->bind_param("iiss", $adm_id, $doctor_id, $note, $plan);
+        $stmt_add->execute();
+        header("Location: doctor_inpatient_chart.php?admission_id=$adm_id&msg=Note Added");
+        exit();
+    } else {
+        $error_msg = "Round Entry observation cannot be empty.";
+    }
 }
 
 // Handle Nurse Request
@@ -189,6 +194,8 @@ $prescr = $conn->query("SELECT * FROM prescriptions WHERE patient_id = $pid ORDE
             transition: 0.3s;
         }
         textarea:focus { border-color: var(--accent); outline: none; }
+        textarea.invalid-input, textarea.invalid-input:focus { border-color: var(--danger) !important; box-shadow: 0 0 5px rgba(239, 68, 68, 0.2) !important; }
+        textarea.valid-input, textarea.valid-input:focus { border-color: var(--success) !important; box-shadow: 0 0 5px rgba(16, 185, 129, 0.2) !important; }
         .btn-primary { 
             background: var(--accent); 
             color: #fff; 
@@ -268,11 +275,54 @@ $prescr = $conn->query("SELECT * FROM prescriptions WHERE patient_id = $pid ORDE
             <div>
                 <div class="card">
                     <div class="card-title"><i class="fas fa-file-signature"></i> Round Entry</div>
-                    <form method="POST">
-                        <textarea name="daily_note" rows="3" required placeholder="Observations, patient complaints, clinical status..."></textarea>
+                    <?php if (isset($error_msg)): ?>
+                        <div style="color: var(--danger); font-size: 13px; margin-bottom: 15px; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px;">
+                            <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error_msg); ?>
+                        </div>
+                    <?php endif; ?>
+                    <form method="POST" onsubmit="return validateRoundEntry()">
+                        <textarea id="dailyNoteField" name="daily_note" rows="3" required placeholder="Observations, patient complaints, clinical status..."></textarea>
                         <textarea name="plan" rows="2" placeholder="Plan: Medication adjustments, new orders, etc. (optional)"></textarea>
+                        <div id="roundEntryError" style="color: var(--danger); font-size: 12px; margin-bottom: 10px; display: none;">Observations cannot be just empty spaces.</div>
                         <button type="submit" class="btn-primary">Append to History</button>
                     </form>
+                    <script>
+                        const docNoteField = document.getElementById('dailyNoteField');
+                        const docErrorDiv = document.getElementById('roundEntryError');
+
+                        // Real-time validation
+                        docNoteField.addEventListener('input', function() {
+                            const val = this.value;
+                            if (val.trim().length > 0) {
+                                docErrorDiv.style.display = 'none';
+                                this.classList.remove('invalid-input');
+                                this.classList.add('valid-input');
+                            } else if (val.length > 0) {
+                                // User typed only spaces
+                                docErrorDiv.style.display = 'block';
+                                this.classList.remove('valid-input');
+                                this.classList.add('invalid-input');
+                            } else {
+                                // Completely empty
+                                docErrorDiv.style.display = 'none';
+                                this.classList.remove('valid-input');
+                                this.classList.remove('invalid-input');
+                            }
+                        });
+
+                        function validateRoundEntry() {
+                            const note = docNoteField.value.trim();
+                            if (note.length === 0) {
+                                docErrorDiv.style.display = 'block';
+                                docNoteField.classList.remove('valid-input');
+                                docNoteField.classList.add('invalid-input');
+                                return false; // Prevent submission
+                            }
+                            docErrorDiv.style.display = 'none';
+                            docNoteField.classList.remove('invalid-input');
+                            return true;
+                        }
+                    </script>
                 </div>
 
                 <div class="card">

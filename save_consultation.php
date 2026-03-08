@@ -101,19 +101,49 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $status = 'Pending';
             $pay_status = 'Pending';
             
-            // Find Category ID
-            $cat_stmt = $conn->prepare("SELECT category_id FROM lab_categories WHERE category_name = ?");
-            $cat_stmt->bind_param("s", $lab_category);
-            $cat_stmt->execute();
-            $cat_res = $cat_stmt->get_result();
-            $cat_id = ($cat_row = $cat_res->fetch_assoc()) ? $cat_row['category_id'] : 0;
+            $tests = array_map('trim', explode(',', $lab_test_name));
+            $grouped_tests = [];
             
-
-
-            // Create Lab Request
-            $stmt_lab = $conn->prepare("INSERT INTO lab_tests (patient_id, doctor_id, appointment_id, category_id, test_name, instructions, test_type, status, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt_lab->bind_param("iiiisssss", $patient_id, $doctor_id, $appt_id, $cat_id, $lab_test_name, $special_notes, $lab_category, $status, $pay_status);
-            $stmt_lab->execute();
+            foreach ($tests as $single_test) {
+                if (empty($single_test)) continue;
+                
+                // Find Category ID and Name for each specific test
+                $cat_stmt = $conn->prepare("SELECT lc.category_id, lc.category_name FROM lab_test_catalog ltc JOIN lab_categories lc ON ltc.category_id = lc.category_id WHERE ltc.test_name = ?");
+                $cat_stmt->bind_param("s", $single_test);
+                $cat_stmt->execute();
+                $cat_res = $cat_stmt->get_result();
+                
+                if ($cat_row = $cat_res->fetch_assoc()) {
+                    $cat_id = $cat_row['category_id'];
+                    $test_type = $cat_row['category_name'];
+                } else {
+                    // Fallback to the submitted category if not found in catalog
+                    $cat_stmt_f = $conn->prepare("SELECT category_id FROM lab_categories WHERE category_name = ?");
+                    $cat_stmt_f->bind_param("s", $lab_category);
+                    $cat_stmt_f->execute();
+                    $cat_res_f = $cat_stmt_f->get_result();
+                    $cat_id = ($cat_row_f = $cat_res_f->fetch_assoc()) ? $cat_row_f['category_id'] : 0;
+                    $test_type = $lab_category;
+                }
+                
+                if (!isset($grouped_tests[$cat_id])) {
+                    $grouped_tests[$cat_id] = [
+                        'type' => $test_type,
+                        'tests' => []
+                    ];
+                }
+                $grouped_tests[$cat_id]['tests'][] = $single_test;
+            }
+            
+            // Insert ONE lab_tests record per category requested
+            foreach ($grouped_tests as $c_id => $data) {
+                $combined_test_names = implode(', ', $data['tests']);
+                $t_type = $data['type'];
+                
+                $stmt_lab = $conn->prepare("INSERT INTO lab_tests (patient_id, doctor_id, appointment_id, category_id, test_name, instructions, test_type, status, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt_lab->bind_param("iiiisssss", $patient_id, $doctor_id, $appt_id, $c_id, $combined_test_names, $special_notes, $t_type, $status, $pay_status);
+                $stmt_lab->execute();
+            }
         }
 
         // 4. Create Medical Record

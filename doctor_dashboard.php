@@ -1585,6 +1585,8 @@ include_once 'includes/greeting_logic.php';
                         </div>
 
                         <script>
+                            let selectedGlobalLabTests = new Set();
+
                             function toggleLabFields(checked) {
                                 const container = document.getElementById('labOrderFields');
                                 const labCat = document.getElementById('labCat');
@@ -1595,6 +1597,8 @@ include_once 'includes/greeting_logic.php';
                                 } else {
                                     container.style.display = 'none';
                                     labCat.removeAttribute('required');
+                                    selectedGlobalLabTests.clear();
+                                    document.getElementById('finalLabTests').value = '';
                                 }
                             }
 
@@ -1615,9 +1619,11 @@ include_once 'includes/greeting_logic.php';
                                     if (tests.length > 0) {
                                         let html = '';
                                         tests.forEach(test => {
+                                            const safeTest = test.replace(/"/g, '&quot;');
+                                            const isChecked = selectedGlobalLabTests.has(test) ? 'checked' : '';
                                             html += `
                                                 <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #fff; margin-bottom: 5px; cursor: pointer;">
-                                                    <input type="checkbox" class="lab-test-item" value="${test}" onchange="updateLabTests()"> ${test}
+                                                    <input type="checkbox" class="lab-test-item" value="${safeTest}" onchange="updateLabTests(this)" ${isChecked}> ${test}
                                                 </label>
                                             `;
                                         });
@@ -1630,10 +1636,22 @@ include_once 'includes/greeting_logic.php';
                                 }
                             }
 
-                            function updateLabTests() {
-                                const checkboxes = document.querySelectorAll('.lab-test-item:checked');
-                                const selectedTests = Array.from(checkboxes).map(cb => cb.value);
-                                document.getElementById('finalLabTests').value = selectedTests.join(', ');
+                            function updateLabTests(checkbox) {
+                                if (checkbox) {
+                                    if (checkbox.checked) {
+                                        selectedGlobalLabTests.add(checkbox.value);
+                                    } else {
+                                        selectedGlobalLabTests.delete(checkbox.value);
+                                    }
+                                } else {
+                                    // Fallback if called without specific checkbox
+                                    const checkboxes = document.querySelectorAll('.lab-test-item');
+                                    checkboxes.forEach(cb => {
+                                        if (cb.checked) selectedGlobalLabTests.add(cb.value);
+                                        else selectedGlobalLabTests.delete(cb.value);
+                                    });
+                                }
+                                document.getElementById('finalLabTests').value = Array.from(selectedGlobalLabTests).join(', ');
                             }
                         </script>
 

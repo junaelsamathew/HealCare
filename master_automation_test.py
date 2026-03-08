@@ -175,11 +175,6 @@ class HealCareMasterTest(unittest.TestCase):
         self.driver.get(f"{BASE_URL}/admin_dashboard.php?section=wards")
         print("    - Ward management section viewed.")
 
-        # 4. Insurance Claims
-        self.driver.find_element(By.LINK_TEXT, "Insurance Management").click()
-        self.wait.until(EC.url_contains("admin_insurance.php"))
-        print("    - Insurance & Claims module verified.")
-
         self.logout()
         print("[ADMIN] Journey completed.")
 

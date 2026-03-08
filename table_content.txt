@@ -1,0 +1,204 @@
+Table 1
+Field Name| Data Type| Description| 
+registration_id| INT (PK)| Unique registration ID| 
+name| VARCHAR(100)| Full name of user| 
+email| VARCHAR(100)| Email ID| 
+phone| VARCHAR(15)| Mobile number| 
+password| VARCHAR(255)| Encrypted password| 
+user_type| VARCHAR(20)| Patient / Doctor / Staff| 
+status| VARCHAR(20)| Pending / Approved / Rejected| 
+registered_date| DATE| Registration date| 
+---
+Table 2
+Attribute Name| Data Type| Description| 
+user_id| INT (PK)| Unique user identifier| 
+registration_id| INT (FK)| Links to Registration table| 
+username| VARCHAR(50)| Login username| 
+email| VARCHAR(100)| User email| 
+password| VARCHAR(255)| Encrypted password| 
+role| VARCHAR(20)| Admin / Patient / Doctor / Staff| 
+status| VARCHAR(20)| Active / Inactive / Blocked| 
+created_at| DATETIME| Account creation date| 
+last_login| DATETIME| Last login time| 
+---
+Table 3
+Column Name| Data Type| Description| 
+canteenstaff_id| INT (PK)| Unique canteen staff ID| 
+user_id| INT (FK)| References User(user_id)| 
+role| VARCHAR(50)| Cook / Cashier / Helper| 
+shift| VARCHAR(20)| Morning / Evening| 
+date_of_join| DATE| Date of joining| 
+status| VARCHAR(20)| Active / On Leave| 
+---
+Table 4
+Attribute Name| Data Type| Description| 
+record_id| INT (PK)| Medical record ID| 
+patient_id| INT (FK)| Links to patient_profile| 
+visit_date| DATE| Date of visit| 
+patient_type| VARCHAR(20)| Inpatient / Outpatient| 
+diagnosis| TEXT| Doctor diagnosis| 
+treatment| TEXT| Treatment given| 
+prescription_id| INT (FK)| Prescription reference| 
+lab_test_required| VARCHAR(10)| Yes / No| 
+doctor_id| INT (FK)| Attending doctor| 
+remarks| TEXT| Notes| 
+---
+Table 5
+Column Name| Data Type| Description| 
+doctor_id| INT (PK)| Unique doctor ID| 
+user_id| INT (FK)| References User(user_id)| 
+specialization| VARCHAR(100)| Medical specialization| 
+qualification| VARCHAR(100)| Degree details| 
+experience| INT| Years of experience| 
+department| VARCHAR(100)| Department| 
+date_of_join| DATE| Date of joining| 
+designation| VARCHAR(50)| Doctor designation (Junior / Senior / Consultant)| 
+---
+Table 6
+Column Name| Data Type| Description| 
+nurse_id| INT (PK)| Unique nurse ID| 
+user_id| INT (FK)| References User(user_id)| 
+department| VARCHAR(100)| Assigned department| 
+shift| VARCHAR(20)| Day / Night| 
+qualification| VARCHAR(100)| Nursing qualification| 
+experience| INT| Years of experience| 
+date_of_join| DATE| Date of joining| 
+designation| VARCHAR(50)| Staff Nurse / Senior Nurse| 
+status| VARCHAR(20)| Active / On Leave| 
+---
+Table 7
+Column Name| Data Type| Description| 
+labstaff_id| INT (PK)| Unique lab staff ID| 
+user_id| INT (FK)| References User(user_id)| 
+lab_type| VARCHAR(100)| Blood / X-Ray / Pathology| 
+shift| VARCHAR(20)| Day / Night| 
+qualification| VARCHAR(100)| Educational qualification| 
+experience| INT| Years of experience| 
+date_of_join| DATE| Date of joining| 
+designation| VARCHAR(50)| Technician / Senior Technician| 
+status| VARCHAR(20)| Active / On Leave| 
+---
+Table 8
+Column Name| Data Type| Description| 
+pharmacist_id| INT (PK)| Unique pharmacist ID| 
+user_id| INT (FK)| References User(user_id)| 
+qualification| VARCHAR(100)| Pharmacy qualification| 
+experience| INT| Years of experience| 
+shift| VARCHAR(20)| Day / Night| 
+date_of_join| DATE| Date of joining| 
+designation| VARCHAR(50)| Pharmacist / Senior Pharmacist| 
+status| VARCHAR(20)| Active / On Leave| 
+---
+Table 9
+Column Name| Data Type| Description| 
+receptionist_id| INT (PK)| Unique receptionist ID| 
+user_id| INT (FK)| References User(user_id)| 
+desk_no| VARCHAR(20)| Reception desk number| 
+shift| VARCHAR(20)| Day / Night| 
+experience| INT| Years of experience| 
+qualification| VARCHAR(100)| Educational qualification| 
+date_of_join| DATE| Date of joining| 
+language_known| VARCHAR(100)| Languages known| 
+status| VARCHAR(20)| Active / On Leave| 
+---
+Table 10
+Column Name| Data Type| Description| 
+appointment_id| INT (PK)| Unique appointment ID| 
+patient_id| INT (FK)| References Patient(patient_id)| 
+doctor_id| INT (FK)| References Doctor(doctor_id)| 
+department| VARCHAR(100)| Department of consultation| 
+appointment_date| DATE| Appointment date| 
+appointment_time| TIME| Appointment time| 
+appointment_type| VARCHAR(20)| Online / Walk-in| 
+status| ENUM| Requested / Confirmed / Completed / Cancelled| 
+queue_number| INT| Token / queue number| 
+payment_status| VARCHAR(20)| Pending / Paid| 
+created_at| DATETIME| Booking time| 
+remarks| TEXT| Notes| 
+---
+Table 11
+Column Name| Data Type| Description| 
+record_id| INT (PK)| Unique medical record| 
+patient_id| INT (FK)| References Patient(patient_id)| 
+doctor_id| INT (FK)| Attending doctor| 
+appointment_id| INT (FK)| Related appointment| 
+diagnosis| TEXT| Diagnosis details| 
+treatment| TEXT| Treatment given| 
+prescription_id| INT (FK)| Prescription reference| 
+lab_test_required| VARCHAR(10)| Yes / No| 
+follow_up_date| DATE| Next visit date| 
+record_status| VARCHAR(20)| Open / Closed| 
+---
+Table 12
+Column Name| Data Type| Description| 
+prescription_id| INT (PK)| Unique prescription ID| 
+patient_id| INT (FK)| References Patient(patient_id)| 
+doctor_id| INT (FK)| Prescribing doctor| 
+prescription_date| DATE| Date of prescription| 
+medicine_details| TEXT| Medicines prescribed| 
+dosage| TEXT| Dosage instructions| 
+duration| VARCHAR(50)| Duration of medication| 
+instructions| TEXT| Special instructions| 
+---
+Table 13
+Column Name| Data Type| Description| 
+labtest_id| INT (PK)| Unique lab test ID| 
+patient_id| INT (FK)| References Patient(patient_id)| 
+doctor_id| INT (FK)| Doctor who requested test| 
+test_name| VARCHAR(100)| Name of lab test| 
+test_type| VARCHAR(50)| Blood / X-Ray / Scan / Pathology| 
+sample_collected| VARCHAR(10)| Yes / No| 
+test_date| DATE| Date of test| 
+result| TEXT| Test result| 
+report_date| DATE| Report generated date| 
+labstaff_id| INT (FK)| Lab staff handling test| 
+status| VARCHAR(20)| Pending / In Progress / Completed| 
+---
+Table 14
+Column Name| Data Type| Description| 
+bill_id| INT (PK)| Unique bill ID| 
+patient_id| INT (FK)| References Patient(patient_id)| 
+appointment_id| INT (FK)| Related appointment| 
+bill_type| VARCHAR(50)| OP / IP / Lab / Pharmacy| 
+total_amount| DECIMAL(10,2)| Total bill amount| 
+Doctor_id| INT(FK)| References Doctor(doctor_id)| 
+payment_mode| VARCHAR(30)| Cash / Card / UPI / Online| 
+payment_status| ENUM| Pending / Paid / Failed| 
+bill_date| DATE| Billing date| 
+---
+Table 15
+Column Name| Data Type| Description| 
+report_id| INT (PK)| Unique report ID| 
+patient_id| INT (FK)| References Patient(patient_id)| 
+report_type| VARCHAR(100)| Lab / Medical / Radiology / Pathology / Prescription| 
+generated_date| DATE| Report generation date| 
+doctor_id| INT (FK)| References Doctor(doctor_id), the doctor who requested/generated the report| 
+lab_id| INT (FK)| References Lab(lab_id), if it is a lab-related report| 
+diagnosis| TEXT| Diagnosis mentioned in the report (if applicable)| 
+status| VARCHAR(50)| Pending / Completed / Reviewed| 
+report_file| VARCHAR(255)| File path or URL if the report is stored digitally| 
+---
+Table 16
+Column Name| Data Type| Description| 
+payment_id| INT (PK)| Unique payment ID| 
+bill_id| INT (FK)| References Billing(bill_id)| 
+patient_id| INT (FK)| References Patient(patient_id), for easy patient lookup| 
+payment_date| DATE| Date of payment| 
+payment_method| VARCHAR(50)| Cash / Card / UPI / Net Banking / Insurance| 
+payment_amount| DECIMAL(10,2)| Amount paid| 
+payment_status| ENUM| Success / Pending / Failed| 
+transaction_id| VARCHAR(100)| Bank or payment gateway transaction reference| 
+---
+Table 17
+Attribute Name| Data Type| Description| 
+patient_id| INT (PK)| Unique patient ID| 
+user_id| INT (FK)| Links to User table| 
+patient_code| VARCHAR(20)| Hospital patient number| 
+name| VARCHAR(100)| Patient full name| 
+gender| VARCHAR(10)| Male / Female / Other| 
+date_of_birth| DATE| Date of birth| 
+blood_group| VARCHAR(5)| Blood group| 
+phone| VARCHAR(15)| Contact number| 
+address| TEXT| Address| 
+status| VARCHAR(20)| Active / Inactive| 
+---

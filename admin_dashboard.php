@@ -1961,9 +1961,6 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <a href="?section=blood-bank" class="nav-link <?php echo $section == 'blood-bank' ? 'active' : ''; ?>">
                 <i class="fas fa-tint"></i> Blood Bank Inventory
             </a>
-            <a href="admin_insurance.php" class="nav-link">
-                <i class="fas fa-shield-alt"></i> Insurance Claims
-            </a>
         </div>
 
         <div class="nav-section">
@@ -1984,9 +1981,7 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
             <a href="?section=feedback-analysis" class="nav-link <?php echo $section == 'feedback-analysis' ? 'active' : ''; ?>">
                 <i class="fas fa-comment-dots"></i> Feedback Analysis
             </a>
-            <a href="?section=complaints" class="nav-link <?php echo $section == 'complaints' ? 'active' : ''; ?>">
-                <i class="fas fa-exclamation-triangle"></i> Complaint Logs
-            </a>
+
             <a href="platform_analytics.php" class="nav-link">
                 <i class="fas fa-chart-line"></i> Platform Analytics
             </a>
@@ -5165,23 +5160,6 @@ $all_users = $conn->query("SELECT u.*, r.app_id FROM users u LEFT JOIN registrat
                             <p>No feedback records found in the system.</p>
                         </div>
                     <?php endif; ?>
-                </div>
-            </div>
-
-        <?php elseif ($section == 'complaints'): ?>
-            <!-- Complaint Logs -->
-            <div class="top-bar">
-                <div class="page-title">
-                    <h1>Complaint Logs</h1>
-                    <p>View and manage patient complaints</p>
-                </div>
-            </div>
-
-            <div class="content-section">
-                <div class="placeholder-section">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <h3>Complaint Logs Module</h3>
-                    <p>Track and manage all patient complaints and feedback</p>
                 </div>
             </div>
 
